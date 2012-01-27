@@ -5,7 +5,12 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  mnesia,
+                  crypto,
+                  mochiweb,
+                  webmachine,
+                  lager
                  ]},
   {mod, { rpg_battlemap_app, []}},
   {env, []}

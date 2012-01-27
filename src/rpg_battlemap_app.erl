@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    rpg_battlemap_sup:start_link().
+    rpg_battlemap_sup:start_link(application:get_all_env(rpg_battlemap)).
 
 stop(_State) ->
     ok.

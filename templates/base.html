@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script type="text/javascript" src="/contrib/jquery.js"></script>
+	<link type="text/css" src="/css/base.css" rel="stylesheet" />
+	<title>RPG Battle Map{% block title %}{% endblock %}</title>
+</head>
+<body>
+<div id="main">
+{% block content %}
+<form action="/account/login/" method="post">
+
+<p>
+	<label for="username">{% trans "Username" %}:</label>
+	<input name="username" />
+</p>
+
+<p>
+	<label for="password">{% trans "Password" %}:</label>
+	<input type="password" name="password" />
+</p>
+
+<p>
+	<label>&nbsp;</label>
+	<input type="submit" value="{% trans "Login" %}" />
+</p>
+
+</form>
+{% endblock %}
+</div>
+</body>
