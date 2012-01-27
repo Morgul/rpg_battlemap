@@ -14,6 +14,10 @@ function pre_compile {
 		mkdir priv
 	fi
 
+	if [ ! -d include ]; then
+		mkdir include
+	fi
+
 #	for file in proto_src/*.proto
 #	do
 #		nameBase=`echo "$file" | sed -e "s/^proto_src\///"`
