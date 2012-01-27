@@ -1,0 +1,12 @@
+{application, rpg_battlemap,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { rpg_battlemap_app, []}},
+  {env, []}
+ ]}.

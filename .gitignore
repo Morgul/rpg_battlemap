@@ -1,0 +1,30 @@
+# build artifacts
+ebin
+deps
+erl_crash.dump
+key
+key.pub
+oacd_office
+rel/oacd_office
+*.config
+include/commit_ver.hrl
+
+# run artifacts
+*.log
+Mnesia.*
+cpx_monitor_*
+agent_manager_*
+queue_manager_*
+
+# test artifacts
+.eunit
+
+# doc artifacts
+doc
+
+# editor/ide files
+*.swp
+*.swo
+
+# OS X file system
+.DS_Store
