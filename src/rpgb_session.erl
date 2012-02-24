@@ -9,8 +9,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
 	code_change/3]).
 % api
--export([start_link/0, start_link/1, get_or_start/1, get/1, start/0,
-	destroy/1]).
+-export([start_link/0, start_link/1, get_or_create/1, get/1, create/0,
+	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3]).
 
 %% =================================================================
 %% Api
@@ -21,15 +21,10 @@ start_link() -> start_link([]).
 start_link(Opts) ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, Opts, []).
 
-get_or_start(Id) ->
+get_or_create(Id) ->
 	case ?MODULE:get(Id) of
-		{error, notfound} ->
-			Uuid = make_uuid(),
-			Session = {Uuid, undefined, dict:new(), calendar:local_time()},
-			ets:insert(?MODULE, [Session]),
-			{new, Session};
-		{ok, OutSess} ->
-			{ok, OutSess}
+		{error, notfound} -> create();
+		E -> E
 	end.
 
 get(Id) ->
@@ -37,15 +32,17 @@ get(Id) ->
 		SessId =:= Id]),
 	case qlc:e(QH) of
 		[] -> {error, notfound};
-		[Session] -> {ok, Session}
+		[Session] ->
+			ets:update_element(?MODULE, Id, {4, calendar:local_time()}),
+			{ok, Session}
 	end.
 
-start() ->
+create() ->
 	Uuid = make_uuid(),
 	Session = {Uuid, undefined, dict:new(), calendar:local_time()},
 	case ets:insert_new(?MODULE, Session) of
 		false ->
-			start();
+			create();
 		true ->
 			{ok, Session}
 	end.
@@ -53,12 +50,25 @@ start() ->
 destroy(Id) ->
 	ets:delete(?MODULE, Id).
 
+get_id({Id, _, _, _}) -> Id.
+
+get_user({_, User, _, _}) -> User.
+
+get_value(Key, {_, _, Dict, _}) ->
+	dict:find(Key, Dict).
+
+get_value(Key, {_, _, Dict, _}, Default) ->
+	case dict:find(Key, Dict) of
+		error -> {ok, Default};
+		E -> E
+	end.
+
 %% =================================================================
 %% Init
 %% =================================================================
 
 init(_Opts) ->
-	Ets = ets:new(?MODULE, [named_table]),
+	Ets = ets:new(?MODULE, [named_table, public]),
 	Self = self(),
 	Timer = erlang:send_after(1000 * 60 * 60, Self, clear_dead_sessions),
 	{ok, {Timer, Ets}}.
