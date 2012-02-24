@@ -10,7 +10,8 @@
                   crypto,
                   mochiweb,
                   webmachine,
-                  lager
+                  lager,
+                  openid
                  ]},
   {mod, { rpg_battlemap_app, []}},
   {env, []}

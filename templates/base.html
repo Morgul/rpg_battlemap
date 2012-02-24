@@ -6,26 +6,14 @@
 	<title>RPG Battle Map{% block title %}{% endblock %}</title>
 </head>
 <body>
+<div id="head">
+<form action="/account/login/" method="post">
+	<input name="openid" placeholder="{% trans "OpenID" %}" />
+	<input type="submit" value="{% trans "Login" %}" />
+</form>
+</div>
 <div id="main">
 {% block content %}
-<form action="/account/login/" method="post">
-
-<p>
-	<label for="username">{% trans "Username" %}:</label>
-	<input name="username" />
-</p>
-
-<p>
-	<label for="password">{% trans "Password" %}:</label>
-	<input type="password" name="password" />
-</p>
-
-<p>
-	<label>&nbsp;</label>
-	<input type="submit" value="{% trans "Login" %}" />
-</p>
-
-</form>
 {% endblock %}
 </div>
 </body>

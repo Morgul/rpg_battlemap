@@ -35,9 +35,11 @@ init(Args) ->
 	],
 	Args0 = proplists:delete(dispatch, Args),
 	StartArgs = [{dispatch, Dispatch} | override_defaults(Defaults, Args0)],
-	Kid = {webmachine_mochiweb, {webmachine_mochiweb, start, [StartArgs]},
-		permanent, 5000, worker, [webmachine_mochiweb]},
-    {ok, { {one_for_one, 5, 10}, [Kid]} }.
+	Webmachine = {webmachine_mochiweb, {webmachine_mochiweb, start,
+		[StartArgs]}, permanent, 5000, worker, [webmachine_mochiweb]},
+	Openid = {openid, {openid_srv, start_link, [{global, openid}]}, permanent, 5000,
+		worker, [openid_srv]},
+	{ok, { {one_for_one, 5, 10}, [Webmachine,Openid]} }.
 
 override_defaults(Defaults, Args) ->
 	override_defaults(Defaults, Args, []).
