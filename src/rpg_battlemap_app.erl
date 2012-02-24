@@ -5,7 +5,7 @@
 %% Application callbacks
 -export([start/2, stop/1]).
 %% api
--exprt([get_env/1, get_env/2, get_url/0]).
+-export([get_env/1, get_env/2, get_url/0]).
 
 %% ===================================================================
 %% Application callbacks
