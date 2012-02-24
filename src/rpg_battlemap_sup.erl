@@ -37,9 +37,11 @@ init(Args) ->
 	StartArgs = [{dispatch, Dispatch} | override_defaults(Defaults, Args0)],
 	Webmachine = {webmachine_mochiweb, {webmachine_mochiweb, start,
 		[StartArgs]}, permanent, 5000, worker, [webmachine_mochiweb]},
-	Openid = {openid, {openid_srv, start_link, [{global, openid}]}, permanent, 5000,
-		worker, [openid_srv]},
-	{ok, { {one_for_one, 5, 10}, [Webmachine,Openid]} }.
+	Openid = {openid, {openid_srv, start_link, [{local, openid}]}, permanent, 
+		5000, worker, [openid_srv]},
+	Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
+		5000, worker, [rpgb_session]},
+	{ok, { {one_for_one, 5, 10}, [Webmachine,Openid,Session]} }.
 
 override_defaults(Defaults, Args) ->
 	override_defaults(Defaults, Args, []).
