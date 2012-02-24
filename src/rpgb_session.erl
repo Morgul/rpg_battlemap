@@ -10,7 +10,7 @@
 	code_change/3]).
 % api
 -export([start_link/0, start_link/1, get_or_create/1, get/1, create/0,
-	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3]).
+	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3, set_user/2]).
 
 %% =================================================================
 %% Api
@@ -53,6 +53,14 @@ destroy(Id) ->
 get_id({Id, _, _, _}) -> Id.
 
 get_user({_, User, _, _}) -> User.
+
+set_user(User, {Id, undefined, Values, _}) ->
+	Session = {Id, User, Values, calendar:local_time()},
+	ets:insert(?MODULE, Session),
+	{ok, Session};
+
+set_user(_, _) ->
+	{error, user_already_set}.
 
 get_value(Key, {_, _, Dict, _}) ->
 	dict:find(Key, Dict).
