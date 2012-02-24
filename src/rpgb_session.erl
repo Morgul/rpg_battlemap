@@ -21,13 +21,38 @@ start_link() -> start_link([]).
 start_link(Opts) ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, Opts, []).
 
-get_or_create(Id) ->
+get_or_create(Id) when is_list(Id) ->
+	get_or_create(list_to_binary(Id));
+
+get_or_create(Id) when is_binary(Id) ->
 	case ?MODULE:get(Id) of
 		{error, notfound} -> create();
 		E -> E
+	end;
+
+get_or_create(ReqData) ->
+	?info("req data version of get_or_create", []),
+	{Newness, {ok, Session}} = case ?MODULE:get(ReqData) of
+		{error, notfound} -> {new, create()};
+		E -> {old, E}
+	end,
+	case Newness of
+		old ->
+			?info("session already exists:  ~p", [get_id(Session)]),
+			{ok, Session, ReqData};
+		new ->
+			SessionId1 = get_id(Session),
+			?info("session was created:  ~p", [SessionId1]),
+			{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid",
+				SessionId1, [{max_age, 60 * 60 * 24 * 7}]),
+			ReqData0 = wrq:set_resp_header(CookieHKey, CookieHVal, ReqData),
+			{ok, Session, ReqData0}
 	end.
 
-get(Id) ->
+get(Id) when is_list(Id) ->
+	?MODULE:get(list_to_binary(Id));
+
+get(Id) when is_binary(Id) ->
 	QH = qlc:q([X || {SessId, _, _, _} = X <- ets:table(?MODULE),
 		SessId =:= Id]),
 	case qlc:e(QH) of
@@ -35,7 +60,12 @@ get(Id) ->
 		[Session] ->
 			ets:update_element(?MODULE, Id, {4, calendar:local_time()}),
 			{ok, Session}
-	end.
+	end;
+
+get(ReqData) ->
+	?info("getting session based on req data"),
+	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
+	?MODULE:get(SessionId).
 
 create() ->
 	Uuid = make_uuid(),
