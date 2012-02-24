@@ -47,17 +47,19 @@ process_post(ReqData, Ctx) ->
 	SessionId0 = wrq:get_cookie_value("rpgbsid", ReqData),
 	{ok, Session} = rpgb_session:get_or_create(SessionId0),
 	SessionId1 = rpgb_session:get_id(Session),
+	{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid", SessionId1, [{max_age, 60 * 60 * 24 * 7}]),
+	ReqData0 = wrq:set_resp_header(CookieHKey, CookieHVal, ReqData),
 	case gen_server:call(openid, {prepare, SessionId1, Openid, true}) of
 		{ok, AuthReq} ->
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL),
-			ReqData0 = wrq:set_resp_header("Location", AuthURL, ReqData),
-			ReqData1 = wrq:do_redirect(true, ReqData0),
-			{true, ReqData1, Ctx};
+			ReqData1 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData0),
+			ReqData2 = wrq:do_redirect(true, ReqData1),
+			{true, ReqData2, Ctx};
 		{error, Err} ->
 			?info("Error from openid:  ~p", [Err]),
-			{false, ReqData, Ctx}
+			{false, ReqData0, Ctx}
 	end.
 
 to_html(ReqData, Ctx) ->

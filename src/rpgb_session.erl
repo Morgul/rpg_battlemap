@@ -107,7 +107,7 @@ handle_info(_Msg, State) ->
 
 too_old(TestDate, Now) ->
 	TestSecs = calendar:datetime_to_gregorian_seconds(TestDate),
-	ThreeHours = 1000 * 60 * 60 * 3,
+	ThreeHours = 1000 * 60 * 60 * 24 * 8,
 	TimeDiff = Now - TestSecs,
 	if
 		TimeDiff > ThreeHours -> true;
