@@ -72,7 +72,7 @@ to_html(ReqData, Ctx) ->
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			QueryParams = wrq:req_qs(ReqData),
-			case gen_server:call(openid, {verify, SessionId, ReturnTo, QueryParams}) of
+			case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
 				{ok, UserId} ->
 					io:format("We have ourselves a user:  ~p", [UserId]);
 				{error, Fail} ->
