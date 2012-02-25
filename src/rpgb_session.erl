@@ -49,6 +49,9 @@ get_or_create(ReqData) ->
 			{ok, Session, ReqData0}
 	end.
 
+get(undefined) ->
+	{error, notfound};
+
 get(Id) when is_list(Id) ->
 	?MODULE:get(list_to_binary(Id));
 
@@ -64,6 +67,7 @@ get(Id) when is_binary(Id) ->
 
 get(ReqData) ->
 	?info("getting session based on req data"),
+	?debug("Das reqData:  ~p", [ReqData]),
 	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
 	?MODULE:get(SessionId).
 
