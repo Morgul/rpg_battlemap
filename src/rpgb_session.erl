@@ -67,7 +67,6 @@ get(Id) when is_binary(Id) ->
 
 get(ReqData) ->
 	?info("getting session based on req data"),
-	?debug("Das reqData:  ~p", [ReqData]),
 	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
 	?MODULE:get(SessionId).
 
