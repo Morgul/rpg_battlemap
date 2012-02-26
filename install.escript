@@ -28,18 +28,23 @@ compile_models() ->
 
 compile_models([]) -> ok;
 compile_models([ModelFile | Tail]) ->
-	File = filename:join(["models", ModelFile]),
 	ModelName = filename:rootname(ModelFile),
-	ModelLastMod = filelib:last_modified(File),
-	BeamLastMod = filelib:last_modified(filename:join(["ebin", ModelName ++ ".beam"])),
+	ModelLastMod = filelib:last_modified(ModelFile),
+	BeamFile = filename:join(["ebin", ModelName ++ ".beam"]),
+	BeamLastMod = filelib:last_modified(BeamFile),
 	Res = if
 		ModelLastMod > BeamLastMod ->
-			boss_record_compiler:compile(File, [{out_dir, "ebin"}]);
+			boss_record_compiler:compile(ModelFile, [{out_dir, "ebin"}]);
 		true ->	
-			nochange
+			{ok, nochange}
 	end,
-	io:format("Compiling ~s:  ~p\n", [ModelFile, Res]),
-	compile_models(Tail).
+	case Res of
+		{ok, _} ->
+			compile_models(Tail);
+		{error, _} = Err ->
+			io:format("~p", [Err]),
+			halt(1)
+	end.
 
 build_db() ->
 	mnesia:create_schema([node()]),
