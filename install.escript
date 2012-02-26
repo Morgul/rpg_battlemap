@@ -1,5 +1,5 @@
 #! /usr/bin/env escript
-%%! -sname rpb_battlemap
+%%! -sname rpg_battlemap_dev
 -mode(compile).
 
 %% @doc Create the mnesia tables, or compile the boss_db models.  Update
@@ -34,17 +34,27 @@ compile_models([ModelFile | Tail]) ->
 	compile_models(Tail).
 
 build_db() ->
+	mnesia:create_schema([node()]),
+	io:format("Schema created\n"),
 	mnesia:start(),
-	mnesia:create_schema(),
 	% yeah hard coded stuff!
 	TableData = [
 		% boss_db needs this to generate ids.
-		{'_ids_', []},
+		{'_ids_', [{disc_copies, [node()]}]},
 		% prefixing rpgb_ on table names because module 'group' is used.
-		{rpgb_user, [{attributes, [id, name, open_id, group_id, created_time, 
-			updated_time]}]},
-		{rpgb_group, [{attributes, [id, name, created_time, updated_time]}]},
-		{rpgb_permission, [{attributes, [id, tag, user_id, group_id]}]}
+		{rpgb_user, [
+			{attributes,
+				[id, name, open_id, rpgb_group_id, created_time, updated_time]},
+			{disc_copies, [node()]}
+		]},
+		{rpgb_group, [
+			{attributes, [id, name, created_time, updated_time]},
+			{disc_copies, [node()]}
+		]},
+		{rpgb_permission, [
+			{attributes, [id, tag, rpgb_user_id, rpgb_group_id]},
+			{disc_copies, [node()]}
+		]}
 	],
-	[mnesia:create_table(Tname, [{attributes, Attr}]) ||
-		{Tname, Attr} <- TableData].
+	[io:format("Creating table ~s:  ~p\n", [Tname, mnesia:create_table(Tname,
+		Attr)]) || {Tname, Attr} <- TableData].
