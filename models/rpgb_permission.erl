@@ -1,0 +1,3 @@
+-module(rpgb_permission, [Id, RpgbUserId, RpgbGroupId]).
+-belongs_to(rpgb_user).
+-belongs_to(rpgb_group).

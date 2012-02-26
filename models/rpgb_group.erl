@@ -1,0 +1,2 @@
+-module(rpgb_group, [Id, Name::binary(), CreatedTime::timestamp(), UpdatesTime::timestamp()]).
+-has({permissions, many}).

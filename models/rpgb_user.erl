@@ -1,0 +1,3 @@
+-module(rpgb_user, [Id, Name, OpenID, RpgbGroupId, CreateTime, UpdateTime]).
+-has({permissions, many, [{module, rpgb_permission}]}).
+-belongs_to(rpgb_group).
