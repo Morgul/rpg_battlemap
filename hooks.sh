@@ -37,6 +37,9 @@ function pre_compile {
 		ln -sf ../deps rpg_battlemap/deps
 	fi
 
+	# model files
+	/usr/bin/env escript install.escript compile
+
 	# record what commit/version the rep is at
 	COMMIT=""
 	if [ -d ".git" ]
