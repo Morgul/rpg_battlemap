@@ -23,7 +23,7 @@ do_actions(["build_db" | Tail]) ->
 	do_actions(Tail).
 
 compile_models() ->
-	{ok, ModelFiles} = file:list_dir("models"),
+	ModelFiles = filelib:wildcard("./models/*.erl"),
 	compile_models(ModelFiles).
 
 compile_models([]) -> ok;
@@ -34,7 +34,7 @@ compile_models([ModelFile | Tail]) ->
 	BeamLastMod = filelib:last_modified(filename:join(["ebin", ModelName ++ ".beam"])),
 	Res = if
 		ModelLastMod > BeamLastMod ->
-			 boss_record_compiler:compile(File, [{out_dir, "ebin"}]);
+			boss_record_compiler:compile(File, [{out_dir, "ebin"}]);
 		true ->	
 			nochange
 	end,
@@ -47,22 +47,27 @@ build_db() ->
 	mnesia:start(),
 	% yeah hard coded stuff!
 	TableData = [
+
 		% boss_db needs this to generate ids.
 		{'_ids_', [{disc_copies, [node()]}]},
+
 		% prefixing rpgb_ on table names because module 'group' is used.
 		{rpgb_user, [
 			{attributes,
 				[id, name, open_id, rpgb_group_id, created_time, updated_time]},
 			{disc_copies, [node()]}
 		]},
+
 		{rpgb_group, [
 			{attributes, [id, name, created_time, updated_time]},
 			{disc_copies, [node()]}
 		]},
+
 		{rpgb_permission, [
 			{attributes, [id, tag, rpgb_user_id, rpgb_group_id]},
 			{disc_copies, [node()]}
 		]}
+
 	],
 	[io:format("Creating table ~s:  ~p\n", [Tname, mnesia:create_table(Tname,
 		Attr)]) || {Tname, Attr} <- TableData].
