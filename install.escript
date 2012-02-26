@@ -29,7 +29,15 @@ compile_models() ->
 compile_models([]) -> ok;
 compile_models([ModelFile | Tail]) ->
 	File = filename:join(["models", ModelFile]),
-	Res = boss_record_compiler:compile(File, [{out_dir, "ebin"}]),
+	ModelName = filename:rootname(ModelFile),
+	ModelLastMod = filelib:last_modified(File),
+	BeamLastMod = filelib:last_modified(filename:join(["ebin", ModelName ++ ".beam"])),
+	Res = if
+		ModelLastMod > BeamLastMod ->
+			 boss_record_compiler:compile(File, [{out_dir, "ebin"}]);
+		true ->	
+			nochange
+	end,
 	io:format("Compiling ~s:  ~p\n", [ModelFile, Res]),
 	compile_models(Tail).
 
