@@ -20,7 +20,8 @@ crud_test_() ->
 		ok
 	end, [
 		fun(_) -> {"granting permission", fun() ->
-			Perm = rpgb_permission:new(needs_permission)
+			Perm = rpgb_permission:new(needs_permission, "create_things"),
+			?assertEqual("create_things-needs_permission-1337", Perm:id())
 		end} end,
 
 		{"perpetual failure", ?_assert(false)}
