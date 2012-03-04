@@ -11,19 +11,27 @@
 	<style type="text/css" rel="/contrib/css/smoothness/jquery-ui.css"></style>
 	<style type="text/css">
 		#drawingBoard {
-			width:90%;
 			height:70%;
 			position:relative;
-		}
-		.drawingBoard {
-			width: 100%;
-			height: 100%;
 		}
 		#canvasBoard {
 			position:absolute;
 			top:0;
 			left:0;
 			pointer-events: none;
+		}
+		#combatantList {
+			list-style:none;
+		}
+		#combatantInfo {
+			display:none;
+		}
+		#leftColumn {
+			float:left;
+			width:200px;
+		}
+		#rightColumn {
+			margin-left:200px;
 		}
 	</style>
 </head>
@@ -36,11 +44,20 @@
 </div>
 <div id="main">
 {% block content %}
-<div id="drawingBoard">
-	<!--<div id="svgBoard" class="drawingBoard"></div>-->
-	<canvas id="canvasBoard"></canvas>
-</div>
-{% endblock %}
+	<div id="leftColumn">
+		<ul id="combatantList">
+			<li>Combatant One</li>
+			<li>Combatant Two</li>
+		</ul>
+		<div id="combatantInfo">
+			Here be info.
+		</div>
+	</div>
+	<div id="rightColumn">
+		<div id="drawingBoard">
+			<canvas id="canvasBoard"></canvas>
+		</div>
+	</div>
 </div>
 <script type="text/javascript">
 	$().ready(function(){
@@ -64,10 +81,12 @@
 			}
 			delta = delta / 100;
 			battleMap.setZoom(battleMap.zoom + delta);
+			return false;
 		});
 
 		resizeBattleMap();
 		window.battleMap.drawGrid();
 	});
 </script>
+{% endblock %}
 </body>
