@@ -158,13 +158,13 @@ function Combatant(battlemap, opts){
 	var pap = this.battlemap.svgPaper;
 	this.svgData = {};
 	this.svgData.set = pap.set();
-	this.svgData.colorRect = pap.rect(0,0,cellSize,cellSize);
+	this.svgData.colorRect = pap.rect(0,0,cellSize * this.size, cellSize * this.size);
 	this.svgData.colorRect.attr({ fill:this.color });
 	this.svgData.set.push(this.svgData.colorRect);
 	if(this.image){
 		var padding = cellSize / 32;
 		this.svgData.image = pap.image(this.image, padding, padding,
-			cellSize - (padding * 2), cellSize - (padding * 2));
+			(cellSize * this.size) - (padding * 2), (cellSize * this.size) - (padding * 2));
 		this.svgData.set.push(this.svgData.image);
 	}
 	if(this.onMouseOver){
