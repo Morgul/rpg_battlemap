@@ -95,6 +95,13 @@ BattleMap.prototype.pan = function(deltaX, deltaY){
 	this.drawGrid();
 }
 
+BattleMap.prototype.getTransformString = function(cellX, cellY){
+	var transX = ((this.gridSpacing * cellX) + this.translateX) * this.zoom;
+	var transY = ((this.gridSpacing * cellY) + this.translateY) * this.zoom;
+	var out = "T" + transX + "," + transY + "S" + this.zoom + "," + this.zoom + "0,0";
+	return out;
+}
+
 /***********************************************************************
 Class Combatant
 
@@ -105,17 +112,47 @@ function Combatant(battlemap, opts){
 	// opts should override most of these.
 	this.name = "Jethro";
 	this.color = "green";
-	this.cell = [0,0];  // [x coord, y coord]
+	this.cellX = 0;
+	this.cellY = 0;
 	this.size = 1;
 	this.hp = 5;
 	this.conditions = [];
 	for(var i in opts){
 		this[i] = opts[i];
 	}
+
+	// svg elements
+	var cellSize = this.battlemap.gridSpacing;
+	var pap = this.battlemap.svgPaper;
+	this.svgData = {};
+	this.svgData.set = pap.set();
+	this.svgData.colorRect = pap.rect(0,0,cellSize,cellSize);
+	this.svgData.colorRect.attr({ fill:this.color });
+	this.svgData.set.push(this.svgData.colorRect);
+	if(this.image){
+		var padding = cellSize / 32;
+		this.svgData.image = pap.image(this.image, padding, padding,
+			cellSize - (padding * 2), cellSize - (padding * 2));
+		this.svgData.set.push(this.svgData.image);
+	}
+	if(this.onMouseOver){
+		this.svgData.set.mouseover(this.onMouseOver);
+	}
+
+	this.updateTransform();
 }
 
-Combatant.prototype.draw = function(){
-	if(! this.svgReference){
-		// stuff?
-	}
+Combatant.prototype.updateTransform = function(){
+	var transformStr = this.battlemap.getTransformString(this.cellX, this.cellY);
+	this.svgData.set.transform(transformStr);
+}
+
+Combatant.prototype.remove = function(){
+	this.svgData.set.remove();
+}
+
+Combatant.prototype.moveTo = function(newX, newY){
+	this.cellX = newX;
+	this.cellY = newY;
+	this.updateTransform();
 }
