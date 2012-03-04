@@ -98,7 +98,7 @@ BattleMap.prototype.pan = function(deltaX, deltaY){
 BattleMap.prototype.getTransformString = function(cellX, cellY){
 	var transX = ((this.gridSpacing * cellX) + this.translateX) * this.zoom;
 	var transY = ((this.gridSpacing * cellY) + this.translateY) * this.zoom;
-	var out = "T" + transX + "," + transY + "S" + this.zoom + "," + this.zoom + "0,0";
+	var out = "S" + this.zoom + "," + this.zoom + ",0,0T" + transX + "," + transY;
 	return out;
 }
 
