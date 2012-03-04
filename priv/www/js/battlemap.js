@@ -35,18 +35,14 @@ BattleMap.prototype._getOffset = function(translate){
 
 BattleMap.prototype.drawVerticalsGrid = function(width, height){
 	var offset = (this.translateX % this.gridSpacing) * this.zoom;
-	console.log("vertical draw.", width);
 	for(offset; offset <= width; offset += (this.gridSpacing * this.zoom)){
-		console.log("vertical draw offset", offset);
 		this.gridCtx.fillRect(offset, 0, 1, height);
 	}
 }
 
 BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 	var offset = (this.translateY % this.gridSpacing) * this.zoom;
-	console.log("horizontal draw", height);
 	for(offset; offset < height; offset += (this.gridSpacing * this.zoom)){
-		console.log("horizontal draw offset", offset);
 		this.gridCtx.fillRect(0,offset,width,1);
 	}
 }
