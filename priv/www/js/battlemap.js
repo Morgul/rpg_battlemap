@@ -18,6 +18,11 @@ function BattleMap(actionElem, gridElem, opts){
 	this.actionElem = '#' + actionElem;
 	this.gridElem = '#' + gridElem;
 	this.gridCtx = $(this.gridElem)[0].getContext('2d');
+	
+	var svgHeight = $(this.actionElem).height();
+	var svgWidth = $(this.actionElem).width();
+	this.svgPaper = Raphael(actionElem, svgWidth, svgHeight);
+
 	this.zoom = 1; // as long as it's above 0, we're okay.
 	this.translateX = 0; // translate as in motion on a 2d plane
 	this.translateY = 0;
@@ -41,6 +46,7 @@ BattleMap.prototype.drawGrid = function(){
 	this.gridCtx.setFillColor("black");
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
+	this.svgPaper.setSize(width, height);
 }
 
 BattleMap.prototype._getOffset = function(translate){
@@ -96,7 +102,20 @@ Class Combatant
 ***********************************************************************/
 function Combatant(battlemap, opts){
 	this.battlemap = battlemap;
+	// opts should override most of these.
+	this.name = "Jethro";
+	this.color = "green";
+	this.cell = [0,0];  // [x coord, y coord]
+	this.size = 1;
+	this.hp = 5;
+	this.conditions = [];
 	for(var i in opts){
 		this[i] = opts[i];
+	}
+}
+
+Combatant.prototype.draw = function(){
+	if(! this.svgReference){
+		// stuff?
 	}
 }
