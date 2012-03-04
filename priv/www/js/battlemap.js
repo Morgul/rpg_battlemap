@@ -22,7 +22,7 @@ BattleMap.prototype.drawGrid = function(){
 	var width = $(this.gridElem).width();
 	var topcornerx = 0 + this.translateX;
 	var topcornery = 0 + this.translateY;
-	this.gridCtx.clearRect(topcornerx, topcornery, width, height);
+	this.gridCtx.clearRect(0,0, width, height);
 	this.gridCtx.setFillColor("black");
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
