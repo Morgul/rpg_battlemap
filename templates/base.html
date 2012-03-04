@@ -2,8 +2,28 @@
 <html>
 <head>
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
+	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
+	<script type="text/javascript" src="/js/battlemap.js"></script>
 	<link type="text/css" src="/css/base.css" rel="stylesheet" />
 	<title>RPG Battle Map{% block title %}{% endblock %}</title>
+	<style type="text/css" rel="/contrib/css/smoothness/jquery-ui.css"></style>
+	<style type="text/css">
+		#drawingBoard {
+			width:90%;
+			height:70%;
+			position:relative;
+		}
+		.drawingBoard {
+			width: 100%;
+			height: 100%;
+		}
+		#canvasBoard {
+			position:absolute;
+			top:0;
+			left:0;
+		}
+	</style>
 </head>
 <body>
 <div id="head">
@@ -14,6 +34,31 @@
 </div>
 <div id="main">
 {% block content %}
+<div id="drawingBoard">
+	<div id="svgBoard" class="drawingBoard"></div>
+	<canvas id="canvasBoard"></canvas>
+</div>
 {% endblock %}
 </div>
+<script type="text/javascript">
+	$().ready(function(){
+		window.battleMap = new BattleMap('svgBoard', 'canvasBoard', {});
+		function resizeBattleMap() {
+			console.log("resizing stuff");
+			var headerHeight = $('#head').height();
+			var guessheight = window.innerHeight - (headerHeight + 20) ;
+			$('#drawingBoard').height(guessheight);
+			var newHeight = $('#drawingBoard').height();
+			var newWidth = $('#drawingBoard').width();
+			$('#canvasBoard').attr("width", newWidth)
+			$('#canvasBoard').attr("height", newHeight);
+			window.battleMap.drawGrid();
+		}
+
+		$(window).resize(resizeBattleMap);
+
+		resizeBattleMap();
+		window.battleMap.drawGrid();
+	});
+</script>
 </body>
