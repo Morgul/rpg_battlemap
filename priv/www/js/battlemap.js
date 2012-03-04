@@ -81,7 +81,6 @@ BattleMap.prototype.setZoom = function(z){
 		z = 3;
 	}
 	this.zoom = z;
-	console.log("zoom!", z);
 	this.drawGrid();
 }
 
