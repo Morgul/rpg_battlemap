@@ -5,6 +5,11 @@ function pre_clean {
 	rm -f include/commit_ver.hrl
 }
 
+function pre_eunit {
+	mkdir .eunit
+	/usr/bin/env escript install.escript -debug compile
+}
+
 function pre_compile {
 	if [ ! -d ebin ]; then
 		mkdir ebin
@@ -74,4 +79,6 @@ case $1 in
 		post_compile;;
 	"pre_clean")
 		pre_clean;;
+	"pre_eunit")
+		pre_eunit;;
 esac

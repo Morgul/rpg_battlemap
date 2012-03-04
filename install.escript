@@ -9,6 +9,7 @@ main(Args) ->
 	{ok, DepsDirs} = file:list_dir("deps"),
 	Paths = ["deps/" ++ X ++ "/ebin" || X <- DepsDirs],
 	code:add_paths(Paths),
+	put(out_dir, "ebin"),
 	do_actions(Args).
 
 do_actions([]) ->
@@ -20,6 +21,10 @@ do_actions(["compile" | Tail]) ->
 
 do_actions(["build_db" | Tail]) ->
 	build_db(),
+	do_actions(Tail);
+
+do_actions(["-debug" | Tail]) ->
+	put(out_dir, ".eunit"),
 	do_actions(Tail).
 
 compile_models() ->
@@ -34,7 +39,7 @@ compile_models([ModelFile | Tail]) ->
 	BeamLastMod = filelib:last_modified(BeamFile),
 	Res = if
 		ModelLastMod > BeamLastMod ->
-			boss_record_compiler:compile(ModelFile, [{out_dir, "ebin"}]);
+			boss_record_compiler:compile(ModelFile, [{out_dir, get(out_dir)}]);
 		true ->	
 			{ok, nochange}
 	end,
