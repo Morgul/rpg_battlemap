@@ -46,3 +46,25 @@ BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 		this.gridCtx.fillRect(0,offset,width,1);
 	}
 }
+
+BattleMap.prototype.setZoom = function(z){
+	this.zoom = z;
+	this.drawGrid();
+}
+
+BattleMap.prototype.setGridSpacing = function(spacing){
+	this.gridSpacing = spacing;
+	this.drawGrid();
+}
+
+BattleMap.prototype.setTranslation = function(x, y){
+	this.translateX = x;
+	this.translateY = y;
+	this.drawGrid();
+}
+
+BattleMap.prototype.pan = function(deltaX, deltaY){
+	this.translateX += deltaX;
+	this.translateY += deltaY;
+	this.drawGrid();
+}
