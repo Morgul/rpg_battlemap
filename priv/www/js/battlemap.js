@@ -1,5 +1,19 @@
 // dependency on rapheal and jquery.
 
+/***********************************************************************
+Class BattleMap
+
+Grid and battle ground context and data.  Responsible for drawing a
+grid and placing entities such they are aligned to the grid.  Entities
+such as combatants and terrain need only concern themselves with which
+grid cell they are in.
+* actionElem :: string() - Id of the element to use for svg drawing.
+* gridElem :: string() - Id of the canvas to use for drawing the grid and
+other limited interactive elements.
+* opts :: Object() - Other parameters to assign to the battlemap.  This can
+be used to override the default zoom, translateX, transalteY, and 
+gridSpacing as well as set additional functions.
+***********************************************************************/
 function BattleMap(actionElem, gridElem, opts){
 	this.actionElem = '#' + actionElem;
 	this.gridElem = '#' + gridElem;
@@ -13,6 +27,7 @@ function BattleMap(actionElem, gridElem, opts){
 	}
 }
 
+/* clears the canvas and redraws the grid. */
 BattleMap.prototype.drawGrid = function(){
 	// resize canvas to avoid weird grid scaling.
 	var parentWidth = $(this.gridElem).parent().width();
@@ -47,24 +62,41 @@ BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 	}
 }
 
+/* set the zoom and redraw the grid */
 BattleMap.prototype.setZoom = function(z){
 	this.zoom = z;
 	this.drawGrid();
 }
 
+/* sets the spacing and redraws the grid */
 BattleMap.prototype.setGridSpacing = function(spacing){
 	this.gridSpacing = spacing;
 	this.drawGrid();
 }
 
+/* sets the translation and redraws the grid. */
 BattleMap.prototype.setTranslation = function(x, y){
 	this.translateX = x;
 	this.translateY = y;
 	this.drawGrid();
 }
 
+/* sets the translation using deltas instead of absolute values.  redraws
+the grid. */
 BattleMap.prototype.pan = function(deltaX, deltaY){
 	this.translateX += deltaX;
 	this.translateY += deltaY;
 	this.drawGrid();
+}
+
+/***********************************************************************
+Class Combatant
+
+
+***********************************************************************/
+function Combatant(battlemap, opts){
+	this.battlemap = battlemap;
+	for(var i in opts){
+		this[i] = opts[i];
+	}
 }
