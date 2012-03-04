@@ -27,6 +27,8 @@ function BattleMap(actionElem, gridElem, opts){
 	this.translateX = 0; // translate as in motion on a 2d plane
 	this.translateY = 0;
 	this.gridSpacing = 32; // pixels
+
+	this.transformListeners = [];
 	for(var i in opts){
 		this[i] = opts[i]
 	}
@@ -47,6 +49,7 @@ BattleMap.prototype.drawGrid = function(){
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
 	this.svgPaper.setSize(width, height);
+	this.triggerTransformListeners();
 }
 
 BattleMap.prototype._getOffset = function(translate){
@@ -95,6 +98,27 @@ BattleMap.prototype.pan = function(deltaX, deltaY){
 	this.drawGrid();
 }
 
+BattleMap.prototype.triggerTransformListeners = function(){
+	for(var i = 0; i < this.transformListeners.length; i++){
+		try{
+			this.transformListeners[i].updateTransform();
+		} catch (ex) {
+			console.log('listener fail', this.transformListeners[i]);
+			this.removeTransformListener(this.transformListeners[i]);
+		}
+	}
+}
+
+BattleMap.prototype.addTransformListener = function(obj){
+	this.transformListeners.push(obj);
+}
+
+BattleMap.prototype.removeTransformListener = function(obj){
+	this.transformListeners = this.transformListeners.filter(function(x){
+		return (obj != x);
+	});
+}
+
 BattleMap.prototype.getTransformString = function(cellX, cellY){
 	var transX = ((this.gridSpacing * cellX) + this.translateX) * this.zoom;
 	var transY = ((this.gridSpacing * cellY) + this.translateY) * this.zoom;
@@ -139,6 +163,7 @@ function Combatant(battlemap, opts){
 		this.svgData.set.mouseover(this.onMouseOver);
 	}
 
+	this.battlemap.addTransformListener(this);
 	this.updateTransform();
 }
 
@@ -149,6 +174,7 @@ Combatant.prototype.updateTransform = function(){
 
 Combatant.prototype.remove = function(){
 	this.svgData.set.remove();
+	this.battlemap.removeTransformListener(this);
 }
 
 Combatant.prototype.moveTo = function(newX, newY){
