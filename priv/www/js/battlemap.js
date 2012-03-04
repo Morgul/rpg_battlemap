@@ -190,3 +190,20 @@ Combatant.prototype.moveTo = function(newX, newY){
 	this.cellY = newY;
 	this.updateTransform();
 }
+
+Combatant.prototype.setColor = function(color){
+	this.color = color;
+	this.svgData.colorRect.attr({fill:color});
+}
+
+Combatant.prototype.setSize = function(size){
+	this.size = size;
+	var cellSize = this.battlemap.gridSpacing;
+	var rectSize = cellSize * this.size;
+	this.svgData.colorRect.attr({width:rectSize,height:rectSize});
+	if(this.image){
+		var padding = cellSize / 32;
+		var imageSize = (cellSize * this.size) - (padding * 2);
+		this.svgData.image.attr({width:imageSize,height:imageSize});
+	}
+}
