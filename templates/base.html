@@ -3,6 +3,7 @@
 <head>
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/contrib/jquery.tools.min.js"></script>
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
 	<link type="text/css" src="/css/base.css" rel="stylesheet" />
@@ -56,6 +57,14 @@
 		}
 
 		$(window).resize(resizeBattleMap);
+
+		$('#drawingBoard').mousewheel(function(ev, delta){
+			if(isNaN(delta)){
+				delta = ev.originalEvent.wheelDelta;
+			}
+			delta = delta / 100;
+			battleMap.setZoom(battleMap.zoom + delta);
+		});
 
 		resizeBattleMap();
 		window.battleMap.drawGrid();

@@ -36,6 +36,7 @@ function BattleMap(actionElem, gridElem, opts){
 
 /* clears the canvas and redraws the grid. */
 BattleMap.prototype.drawGrid = function(){
+	this.skipDraw = true;
 	// resize canvas to avoid weird grid scaling.
 	var parentWidth = $(this.gridElem).parent().width();
 	var parentHeight = $(this.gridElem).parent().height();
@@ -73,7 +74,14 @@ BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 
 /* set the zoom and redraw the grid */
 BattleMap.prototype.setZoom = function(z){
+	if(z < .1){
+		z = .1; 
+	}
+	if(z > 3){
+		z = 3;
+	}
 	this.zoom = z;
+	console.log("zoom!", z);
 	this.drawGrid();
 }
 
