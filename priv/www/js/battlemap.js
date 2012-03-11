@@ -221,7 +221,10 @@ function datadump(dataHolder, topNode){
 		var defaultVal = elem.getAttribute("display-default") || "";
 		var displayAttr = elem.getAttribute("display-attr") || "innerHTML";
 		var objectProperty = elem.getAttribute("object-property");
-		var displayValue = dataHolder[objectProperty] || defaultVal;
+		var displayValue = dataHolder[objectProperty];
+		if(dataHolder[objectProperty] == undefined){
+			displayValue = defaultVal;
+		}
 
 		if(displayAttr == "style"){
 			var styleProperty = elem.getAttribute("style-display");

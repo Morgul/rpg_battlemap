@@ -68,7 +68,9 @@
 		</ul>
 		<div id="addCombatant">
 			<form name="addCombatant">
-				<p><input name="name" placeholder="Combatant Name" />
+				<p>
+					<input name="name" placeholder="Combatant Name" />
+				</p>
 				<p>
 					<label>Starting Position</label>
 					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />, 
@@ -76,12 +78,18 @@
 				<p>
 					<label for="color">Color</label>
 					<input name="color" placeholder="blue" type="color" />
-				<p>
+				</p>
 				<p>
 					<label for="initiative">Initiative</label>
 					<input name="initiative" placeholder="10" type="number" />
 				</p>
-				<p><input name="create" type="submit" value="Add Combatant" /></p>
+				<p>
+					<label for="size">Size</label>
+					<input name="size" value="1" type="number" />
+				</p>
+				<p>
+					<input name="create" type="submit" value="Add Combatant" />
+				</p>
 			</form>
 		</div>
 	</div>
@@ -118,6 +126,24 @@
 
 		resizeBattleMap();
 		window.battleMap.drawGrid();
+
+		window.combatantList = [];
+
+		$('#addCombatant form').submit(function(){
+			var creationObj = {};
+			var newCombatant;
+			for(var i = 0; i < this.elements.length; i++){
+				creationObj[this.elements[i].name] = this.elements[i].value;
+			}
+			creationObj.onMouseOver = function(){
+				datadump(newCombatant, '#combatantInfo');
+				$('#combatantConditions').html(newCombatant.conditions.join(", "));
+			}
+			newCombatant = new Combatant(window.battleMap, creationObj);
+			combatantList.push(newCombatant);
+			combatantList.sort(Combatant.sortByInitiative);
+			return false;
+		});
 	});
 </script>
 {% endblock %}
