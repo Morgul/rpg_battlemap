@@ -25,6 +25,14 @@
 		}
 		#combatantInfo {
 		}
+		form label{
+			font-size:xx-small;
+			color: gray;
+			display:block;
+		}
+		form p{
+			margin: 8px 0 8px 0;
+		}
 		#leftColumn {
 			float:left;
 			width:200px;
@@ -45,16 +53,37 @@
 {% block content %}
 	<div id="leftColumn">
 		<div id="combatantInfo">
-			<img object-property="image" display-attr="src" />
-			<p object-property="color" display-attr="style" style-display="background-color"><span object-property="name">&nbsp;</span></p>
+			<div object-property="color" display-attr="style" style-display="border-color" style="float: left; width: 48px; height: 48px; border-width: 3px; margin:3px; border-style:solid;">
+			<img object-property="image" display-attr="src" style="width:100%; height: 100%;" />
+		</div>
+			<p object-property="name">&nbsp;</p>
 			<p>cell
-				<span object-property="cellX">&nbsp;</span> X <span object-property="cellY">&nbsp;</span>
+				<span object-property="cellX">&nbsp;</span>, <span object-property="cellY">&nbsp;</span>
 			</p>
+			<p id="combatantConditions">&nbsp;</p>
 		</div>
 		<ul id="combatantList">
 			<li>Combatant One</li>
 			<li>Combatant Two</li>
 		</ul>
+		<div id="addCombatant">
+			<form name="addCombatant">
+				<p><input name="name" placeholder="Combatant Name" />
+				<p>
+					<label>Starting Position</label>
+					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />, 
+					<input style="width: 4em;" name="cellY" placeholder="Y" type="number" /></p>
+				<p>
+					<label for="color">Color</label>
+					<input name="color" placeholder="blue" type="color" />
+				<p>
+				<p>
+					<label for="initiative">Initiative</label>
+					<input name="initiative" placeholder="10" type="number" />
+				</p>
+				<p><input name="create" type="submit" value="Add Combatant" /></p>
+			</form>
+		</div>
 	</div>
 	<div id="rightColumn">
 		<div id="drawingBoard">

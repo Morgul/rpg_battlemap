@@ -147,6 +147,7 @@ function Combatant(battlemap, opts){
 	this.cellY = 0;
 	this.size = 1;
 	this.hp = 5;
+	this.initiative = 10;
 	this.conditions = [];
 	for(var i in opts){
 		this[i] = opts[i];
@@ -205,6 +206,10 @@ Combatant.prototype.setSize = function(size){
 		var imageSize = (cellSize * this.size) - (padding * 2);
 		this.svgData.image.attr({width:imageSize,height:imageSize});
 	}
+}
+
+Combatant.sortByInitiative = function(combater1, combater2){
+	return combater1.initiative - combater2.initiative;
 }
 
 /***********************************************************************
