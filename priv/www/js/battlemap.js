@@ -206,3 +206,30 @@ Combatant.prototype.setSize = function(size){
 		this.svgData.image.attr({width:imageSize,height:imageSize});
 	}
 }
+
+/***********************************************************************
+Utility functions to make life easier.
+***********************************************************************/
+
+function datadump(dataHolder, topNode){
+	$('[object-property]', topNode).each(function(index, elem){
+		var defaultVal = elem.getAttribute("display-default") || "";
+		var displayAttr = elem.getAttribute("display-attr") || "innerHTML";
+		var objectProperty = elem.getAttribute("object-property");
+		var displayValue = dataHolder[objectProperty] || defaultVal;
+
+		if(displayAttr == "style"){
+			var styleProperty = elem.getAttribute("style-display");
+			elem.style[styleProperty] = displayValue;
+			return;
+		}
+
+		var notAttrs = ["innerHTML", "innerText"];
+		if(notAttrs.indexOf(displayAttr) > -1){
+			elem[displayAttr] = displayValue;
+			return;
+		}
+
+		elem.setAttribute(displayAttr, displayValue);
+	});
+}
