@@ -23,6 +23,10 @@
 		#combatantList {
 			list-style:none;
 		}
+		#combatantList li{
+			border-style: solid;
+			border-width: 3px;
+		}
 		#combatantInfo {
 		}
 		form label{
@@ -63,8 +67,6 @@
 			<p id="combatantConditions">&nbsp;</p>
 		</div>
 		<ul id="combatantList">
-			<li>Combatant One</li>
-			<li>Combatant Two</li>
 		</ul>
 		<div id="addCombatant">
 			<form name="addCombatant">
@@ -129,6 +131,15 @@
 
 		window.combatantList = [];
 
+		window.updateCombatantListDisplay = function(){
+			combatantList = combatantList.sort(Combatant.sortByInitiative);
+			var cl = $('#combatantList');
+			cl.empty();
+			combatantList.map(function(dude, ind){
+				cl.append('<li style="border-color:' + dude.color + '">' + dude.name + '</li>');
+			});
+		}
+
 		$('#addCombatant form').submit(function(){
 			var creationObj = {};
 			var newCombatant;
@@ -141,7 +152,7 @@
 			}
 			newCombatant = new Combatant(window.battleMap, creationObj);
 			combatantList.push(newCombatant);
-			combatantList.sort(Combatant.sortByInitiative);
+			updateCombatantListDisplay();
 			return false;
 		});
 	});

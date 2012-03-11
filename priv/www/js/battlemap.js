@@ -209,7 +209,7 @@ Combatant.prototype.setSize = function(size){
 }
 
 Combatant.sortByInitiative = function(combater1, combater2){
-	return combater1.initiative - combater2.initiative;
+	return combater2.initiative - combater1.initiative;
 }
 
 /***********************************************************************
