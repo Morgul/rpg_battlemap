@@ -46,7 +46,8 @@ BattleMap.prototype.drawGrid = function(){
 	var topcornerx = 0 + this.translateX;
 	var topcornery = 0 + this.translateY;
 	this.gridCtx.clearRect(0,0, width, height);
-	this.gridCtx.setFillColor("black");
+	//this.gridCtx.setFillColor("black");
+	this.gridCtx.fillSytle = "black";
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
 	this.svgPaper.setSize(width, height);
