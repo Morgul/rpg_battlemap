@@ -133,6 +133,39 @@ BattleMap.prototype.getTransformString = function(cellX, cellY){
 	return out;
 }
 
+BattleMap.prototype.getCell = function(x,y){
+	var cellX = Math.floor((x - (this.translateX * this.zoom)) / (this.zoom * this.gridSpacing));
+	var cellY = Math.floor((y - (this.translateY * this.zoom)) / (this.zoom * this.gridSpacing));
+	return [cellX,cellY];
+}
+
+BattleMap.prototype.highlight = function(cellX, cellY, size){
+	if(size == undefined){
+		size = 1;
+	}
+	if(this.highlighted){
+		try{
+			this.highlighted.remove();
+		} catch (ex) {
+			console.log('error with removal', ex);
+		}
+		delete this.highlighted;
+	}
+	var size = this.gridSpacing * size;
+	this.highlighted = this.svgPaper.rect(0,0,size,size);
+	this.highlighted.attr({
+		'fill-opacity':0,
+		'stroke':'gray',
+		'stroke-width':3
+	});
+	this.highlighted.transform(this.getTransformString(cellX,cellY));
+}
+
+BattleMap.prototype.unhighlight = function(){
+	this.highlighted.remove();
+	delete this.highlighted;
+}
+
 /***********************************************************************
 Class Combatant
 
@@ -153,6 +186,12 @@ function Combatant(battlemap, opts){
 		this[i] = opts[i];
 	}
 
+	// determine some data used for drag actions
+	var boundingRect = $(battlemap.actionElem)[0].getBoundingClientRect();
+	this.deltaX = boundingRect.left;
+	this.deltaY = boundingRect['top'];
+	this.lastCell = [this.cellX, this.cellY];
+
 	// svg elements
 	var cellSize = this.battlemap.gridSpacing;
 	var pap = this.battlemap.svgPaper;
@@ -167,6 +206,21 @@ function Combatant(battlemap, opts){
 			(cellSize * this.size) - (padding * 2), (cellSize * this.size) - (padding * 2));
 		this.svgData.set.push(this.svgData.image);
 	}
+	this.svgData.set.drag(function(moveX, moveY, pageX, pageY, ev){
+		var x = pageX - this.deltaX;
+		var y = pageY - this.deltaY;
+		var cells = this.battlemap.getCell(x,y);
+		this.battlemap.highlight(cells[0], cells[1], this.size);
+		this.lastCell = cells;
+	}, function(pageX, pageY, ev){
+		var x = pageX - this.deltaX;
+		var y = pageY - this.deltaY;
+		var cells = this.battlemap.getCell(x,y);
+		this.battlemap.highlight(cells[0], cells[1], this.size);
+	}, function(){
+		this.moveTo(this.lastCell[0], this.lastCell[1]);
+		this.battlemap.unhighlight();
+	}, this, this, this);
 	if(this.onMouseOver){
 		this.svgData.set.mouseover(this.onMouseOver);
 	}
