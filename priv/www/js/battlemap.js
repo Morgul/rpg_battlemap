@@ -48,6 +48,9 @@ function BattleMap(actionElem, gridElem, opts){
 			return false;
 		}
 	})
+	// TODO a bug exists where if you lift the mouse button outside the
+	// svg element, you continue to drag when you re-enter w/o the button
+	// pressed until you click.  /oi.  Thus, just stopped when we leave.
 	.mouseleave(function(){
 		dragData.dragging = false;
 	})
