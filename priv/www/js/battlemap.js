@@ -117,14 +117,28 @@ BattleMap.prototype.triggerTransformListeners = function(){
 	}
 }
 
+/* Add an object interested in when things change on the battlefield.
+A transform listener must have a function "updateTranform".  In addition,
+the listener should have the properties "layer" and "svgObject" on it.
+Those two properties are used to determine painting order.  The layers
+(and order of painting) are "ground", "action", and "sky". */
 BattleMap.prototype.addTransformListener = function(obj){
 	this.transformListeners.push(obj);
+	this.setPaintOrder();
 }
 
 BattleMap.prototype.removeTransformListener = function(obj){
 	this.transformListeners = this.transformListeners.filter(function(x){
 		return (obj != x);
 	});
+	this.setPaintOrder();
+}
+
+BattleMap.prototype.setPaintOrder = function(){
+	var sorted = this.transformListeners.sort(BattleMap.layerSort);
+	for(var i = 0; i < sorted.length; i++){
+		sorted[i].svgObject.toBack();
+	}
 }
 
 BattleMap.prototype.getTransformString = function(cellX, cellY){
@@ -167,11 +181,48 @@ BattleMap.prototype.unhighlight = function(){
 	delete this.highlighted;
 }
 
+BattleMap.layerSort = function(thinga,thingb){
+	if(thinga.layer == "sky"){
+		return -1;
+	}
+	if(thingb.layer == "sky"){
+		return 1;
+	}
+	if(thinga.layer == "action"){
+		return -1;
+	}
+	if(thingb.layer == "action"){
+		return 1;
+	}
+	return -1;
+}
+
+/***********************************************************************
+Battlemap tests:  TODO move to other file
+***********************************************************************/
+
+var tests = {};
+tests.battleLayerSort = function(){
+	var battleLayerMembers = [{layer:'ground'}, {layer:'action'},
+	{layer:'sky'}];
+	var battleLayerMembersSorted = battleLayerMembers.sort(BattleMap.layerSort);
+	var expected = ['sky','action','ground'];
+	var got = battleLayerMembersSorted.map(function(a){
+		return a.layer;
+	});
+	for(var i = 0; i < expected.length; i++){
+		if(expected[i] != got[i]){
+			console.error('test fail', expected, got);
+			return false;
+		}
+	}
+	return true;
+}
+
 /***********************************************************************
 Class Combatant
-
-
 ***********************************************************************/
+
 function Combatant(battlemap, opts){
 	this.battlemap = battlemap;
 	// opts should override most of these.
@@ -197,17 +248,17 @@ function Combatant(battlemap, opts){
 	var cellSize = this.battlemap.gridSpacing;
 	var pap = this.battlemap.svgPaper;
 	this.svgData = {};
-	this.svgData.set = pap.set();
+	this.svgObject = pap.set();
 	this.svgData.colorRect = pap.rect(0,0,cellSize * this.size, cellSize * this.size);
 	this.svgData.colorRect.attr({ fill:this.color });
-	this.svgData.set.push(this.svgData.colorRect);
+	this.svgObject.push(this.svgData.colorRect);
 	if(this.image){
 		var padding = cellSize / 32;
 		this.svgData.image = pap.image(this.image, padding, padding,
 			(cellSize * this.size) - (padding * 2), (cellSize * this.size) - (padding * 2));
-		this.svgData.set.push(this.svgData.image);
+		this.svgObject.push(this.svgData.image);
 	}
-	this.svgData.set.drag(function(moveX, moveY, pageX, pageY, ev){
+	this.svgObject.drag(function(moveX, moveY, pageX, pageY, ev){
 		var x = pageX - this.deltaX;
 		var y = pageY - this.deltaY;
 		var cells = this.battlemap.getCell(x,y);
@@ -223,20 +274,22 @@ function Combatant(battlemap, opts){
 		this.battlemap.unhighlight();
 	}, this, this, this);
 	if(this.onMouseOver){
-		this.svgData.set.mouseover(this.onMouseOver);
+		this.svgObject.mouseover(this.onMouseOver);
 	}
 
 	this.battlemap.addTransformListener(this);
 	this.updateTransform();
 }
 
+Combatant.prototype.layer = "action";
+
 Combatant.prototype.updateTransform = function(){
 	var transformStr = this.battlemap.getTransformString(this.cellX, this.cellY);
-	this.svgData.set.transform(transformStr);
+	this.svgObject.transform(transformStr);
 }
 
 Combatant.prototype.remove = function(){
-	this.svgData.set.remove();
+	this.svgObject.remove();
 	this.battlemap.removeTransformListener(this);
 }
 
@@ -285,7 +338,7 @@ function CombatZone(battlemap, opts){
 	this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
 	this.type = 'terrain';
 	this.color = 'darkgreen';
-	this.layerNumber = 1;
+	this.layer = "sky";
 
 	for(var i in opts){
 		this[i] = opts[i];
@@ -293,14 +346,15 @@ function CombatZone(battlemap, opts){
 
 	var svgPathString = this.makeSvgPathString();
 	var pap = this.battlemap.svgPaper;
-	this.svgPath = pap.path(svgPathString);
-	var opacity = 1;
-	var strokeWidth = 0;
-	if(this.type != 'terrain'){
-		opacity = .5;
-		strokeWidth = 3;
+	this.svgObject = pap.path(svgPathString);
+	var opacity = .5;
+	var strokeWidth = 3;
+	if(this.type.match(/terrain$/)){
+		opacity = 1;
+		strokeWidth = 0;
+		this.layer = "ground";
 	}
-	this.svgPath.attr({
+	this.svgObject.attr({
 		fill: this.color,
 		'fill-opacity': opacity,
 		'stroke-width': 3,
@@ -312,7 +366,7 @@ function CombatZone(battlemap, opts){
 
 CombatZone.prototype.updateTransform = function(){
 	var transformStr = this.battlemap.getTransformString(this.startCell[0], this.startCell[1]);
-	this.svgPath.transform(transformStr);
+	this.svgObject.transform(transformStr);
 }
 
 CombatZone.prototype.makeSvgPathString = function(){
@@ -342,7 +396,7 @@ CombatZone.prototype.setStart = function(cellX, cellY){
 
 CombatZone.prototype.setColor = function(color){
 	this.color = color;
-	this.svgPath.attr({
+	this.svgObject.attr({
 		'fill': color,
 		'stroke': color
 	});
@@ -352,14 +406,17 @@ CombatZone.prototype.setType = function(type){
 	this.type = type;
 	var opacity = 0.5;
 	var strokeW = 3;
+	this.layer = "sky";
 	if(this.type.match(/terrain$/)){
 		opacity = 1;
 		strokeW = 0;
+		this.layer = "ground";
 	}
-	this.svgPath.attr({
+	this.svgObject.attr({
 		'fill-opacity':opacity,
 		'stroke-width':strokeW
 	});
+	this.battlemap.setPaintOrder();
 }
 
 CombatZone.prototype.setCells = function(newCells){
@@ -369,7 +426,7 @@ CombatZone.prototype.setCells = function(newCells){
 
 CombatZone.prototype.updatePath = function(){
 	var pathStr = this.makeSvgPathString();
-	this.svgPath.attr({
+	this.svgObject.attr({
 		'path':pathStr
 	});
 	this.updateTransform();
