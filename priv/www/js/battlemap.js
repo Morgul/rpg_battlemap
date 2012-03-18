@@ -43,12 +43,13 @@ function BattleMap(actionElem, gridElem, opts){
 		return false;
 	})
 	.mouseup(function(){
-		dragData.dragging = false;
-		return false;
+		if(dragData.dragging){
+			dragData.dragging = false;
+			return false;
+		}
 	})
 	.mouseleave(function(){
 		dragData.dragging = false;
-		return false;
 	})
 	.mousemove(function(ev){
 		if(dragData.dragging){
