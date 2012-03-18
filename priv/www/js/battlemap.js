@@ -268,6 +268,128 @@ Combatant.sortByInitiative = function(combater1, combater2){
 }
 
 /***********************************************************************
+Class for holding freeform shaped areas.  Use cases are:
+* Walls of rooms or other blocking terrain, but not taking up a cell
+* marking difficult or dangerous terrain that take up cells.
+* marking non-blocking, but still important areas, like a poison cloud.
+
+To support this, a combat zone is basically a path that can float above
+the combatants or below, be filled or not, be closed or not, and be
+transparent or not.
+***********************************************************************/
+
+function CombatZone(battlemap, opts){
+	this.battlemap = battlemap;
+	this.cells = CombatZone.square;
+	this.startCell = [0,0];
+	this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
+	this.type = 'terrain';
+	this.color = 'darkgreen';
+	this.layerNumber = 1;
+
+	for(var i in opts){
+		this[i] = opts[i];
+	}
+
+	var svgPathString = this.makeSvgPathString();
+	var pap = this.battlemap.svgPaper;
+	this.svgPath = pap.path(svgPathString);
+	var opacity = 1;
+	var strokeWidth = 0;
+	if(this.type != 'terrain'){
+		opacity = .5;
+		strokeWidth = 3;
+	}
+	this.svgPath.attr({
+		fill: this.color,
+		'fill-opacity': opacity,
+		'stroke-width': 3,
+		'stroke': this.color
+	});
+	this.battlemap.addTransformListener(this);
+	this.updateTransform();
+}
+
+CombatZone.prototype.updateTransform = function(){
+	var transformStr = this.battlemap.getTransformString(this.startCell[0], this.startCell[1]);
+	this.svgPath.transform(transformStr);
+}
+
+CombatZone.prototype.makeSvgPathString = function(){
+	var cellSize = this.battlemap.gridSpacing;
+	var endi = this.cells.length;
+	var convertToCoords = function(xy){
+		return [xy[0] * cellSize, xy[1] * cellSize];
+	}
+	var convertedCells = this.cells.map(convertToCoords);
+	if(this.closed){
+		endi--;
+	}
+	var path = "M" + convertedCells[0][0] + "," + convertedCells[0][1];
+	for(var i = 1; i < endi; i++){
+		path += "L" + convertedCells[i][0] + "," + convertedCells[i][1];
+	}
+	if(this.closed){
+		path += "Z";
+	}
+	return path;
+}
+
+CombatZone.prototype.setStart = function(cellX, cellY){
+	this.startCell = [cellX,cellY];
+	this.updateTransform();
+}
+
+CombatZone.prototype.setColor = function(color){
+	this.color = color;
+	this.svgPath.attr({
+		'fill': color,
+		'stroke': color
+	});
+};
+
+CombatZone.prototype.setType = function(type){
+	this.type = type;
+	var opacity = 0.5;
+	var strokeW = 3;
+	if(this.type.match(/terrain$/)){
+		opacity = 1;
+		strokeW = 0;
+	}
+	this.svgPath.attr({
+		'fill-opacity':opacity,
+		'stroke-width':strokeW
+	});
+}
+
+CombatZone.prototype.setCells = function(newCells){
+	this.cells = newCells;
+	this.updatePath();
+}
+
+CombatZone.prototype.updatePath = function(){
+	var pathStr = this.makeSvgPathString();
+	this.svgPath.attr({
+		'path':pathStr
+	});
+	this.updateTransform();
+}
+
+CombatZone.makeSquare = function(size){
+	return [[0,0],[size,0],[size,size],[0,size],[0,0]];
+}
+
+CombatZone.makeOctogon = function(size){
+	return [[size,0],[size * 2,0],[size*3,size],[size*3,size*2],
+		[size*2,size*3],[size,size*3],[0,size*2],[0,size],[size,0]];
+}
+
+// CombatZone basic shapes
+CombatZone.square = CombatZone.makeSquare(1);
+CombatZone.largeSquare = CombatZone.makeSquare(2);
+CombatZone.hugeSquare = CombatZone.makeSquare(3);
+
+/***********************************************************************
 Utility functions to make life easier.
 ***********************************************************************/
 
