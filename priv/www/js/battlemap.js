@@ -32,6 +32,37 @@ function BattleMap(actionElem, gridElem, opts){
 	for(var i in opts){
 		this[i] = opts[i]
 	}
+
+	var dragData = {
+		mapRef: this
+	};
+	$(this.actionElem).mousedown(this, function(ev){
+		dragData.dragging = true;
+		dragData.lastDragX = ev.pageX;
+		dragData.lastDragY = ev.pageY;
+		return false;
+	})
+	.mouseup(function(){
+		dragData.dragging = false;
+		return false;
+	})
+	.mouseleave(function(){
+		dragData.dragging = false;
+		return false;
+	})
+	.mousemove(function(ev){
+		if(dragData.dragging){
+			var deltaX = ev.pageX - dragData.lastDragX;
+			var deltaY = ev.pageY - dragData.lastDragY;
+			dragData.lastDragX = ev.pageX;
+			dragData.lastDragY = ev.pageY;
+			deltaX = deltaX / dragData.mapRef.zoom;
+			deltaY = deltaY / dragData.mapRef.zoom;
+			dragData.mapRef.pan(deltaX, deltaY);
+			return false;
+		}
+		return true;
+	});
 }
 
 /* clears the canvas and redraws the grid. */
@@ -264,14 +295,19 @@ function Combatant(battlemap, opts){
 		var cells = this.battlemap.getCell(x,y);
 		this.battlemap.highlight(cells[0], cells[1], this.size);
 		this.lastCell = cells;
+		ev.stopPropagation();
+		return false;
 	}, function(pageX, pageY, ev){
 		var x = pageX - this.deltaX;
 		var y = pageY - this.deltaY;
 		var cells = this.battlemap.getCell(x,y);
 		this.battlemap.highlight(cells[0], cells[1], this.size);
+		ev.stopPropagation();
+		return false;
 	}, function(){
 		this.moveTo(this.lastCell[0], this.lastCell[1]);
 		this.battlemap.unhighlight();
+		return false;
 	}, this, this, this);
 	if(this.onMouseOver){
 		this.svgObject.mouseover(this.onMouseOver);
