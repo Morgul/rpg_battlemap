@@ -432,6 +432,11 @@ CombatZone.prototype.updatePath = function(){
 	this.updateTransform();
 }
 
+CombatZone.prototype.remove = function(){
+	this.svgObject.remove();
+	this.battlemap.removeTransformListener(this);
+}
+
 CombatZone.makeSquare = function(size){
 	return [[0,0],[size,0],[size,size],[0,size],[0,0]];
 }
