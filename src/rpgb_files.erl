@@ -2,6 +2,7 @@
 
 -export([init/1,to_html/2]).
 -include_lib("webmachine/include/webmachine.hrl").
+-include("log.hrl").
 
 
 init(Args) ->
@@ -12,5 +13,9 @@ to_html(ReqData, Context) ->
 		"/" -> "index.html";
 		X -> X
 	end,
-	{ok, Bin} = file:read_file("priv/www/" ++ Path),
-	{Bin, ReqData, Context}.
+	?info("Serving file ~p", [Path]),
+	Ext = filename:extension(Path),
+	Mime = mochiweb_mime:from_extension(Ext),
+	{ok, Bin} = file:read_file("priv/www" ++ Path),
+	ReqData0 = wrq:set_resp_header("Content-Type", Mime, ReqData),
+	{Bin, ReqData0, Context}.
