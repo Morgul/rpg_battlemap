@@ -13,7 +13,6 @@ to_html(ReqData, Context) ->
 		"/" -> "index.html";
 		X -> X
 	end,
-	?info("Serving file ~p", [Path]),
 	Ext = filename:extension(Path),
 	Mime = mochiweb_mime:from_extension(Ext),
 	{ok, Bin} = file:read_file("priv/www" ++ Path),
