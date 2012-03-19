@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<link type="text/css" href="/css/base.css" rel="stylesheet" />
 	<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
@@ -9,50 +10,13 @@
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
 	{% endblock %}
-	<link type="text/css" src="/css/base.css" rel="stylesheet" />
 	<title>RPG Battle Map{% block title %}{% endblock %}</title>
 	{% block page_style %}
-	<style type="text/css">
-		#drawingBoard {
-			height:70%;
-			position:relative;
-		}
-		#canvasBoard {
-			position:absolute;
-			top:0;
-			left:0;
-			pointer-events: none;
-		}
-		#combatantList {
-			list-style:none;
-		}
-		#combatantList li{
-			border-style: solid;
-			border-width: 3px;
-		}
-		#combatantInfo {
-		}
-		form label{
-			font-size:xx-small;
-			color: gray;
-			display:block;
-		}
-		form p{
-			margin: 8px 0 8px 0;
-		}
-		#leftColumn {
-			float:left;
-			width:200px;
-		}
-		#rightColumn {
-			margin-left:200px;
-		}
-	</style>
 	{% endblock %}
 </head>
 <body>
 <div id="head">
-<form action="/account/login/" method="post">
+<form id="login" action="/account/login/" method="post">
 	<input name="openid" placeholder="{% trans "OpenID" %}" />
 	<input type="submit" value="{% trans "Login" %}" />
 </form>
@@ -82,7 +46,7 @@
 				</p>
 				<p>
 					<label>Starting Position</label>
-					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />, 
+					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />,
 					<input style="width: 4em;" name="cellY" placeholder="Y" type="number" /></p>
 				<p>
 					<label for="color">Color</label>
@@ -102,7 +66,7 @@
 			</form>
 		</div>
 	</div>
-	<div id="rightColumn">
+	<div id="rightColumn" class="ui-corner-all">
 		<div id="drawingBoard">
 			<canvas id="canvasBoard"></canvas>
 		</div>

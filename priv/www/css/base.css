@@ -1,0 +1,78 @@
+*
+{
+	font-family: sans-serif;
+	font-size: 8pt;
+}
+
+body
+{
+	margin: 0;
+}
+
+#head
+{
+	text-align: right;
+	padding: 2px;
+}
+
+#login
+{
+	margin: 0 auto;
+}
+
+#drawingBoard
+{
+	height:70%;
+	position:relative;
+}
+
+#canvasBoard
+{
+	position:absolute;
+	top:0;
+	left:0;
+	pointer-events: none;
+}
+
+#combatantList
+{
+	list-style:none;
+}
+
+#combatantList li
+{
+	border-style: solid;
+	border-width: 3px;
+}
+
+#combatantInfo
+{
+}
+
+form label
+{
+	font-size:xx-small;
+	color: gray;
+	display:block;
+}
+
+form p
+{
+	margin: 8px 0 8px 0;
+}
+
+#leftColumn
+{
+	float:left;
+	width:200px;
+	margin-left: 5px;
+}
+
+#rightColumn
+{
+	margin-left:210px;
+	border: 1px solid #aaa;
+	margin-right: 5px;
+	padding: 5px;
+    box-shadow: 0 0 10px rgba(80, 80, 80, .5);
+}
