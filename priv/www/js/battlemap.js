@@ -401,6 +401,7 @@ function CombatZone(battlemap, opts){
 		'stroke': this.color
 	});
 	this.battlemap.addTransformListener(this);
+	this.svgObject[0].setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
 
