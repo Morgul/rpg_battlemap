@@ -65,6 +65,32 @@
 				</p>
 			</form>
 		</div>
+		<h3><a href="#">Zone Editor</a></h3>
+		<div id="zoneEditor">
+			<form name="zoneEditor">
+				<p>
+					<label for="editZonesToggle">Enabled Zone Edits</label>
+					<input id="editZonesToggle" type="checkbox" />
+				</p>
+				<ul id="zoneList">
+					<li>New Zone...</li>
+				</ul>
+				<p>
+					<label>Top Left Corner</label>
+					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />, 
+					<input style="width: 4em" name="cellY" placeholder="Y" type="number" />
+				</p>
+				<p>
+					<label>Raw Cell Data</label>
+					<textarea name="cellData"></textarea>
+				</p>
+				<p>While editing is enabled, you can add a new point connected to 
+the most recent point by clicking.  To remove a point, secondary (right) 
+click on it.  To add a point on an existing line, secondary click on the
+line.  To move a point, drag it to the desired position.
+				</p>
+			</form>
+		</div>
 	</div>
 	<div id="rightColumn" class="ui-corner-all">
 		<div id="drawingBoard">
@@ -126,7 +152,9 @@
 			updateCombatantListDisplay();
 			return false;
 		});
-	$('#leftColumn').height($('#drawingBoard').height()).accordion();
+		$('#leftColumn').height($('#drawingBoard').height()).accordion({
+			autoHeight:false
+		});
 	});
 </script>
 {% endblock %}
