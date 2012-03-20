@@ -73,7 +73,9 @@
 					<input id="editZonesToggle" type="checkbox" />
 				</p>
 				<ul id="zoneList">
-					<li>New Zone...</li>
+					<li>
+						<label>New Zone</label>
+						<select id="newZoneDefaults"></select>
 				</ul>
 				<p>
 					<label>Top Left Corner</label>
@@ -127,6 +129,7 @@ line.  To move a point, drag it to the desired position.
 		window.battleMap.drawGrid();
 
 		window.combatantList = [];
+		window.zoneList = [];
 
 		window.updateCombatantListDisplay = function(){
 			combatantList = combatantList.sort(Combatant.sortByInitiative);

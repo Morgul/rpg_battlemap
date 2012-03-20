@@ -34,7 +34,7 @@ body
 	pointer-events: none;
 }
 
-#combatantList
+#combatantList, #zoneList
 {
 	list-style:none;
 }
