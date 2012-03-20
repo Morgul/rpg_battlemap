@@ -6,6 +6,7 @@
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/contrib/jquery.tools.min.js"></script>
+	<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
 	{% block page_scripts %}
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
@@ -95,8 +96,6 @@
 
 					combatant.initiative = lower + ((higher - lower) / 2);
 				}
-
-				console.log(combatant.initiative);
 			}
 		});
 
@@ -116,10 +115,11 @@
 		$(window).resize(resizeBattleMap);
 
 		$('#drawingBoard').mousewheel(function(ev, delta){
+			var sensitivity = 10;
 			if(isNaN(delta)){
 				delta = ev.originalEvent.wheelDelta;
 			}
-			delta = delta / 100;
+			delta = (delta / 100) * sensitivity;
 			battleMap.setZoom(battleMap.zoom + delta);
 			return false;
 		});
