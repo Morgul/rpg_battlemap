@@ -129,15 +129,40 @@
 
 		window.combatants = {};
 
-		window.appendCombatant = function(combatant) {
-			var cl = $('#combatantList');
+		window.insertCombatant = function(combatant) {
+			var combatantList = $('#combatantList').sortable("toArray");
 			combatants[combatant.name] = combatant;
 
 			// Sanatize intiative
 			sanatizeInit(combatant);
 
+			var added = false;
+			//TODO: This would be faster as a binary search
+			$(combatantList).each(function(index) {
+				var item = combatantList[index];
+
+				// This will always add to the bottom of same-initiative
+				if (combatants[item].initiative < combatant.initiative)
+				{
+					$(generateInitListItem(combatant)).insertBefore('#' + item);
+					added = true;
+
+					// Break out of the .each()
+					return false;
+				}
+			});
+
+			// We go at the bottom of the list.
+			if (added == false)
+			{
+				$('#combatantList').append(generateInitListItem(combatant));
+			}
+		}
+
+		window.generateInitListItem = function(combatant)
+		{
 			var style = 'style="box-shadow: inset 0 0 10px 2px ' + combatant.color + ';"';
-			cl.append('<li id="' + combatant.name + '" class="combatant"' + style + '>' + combatant.name + '</li>');
+			return '<li id="' + combatant.name + '" class="combatant"' + style + '>' + combatant.name + '</li>';
 		}
 
 		// Makes sure that instead of a string, we are dealing with a real number for initiative.
@@ -148,15 +173,6 @@
 			} else {
 				combatant.initiative = init;
 			}
-		}
-
-		window.updateCombatantListDisplay = function(){
-			//combatantList = combatantList.sort(Combatant.sortByInitiative);
-			var cl = $('#combatantList');
-			cl.empty();
-			combatantList.map(function(dude, ind){
-				cl.append('<li style="border-color:' + dude.color + '">' + dude.name + '</li>');
-			});
 		}
 
 		$('#addCombatant form').submit(function(){
@@ -170,9 +186,7 @@
 				$('#combatantConditions').html(newCombatant.conditions.join(", "));
 			}
 			newCombatant = new Combatant(window.battleMap, creationObj);
-			//combatantList.push(newCombatant);
-			//updateCombatantListDisplay();
-			appendCombatant(newCombatant);
+			insertCombatant(newCombatant);
 			return false;
 		});
 	$('#leftColumn').height($('#drawingBoard').height()).accordion();
