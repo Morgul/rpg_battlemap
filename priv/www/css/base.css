@@ -39,14 +39,10 @@ body
 	list-style:none;
 }
 
-li.combatant
+#combatantList li
 {
-	border: 1px solid #333;
-	border-radius: 2px;
-	text-align: center;
-	padding: 2px;
-	margin-bottom: 2px;
-	background-color: white;
+	border-style: solid;
+	border-width: 3px;
 }
 
 #combatantInfo
