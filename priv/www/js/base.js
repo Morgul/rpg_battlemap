@@ -41,6 +41,7 @@ function createZoneListItem(zone){
 		editorForm.cellY.value = zone.startCell[1];
 		editorForm.color.value = zone.color;
 		editorForm.type.value = zone.type;
+		editorForm.zoneIndex.value = zoneListInd;
 		editorForm.cellData.value = cellListToString(zone.cells);
 	});
 	return liElem;
@@ -199,6 +200,16 @@ $().ready(function(){
 		var liElem = createZoneListItem(newZone);
 		liElem.setAttribute('zoneIndex', zoneList.length - 1);
 		$('#zoneList').append(liElem);
+		return false;
+	});
+
+	$('#zoneEditor form').submit(function(){
+		var index = parseInt(this.zoneIndex.value);
+		var zone = zoneList[index];
+		zone.setStart(sanatizeInt(this.cellX.value),sanatizeInt(this.cellY.value));
+		zone.setColor(this.color.value);
+		zone.setType(this.type.value);
+		zone.setCells(stringToCells(this.cellData.value));
 		return false;
 	});
 });
