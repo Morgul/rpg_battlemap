@@ -39,7 +39,7 @@ body
 	list-style:none;
 }
 
-#combatantList li
+#combatantList li, #zoneList li
 {
 	border-style: solid;
 	border-width: 3px;

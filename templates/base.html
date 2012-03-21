@@ -301,7 +301,11 @@ line.  To move a point, drag it to the desired position.
 			creationObj.cells = cells;
 			newZone = new CombatZone(battleMap, creationObj);
 			zoneList.push(newZone);
-			$('#zoneList').append('<li zoneIndex="' + (zoneList.length - 1) + '">' + newZone.type + '</li>');
+
+			var liElem = '<li style="box-shadow: inset 0 0 10px 2px ' +
+				newZone.color + ';" zoneIndex="' + (zoneList.length - 1) + '">' +
+				newZone.type + '</li>';
+			$('#zoneList').append(liElem);
 			$('#zoneList li:last-child').click(function(){
 				var zoneListInd = this.getAttribute('zoneIndex');
 				var zone = zoneList[zoneListInd];
