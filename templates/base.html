@@ -65,31 +65,67 @@
 				</p>
 			</form>
 		</div>
-		<h3><a href="#">Zone Editor</a></h3>
+		<h3><a href="#">Zone List</a></h3>
 		<div id="zoneEditor">
-			<form name="zoneEditor">
+			<ul id="zoneList">
+			</ul>
+			<form name="zoneEditor" action="javascript:void(0)">
 				<p>
 					<label for="editZonesToggle">Enabled Zone Edits</label>
 					<input id="editZonesToggle" type="checkbox" />
 				</p>
-				<ul id="zoneList">
-					<li>
-						<label>New Zone</label>
-						<select id="newZoneDefaults"></select>
-				</ul>
 				<p>
 					<label>Top Left Corner</label>
 					<input style="width: 4em;" name="cellX" placeholder="X" type="number" />, 
 					<input style="width: 4em" name="cellY" placeholder="Y" type="number" />
 				</p>
 				<p>
+					<label for="color">Color</label>
+					<input name="color" />
+				</p>
+				<p>
+					<label for="type">Description</label>
+					<input name="type" />
+				</p>
+				<p>
 					<label>Raw Cell Data</label>
-					<textarea name="cellData"></textarea>
+					<textarea name="cellData" rows="7"></textarea>
 				</p>
 				<p>While editing is enabled, you can add a new point connected to 
 the most recent point by clicking.  To remove a point, secondary (right) 
 click on it.  To add a point on an existing line, secondary click on the
 line.  To move a point, drag it to the desired position.
+				</p>
+				<p>
+					<button>Save</button>
+				</p>
+			</form>
+		</div>
+		<h3><a href="#">New Zone</a></h3>
+		<div>
+			<form id="newZone" name="newZone">
+				<p>New Zone</p>
+				<p>
+					<label for="size">Edge Size</label>
+					<input type="number" name="size" />
+				</p>
+				<p>
+					<label for="shape">Shape</label>
+					<select name="shape">
+						<option value="square">Square</option>
+						<option value="octogon">Octogon</option>
+					</select>
+				</p>
+				<p>
+					<label for="type">Description; ground ends with 'terrain'</label>
+					<input name="type" />
+				</p>
+				<p>
+					<label for="color">Color</label>
+					<input name="color" />
+				</p>
+				<p>
+					<input type="submit" value="Create" />
 				</p>
 			</form>
 		</div>
@@ -101,6 +137,31 @@ line.  To move a point, drag it to the desired position.
 	</div>
 </div>
 <script type="text/javascript">
+	function sanatizeInt(given, defVal){
+		if(defVal == undefined){
+			defVal = 0;
+		}
+		var retVal = parseInt(given);
+		if(isNaN(retVal)){
+			return defVal;
+		}
+		return retVal;
+	}
+
+	function cellListToString(cells){
+		var cellStr = cells.map(function(xy){
+			return xy[0] + ',' + xy[1];
+		});
+		return cellStr.join('\n');
+	}
+
+	function updateZoneList(){
+		$('#zoneList').empty();
+		for(var i = 0; i < zoneList.length; i++){
+			$('#zoneList').append('<li zoneIndex="' + i + '">' + zoneList[i].type + '</li>');
+		}
+	}
+
 	$().ready(function(){
 		$('#combatantList').sortable({
 			update: function(event, ui) {
@@ -217,8 +278,41 @@ line.  To move a point, drag it to the desired position.
 			insertCombatant(newCombatant);
 			return false;
 		});
+
 		$('#leftColumn').height($('#drawingBoard').height()).accordion({
 			autoHeight:false
+		});
+
+		$('#newZone').submit(function(){
+			var creationObj = {};
+			var newZone;
+			for(var i = 0; i < this.elements.length; i++){
+				creationObj[this.elements[i].name] = this.elements[i].value;
+			}
+			var size = sanatizeInt(this.size.value, 1);
+			var cells;
+			if(this.shape.value == "square"){
+				cells = CombatZone.makeSquare(size);
+			} else if(this.shape.value == "octogon"){
+				cells = CombatZone.makeOctogon(size);
+			} else {
+				cells = [[0,0],[0,1],[1,1],[0,0]];
+			}
+			creationObj.cells = cells;
+			newZone = new CombatZone(battleMap, creationObj);
+			zoneList.push(newZone);
+			$('#zoneList').append('<li zoneIndex="' + (zoneList.length - 1) + '">' + newZone.type + '</li>');
+			$('#zoneList li:last-child').click(function(){
+				var zoneListInd = this.getAttribute('zoneIndex');
+				var zone = zoneList[zoneListInd];
+				var editorForm = $('#zoneEditor form')[0];
+				editorForm.cellX.value = zone.startCell[0];
+				editorForm.cellY.value = zone.startCell[1];
+				editorForm.color.value = zone.color;
+				editorForm.type.value = zone.type;
+				editorForm.cellData.value = cellListToString(zone.cells);
+			});
+			return false;
 		});
 	});
 </script>
