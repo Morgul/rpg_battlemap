@@ -29,11 +29,31 @@ function stringToCells(string, cellCoordDelim){
 	return pairs;
 }
 
-function updateZoneList(){
-	$('#zoneList').empty();
-	for(var i = 0; i < zoneList.length; i++){
-		$('#zoneList').append('<li zoneIndex="' + i + '">' + zoneList[i].type + '</li>');
-	}
+function createZoneListItem(zone){
+	var liElem = document.createElement('li');
+	liElem.style.boxShadow = "inset 0 0 10px 2px " + zone.color;
+	liElem.innerHTML = zone.type;
+	$(liElem).click(function(){
+		var zoneListInd = this.getAttribute('zoneIndex');
+		var zone = zoneList[zoneListInd];
+		var editorForm = $('#zoneEditor form')[0];
+		editorForm.cellX.value = zone.startCell[0];
+		editorForm.cellY.value = zone.startCell[1];
+		editorForm.color.value = zone.color;
+		editorForm.type.value = zone.type;
+		editorForm.cellData.value = cellListToString(zone.cells);
+	});
+	return liElem;
+}
+
+function rebuildZoneList(){
+	var zoneListElem = $('#zoneList')
+	zoneListElem.empty();
+	zoneList.map(function(zone, index){
+		var liElem = createZoneListItem(zone);
+		liElem.setAttribute('zoneIndex', index);
+		zoneListElem.append(liElem);
+	});
 }
 
 $().ready(function(){
@@ -176,20 +196,9 @@ $().ready(function(){
 		newZone = new CombatZone(battleMap, creationObj);
 		zoneList.push(newZone);
 
-		var liElem = '<li style="box-shadow: inset 0 0 10px 2px ' +
-			newZone.color + ';" zoneIndex="' + (zoneList.length - 1) + '">' +
-			newZone.type + '</li>';
+		var liElem = createZoneListItem(newZone);
+		liElem.setAttribute('zoneIndex', zoneList.length - 1);
 		$('#zoneList').append(liElem);
-		$('#zoneList li:last-child').click(function(){
-			var zoneListInd = this.getAttribute('zoneIndex');
-			var zone = zoneList[zoneListInd];
-			var editorForm = $('#zoneEditor form')[0];
-			editorForm.cellX.value = zone.startCell[0];
-			editorForm.cellY.value = zone.startCell[1];
-			editorForm.color.value = zone.color;
-			editorForm.type.value = zone.type;
-			editorForm.cellData.value = cellListToString(zone.cells);
-		});
 		return false;
 	});
 });
