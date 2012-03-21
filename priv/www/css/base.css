@@ -45,6 +45,11 @@ body
 	border-width: 3px;
 }
 
+#zoneList
+{
+	padding: 0;
+}
+
 #combatantInfo
 {
 }
