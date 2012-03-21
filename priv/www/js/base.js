@@ -16,8 +16,11 @@ function cellListToString(cells){
 	return cellStr.join('\n');
 }
 
-function stringToCells(string){
-	var strPairs = string.split("\n");
+function stringToCells(string, cellCoordDelim){
+	if(! cellCoordDelim){
+		cellCoordDelim = "\n";
+	}
+	var strPairs = string.split(cellCoordDelim);
 	var pairs = strPairs.map(function(strP){
 		return strP.split(",").map(function(x){
 			return parseInt(x);
