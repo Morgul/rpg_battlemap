@@ -16,6 +16,16 @@ function cellListToString(cells){
 	return cellStr.join('\n');
 }
 
+function stringToCells(string){
+	var strPairs = string.split("\n");
+	var pairs = strPairs.map(function(strP){
+		return strP.split(",").map(function(x){
+			return parseInt(x);
+		});
+	});
+	return pairs;
+}
+
 function updateZoneList(){
 	$('#zoneList').empty();
 	for(var i = 0; i < zoneList.length; i++){
