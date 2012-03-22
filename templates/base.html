@@ -24,6 +24,9 @@
 <div id="main">
 {% block content %}
 	<div id="leftColumn">
+		<input name="mapName" id="mapname" value="Default Map" onchange="battleMap.name=this.value;" />
+		<button onclick="saveBattleMapLocal();">Save</button>
+		<div id="leftColumnItems">
 		<h3><a href="#">Combatant</a></h3>
 		<div id="combatantInfo">
 			<div object-property="color" display-attr="style" style-display="border-color" style="float: left; width: 48px; height: 48px; border-width: 3px; margin:3px; border-style:solid;">
@@ -129,6 +132,12 @@ line.  To move a point, drag it to the desired position.
 					<input type="submit" value="Create" />
 				</p>
 			</form>
+		</div>
+		<h3><a href="#">Saved Maps</a></h3>
+		<div>
+			<ul id="savedMapsList">
+			</ul>
+		</div>
 		</div>
 	</div>
 	<div id="rightColumn" class="ui-corner-all">

@@ -65,6 +65,7 @@ function loadBattleMapLocal(mapname){
 		zoneList.push(newZone);
 	});
 	rebuildZoneList();
+	$('#mapname').attr('value', mapname);
 	resizeBattleMap();
 }
 
@@ -244,7 +245,7 @@ $().ready(function(){
 		return false;
 	});
 
-	$('#leftColumn').height($('#drawingBoard').height()).accordion({
+	$('#leftColumnItems').height($('#drawingBoard').height()).accordion({
 		autoHeight:false
 	});
 
@@ -293,7 +294,26 @@ $().ready(function(){
 			return;
 		}
 		if(this.checked){
-			zoneList[ind].svgObject.node.setAttribute('pointer-events', 'visibleStroke');
+			zoneList[ind].svgObject.node.setAttribute('pointer-events', 'visible');
 		}
+	});
+
+	var mapNameLi;
+	for(var localmap in localStorage){
+		if(localmap == "getObject"){
+			continue;
+		}
+		if(localmap == "setObject"){
+			continue;
+		}
+		mapNameLi = document.createElement('li');
+		mapNameLi.innerHTML = localmap;
+		mapNameLi.onclick = function(){
+			loadBattleMapLocal(localmap);
+		};
+		$('#savedMapsList').append(mapNameLi);
+	}
+	$('#savedMapsList li').click(function(){
+		loadBattleMapLocal(this.innerHTML);
 	});
 });
