@@ -299,13 +299,9 @@ $().ready(function(){
 	});
 
 	var mapNameLi;
-	for(var localmap in localStorage){
-		if(localmap == "getObject"){
-			continue;
-		}
-		if(localmap == "setObject"){
-			continue;
-		}
+	var localmap;
+	for(var i = 0; i < localStorage.length; i++){
+		localmap = localStorage.key(i);
 		mapNameLi = document.createElement('li');
 		mapNameLi.innerHTML = localmap;
 		mapNameLi.onclick = function(){
