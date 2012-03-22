@@ -15,6 +15,7 @@ be used to override the default zoom, translateX, transalteY, and
 gridSpacing as well as set additional functions.
 ***********************************************************************/
 function BattleMap(actionElem, gridElem, opts){
+	this.name = "Default Map";
 	this.actionElem = '#' + actionElem;
 	this.gridElem = '#' + gridElem;
 	this.gridCtx = $(this.gridElem)[0].getContext('2d');
@@ -401,7 +402,7 @@ function CombatZone(battlemap, opts){
 		'stroke': this.color
 	});
 	this.battlemap.addTransformListener(this);
-	this.svgObject[0].setAttribute('pointer-events', 'none');
+	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
 
@@ -463,6 +464,45 @@ CombatZone.prototype.setType = function(type){
 CombatZone.prototype.setCells = function(newCells){
 	this.cells = newCells;
 	this.updatePath();
+}
+
+CombatZone.prototype.addCell = function(xy, pos){
+	if(pos == undefined){
+		this.cells.push(pos);
+	} else {
+		this.cells.splice(pos, 0, xy);
+	}
+	this.updatePath();
+}
+
+CombatZone.prototype.removeCell = function(cellref){
+	if(cellref instanceof Array){
+		var ind = this.cells.indexOf(cellref);
+		if(ind > -1){
+			this.cells.splice(ind, 1);
+		}
+	} else {
+		this.cells.splice(cellref, 1);
+	}
+	this.updatePath();
+}
+
+// true:  anywhere
+// false:  nowhere
+// append:  last cell to close the path
+// prepend:  first cell to close the path
+CombatZone.prototype.safeCell = function(xy){
+	var ind = this.cells.indexOf(xy);
+	if(ind < 0){
+		return true;
+	}
+	if(xy == this.cells[0] && xy != this.cells[this.cells.length - 1]){
+		return "append";
+	}
+	if(xy != this.cells[0] && xy == this.cells[this.cells.length - 1]){
+		return "prepend";
+	}
+	return false;
 }
 
 CombatZone.prototype.updatePath = function(){

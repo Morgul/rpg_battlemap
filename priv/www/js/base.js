@@ -1,3 +1,101 @@
+Storage.prototype.setObject = function(key, value){
+	this.setItem(key, JSON.stringify(value));
+}
+
+Storage.prototype.getObject = function(key){
+	var value = this.getItem(key);
+	return value && JSON.parse(value);
+}
+
+function saveBattleMapLocal(){
+	var mapForStorage = {
+		name: battleMap.name,
+		zoom: battleMap.zoom,
+		translateX: battleMap.translateX,
+		translateY: battleMap.translateY,
+		gridSpacing: battleMap.gridSpacing,
+		combatants: [],
+		zones: []
+	};
+	var storeCombatant = function(combatDude){
+		var tmpCombat = {
+			name: combatDude.name,
+			color: combatDude.color,
+			cellX: combatDude.cellX,
+			cellY: combatDude.cellY,
+			size: combatDude.size,
+			hp: combatDude.hp,
+			initiative: combatDude.initiative,
+			conditions: combatDude.conditions
+		};
+		mapForStorage.combatants.push(tmpCombat);
+	}
+	for(var cname in combatants){
+		storeCombatant(combatants[cname]);
+	}
+	mapForStorage.zones = zoneList.map(function(zone){
+		var tmpZone = {
+			cells: zone.cells,
+			startCell: zone.startCell,
+			type: zone.type,
+			color: zone.color
+		};
+		return tmpZone;
+	});
+	localStorage.setObject(battleMap.name, mapForStorage);
+}
+
+function loadBattleMapLocal(mapname){
+	if(localStorage.getObject(mapname) == null){
+		return;
+	}
+	var rawMap = localStorage.getObject(mapname);
+	window.battleMap = new BattleMap('drawingBoard', 'canvasBoard', rawMap);
+	rawMap.combatants.map(function(rawDude){
+		rawDude.onMouseOver = function(){
+			datadump(newCombatant, '#combatantInfo');
+			$('#combatantConditions').html(newCombatant.conditions.join(", "));
+		};
+		newCombatant = new Combatant(window.battleMap, rawDude);
+		insertCombatant(newCombatant);
+	});
+	rawMap.zones.map(function(rawZone){
+		newZone = new CombatZone(battleMap, rawZone);
+		zoneList.push(newZone);
+	});
+	rebuildZoneList();
+}
+
+function insertCombatant(combatant) {
+	var combatantList = $('#combatantList').sortable("toArray");
+	combatants[combatant.name] = combatant;
+
+	// Sanatize intiative
+	sanatizeInit(combatant);
+
+	var added = false;
+	//TODO: This would be faster as a binary search
+	$(combatantList).each(function(index) {
+		var item = combatantList[index];
+
+		// This will always add to the bottom of same-initiative
+		if (combatants[item].initiative < combatant.initiative)
+		{
+			$(generateInitListItem(combatant)).insertBefore('#' + item);
+			added = true;
+
+			// Break out of the .each()
+			return false;
+		}
+	});
+
+	// We go at the bottom of the list.
+	if (added == false)
+	{
+		$('#combatantList').append(generateInitListItem(combatant));
+	}
+}
+
 function sanatizeInt(given, defVal){
 	if(defVal == undefined){
 		defVal = 0;
@@ -113,36 +211,6 @@ $().ready(function(){
 	window.zoneList = [];
 	window.combatants = {};
 
-	window.insertCombatant = function(combatant) {
-		var combatantList = $('#combatantList').sortable("toArray");
-		combatants[combatant.name] = combatant;
-
-		// Sanatize intiative
-		sanatizeInit(combatant);
-
-		var added = false;
-		//TODO: This would be faster as a binary search
-		$(combatantList).each(function(index) {
-			var item = combatantList[index];
-
-			// This will always add to the bottom of same-initiative
-			if (combatants[item].initiative < combatant.initiative)
-			{
-				$(generateInitListItem(combatant)).insertBefore('#' + item);
-				added = true;
-
-				// Break out of the .each()
-				return false;
-			}
-		});
-
-		// We go at the bottom of the list.
-		if (added == false)
-		{
-			$('#combatantList').append(generateInitListItem(combatant));
-		}
-	}
-
 	window.generateInitListItem = function(combatant)
 	{
 		var style = 'style="box-shadow: inset 0 0 10px 2px ' + combatant.color + ';"';
@@ -211,5 +279,19 @@ $().ready(function(){
 		zone.setType(this.type.value);
 		zone.setCells(stringToCells(this.cellData.value));
 		return false;
+	});
+
+	$('#editZonesToggle').click(function(){
+		for(var i = 0; i < zoneList.length; i++){
+			zoneList[i].svgObject.node.setAttribute('pointer-events', 'none');
+		}
+		var form = $('#zoneEditor form')[0];
+		var ind = parseInt(form.zoneIndex.value);
+		if(isNaN(ind)){
+			return;
+		}
+		if(this.checked){
+			zoneList[ind].svgObject.node.setAttribute('pointer-events', 'visibleStroke');
+		}
 	});
 });
