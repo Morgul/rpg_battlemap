@@ -83,16 +83,27 @@
 					<input style="width: 4em" name="cellY" placeholder="Y" type="number" />
 				</p>
 				<p>
+					<label for="layer">Above or Below Combatants</label>
+					<select name="layer">
+						<option value="ground">Below</option>
+						<option value="sky">Above</option>
+					</select>
+				</p>
+				<p>
 					<label for="color">Color</label>
 					<input name="color" />
 				</p>
 				<p>
-					<label for="type">Description</label>
-					<input name="type" />
+					<label for="strokeColor">Border Color</label>
+					<input name="strokeColor" />
 				</p>
 				<p>
-					<label>Raw Cell Data</label>
-					<textarea name="cellData" rows="7"></textarea>
+					<label for="strokeOpacity">Border Opacity Percentage</label>
+					<input name="strokeOpacity" type="number" />
+				</p>
+				<p>
+					<label>Path Data</label>
+					<textarea name="path" rows="7"></textarea>
 				</p>
 				<p>While editing is enabled, you can add a new point connected to 
 the most recent point by clicking.  To remove a point, secondary (right) 
@@ -110,6 +121,10 @@ line.  To move a point, drag it to the desired position.
 			<form id="newZone" name="newZone">
 				<p>New Zone</p>
 				<p>
+					<label for="name">Name</label>
+					<input name="name" />
+				</p>
+				<p>
 					<label for="size">Edge Size</label>
 					<input type="number" name="size" />
 				</p>
@@ -121,8 +136,11 @@ line.  To move a point, drag it to the desired position.
 					</select>
 				</p>
 				<p>
-					<label for="type">Description; ground ends with 'terrain'</label>
-					<input name="type" />
+					<label for="layer">Ground or Sky</label>
+					<select name="layer">
+						<option value="ground">Ground</option>
+						<option value="sky">Sky</option>
+					</select>
 				</p>
 				<p>
 					<label for="color">Color</label>

@@ -161,9 +161,10 @@ BattleMap.prototype.triggerTransformListeners = function(){
 
 /* Add an object interested in when things change on the battlefield.
 A transform listener must have a function "updateTranform".  In addition,
-the listener should have the properties "layer" and "svgObject" on it.
-Those two properties are used to determine painting order.  The layers
-(and order of painting) are "ground", "action", and "sky". */
+the listener should have the properties "layer", "zIndex" and "svgObject"
+on it.  Those three properties are used to determine painting order.
+The layers (and order of painting) are "ground", "action", and "sky".
+zIndex is used to determine order within layers.*/
 BattleMap.prototype.addTransformListener = function(obj){
 	this.transformListeners.push(obj);
 	this.setPaintOrder();
@@ -224,6 +225,9 @@ BattleMap.prototype.unhighlight = function(){
 }
 
 BattleMap.layerSort = function(thinga,thingb){
+	if(thinga.layer == thingb.layer){
+		thingb.zIndex - thinga.zIndex;
+	}
 	if(thinga.layer == "sky"){
 		return -1;
 	}
@@ -276,6 +280,7 @@ function Combatant(battlemap, opts){
 	this.hp = 5;
 	this.initiative = 10;
 	this.conditions = [];
+	this.zIndex = 1;
 	for(var i in opts){
 		this[i] = opts[i];
 	}
@@ -380,12 +385,17 @@ transparent or not.
 
 function CombatZone(battlemap, opts){
 	this.battlemap = battlemap;
-	this.cells = CombatZone.square;
+	//this.cells = CombatZone.square;
 	this.startCell = [0,0];
-	this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
-	this.type = 'terrain';
+	//this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
+	this.name = 'CombatZone of Doom';
 	this.color = 'darkgreen';
-	this.layer = "sky";
+	this.layer = "ground";
+	this.zIndex = 1;
+	this.rotation = "none"; // none, cw, ccw, about
+	this.path = CombatZone.makeSquare(1);
+	this.strokeOpacity = ".25";
+	this.strokeColor = "black";
 
 	for(var i in opts){
 		this[i] = opts[i];
@@ -395,17 +405,16 @@ function CombatZone(battlemap, opts){
 	var pap = this.battlemap.svgPaper;
 	this.svgObject = pap.path(svgPathString);
 	var opacity = .5;
-	var strokeWidth = 3;
-	if(this.type.match(/terrain$/)){
+	var strokeWidth = 5;
+	if(this.layer == "ground"){
 		opacity = 1;
-		strokeWidth = 0;
-		this.layer = "ground";
 	}
 	this.svgObject.attr({
 		fill: this.color,
 		'fill-opacity': opacity,
-		'stroke-width': 3,
-		'stroke': this.color
+		'stroke-width': strokeWidth,
+		'stroke': this.strokeColor,
+		'stroke-opacity': this.strokeOpacity
 	});
 	this.battlemap.addTransformListener(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
@@ -419,22 +428,48 @@ CombatZone.prototype.updateTransform = function(){
 
 CombatZone.prototype.makeSvgPathString = function(){
 	var cellSize = this.battlemap.gridSpacing;
-	var endi = this.cells.length;
-	var convertToCoords = function(xy){
-		return [xy[0] * cellSize, xy[1] * cellSize];
-	}
-	var convertedCells = this.cells.map(convertToCoords);
-	if(this.closed){
-		endi--;
-	}
-	var path = "M" + convertedCells[0][0] + "," + convertedCells[0][1];
-	for(var i = 1; i < endi; i++){
-		path += "L" + convertedCells[i][0] + "," + convertedCells[i][1];
-	}
-	if(this.closed){
-		path += "Z";
-	}
-	return path;
+	var pathArray = Raphael.parsePathString(this.path);
+	var toGrid = function(xory){
+		return xory * cellSize;
+	};
+	var outPath = "";
+	pathArray.map(function(parts){
+		switch(parts[0]){
+			case "M":
+			case "L":
+			case "T":
+			case "m":
+			case "l":
+			case "t":
+				outPath += parts[0] + [parts[1], parts[2]].map(toGrid).join(" ");
+				break;
+			case "H":
+			case "V":
+			case "h":
+			case "v":
+				outPath += parts[0] + [parts[1]].map(toGrid).join(" ");
+				break;
+			case "S":
+			case "Q":
+			case "R":
+			case "s":
+			case "q":
+			case "r":
+				outPath += parts[0] + [parts[1], parts[2], parts[3], parts[4]].map(toGrid).join(" ");
+				break;
+			case "C":
+			case "c":
+				outPath += parts[0] + [parts[1], parts[2], parts[3], parts[4], parts[5], parts[6]].map(toGrid).join(" ");
+				break;
+			case "A":
+			case "a":
+				outPath += [parts[0], parts[1] * cellSize, parts[2] * cellSize,
+					parts[3], parts[4], parts[5], parts[6] * cellSize,
+					parts[7] * cellSize].join(" ");
+				break;
+		}
+	});
+	return outPath;
 }
 
 CombatZone.prototype.setStart = function(cellX, cellY){
@@ -445,34 +480,44 @@ CombatZone.prototype.setStart = function(cellX, cellY){
 CombatZone.prototype.setColor = function(color){
 	this.color = color;
 	this.svgObject.attr({
-		'fill': color,
-		'stroke': color
+		'fill': color
 	});
 };
 
-CombatZone.prototype.setType = function(type){
-	this.type = type;
-	var opacity = 0.5;
-	var strokeW = 3;
-	this.layer = "sky";
-	if(this.type.match(/terrain$/)){
-		opacity = 1;
-		strokeW = 0;
-		this.layer = "ground";
+CombatZone.prototype.setStroke = function(color, opacity){
+	if(opacity == undefined){
+		opacity = this.strokeOpacity;
+	}
+	if(color == undefined){
+		color = this.strokeColor;
 	}
 	this.svgObject.attr({
-		'fill-opacity':opacity,
-		'stroke-width':strokeW
+		'stroke':color,
+		'stroke-opacity':opacity
+	});
+}
+
+CombatZone.prototype.setLayer = function(layer){
+	if(layer != "sky"){
+		layer = "ground";
+	}
+	this.layer = layer;
+	var opacity = 0.5;
+	if(this.layer == "ground"){
+		opacity = 1;
+	}
+	this.svgObject.attr({
+		'fill-opacity':opacity
 	});
 	this.battlemap.setPaintOrder();
 }
 
-CombatZone.prototype.setCells = function(newCells){
-	this.cells = newCells;
+CombatZone.prototype.setPath = function(pathStr){
+	this.path = pathStr;
 	this.updatePath();
 }
 
-CombatZone.prototype.addCell = function(xy, pos){
+/*CombatZone.prototype.addCell = function(xy, pos){
 	if(pos == undefined){
 		this.cells.push(pos);
 	} else {
@@ -509,7 +554,7 @@ CombatZone.prototype.safeCell = function(xy){
 		return "prepend";
 	}
 	return false;
-}
+}*/
 
 CombatZone.prototype.updatePath = function(){
 	var pathStr = this.makeSvgPathString();
@@ -525,12 +570,11 @@ CombatZone.prototype.remove = function(){
 }
 
 CombatZone.makeSquare = function(size){
-	return [[0,0],[size,0],[size,size],[0,size],[0,0]];
+	return Raphael.format("M0 0L{0} 0L{0} {0}L0 {0}L0 0Z", size);
 }
 
 CombatZone.makeOctogon = function(size){
-	return [[size,0],[size * 2,0],[size*3,size],[size*3,size*2],
-		[size*2,size*3],[size,size*3],[0,size*2],[0,size],[size,0]];
+	return Raphael.format("M{0} 0L{1} 0L{2} {0}L{2} {1}L{1} {2}L{0} {2}L0 {1}L0 {0}L{0} 0Z", size, size * 2, size * 3);
 }
 
 // CombatZone basic shapes

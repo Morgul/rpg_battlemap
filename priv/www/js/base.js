@@ -20,6 +20,7 @@ function saveBattleMapLocal(){
 	var storeCombatant = function(combatDude){
 		var tmpCombat = {
 			name: combatDude.name,
+			zIndex: combatDude.zIndex,
 			color: combatDude.color,
 			cellX: combatDude.cellX,
 			cellY: combatDude.cellY,
@@ -35,10 +36,15 @@ function saveBattleMapLocal(){
 	}
 	mapForStorage.zones = zoneList.map(function(zone){
 		var tmpZone = {
-			cells: zone.cells,
 			startCell: zone.startCell,
-			type: zone.type,
-			color: zone.color
+			name: zone.name,
+			color: zone.color,
+			layer: zone.layer,
+			zIndex: zone.zIndex,
+			rotation: zone.rotation,
+			path: zone.path,
+			strokeOpacity: zone.strokeOpacity,
+			strokeColor: zone.strokeColor
 		};
 		return tmpZone;
 	});
@@ -145,17 +151,19 @@ function stringToCells(string, cellCoordDelim){
 function createZoneListItem(zone){
 	var liElem = document.createElement('li');
 	liElem.style.boxShadow = "inset 0 0 10px 2px " + zone.color;
-	liElem.innerHTML = zone.type;
+	liElem.innerHTML = zone.name;
 	$(liElem).click(function(){
 		var zoneListInd = this.getAttribute('zoneIndex');
 		var zone = zoneList[zoneListInd];
 		var editorForm = $('#zoneEditor form')[0];
+		for(var prop in zone){
+			if(editorForm[prop] && (editorForm[prop].value != undefined)){
+				editorForm[prop].value = zone[prop];
+			}
+		}
 		editorForm.cellX.value = zone.startCell[0];
 		editorForm.cellY.value = zone.startCell[1];
-		editorForm.color.value = zone.color;
-		editorForm.type.value = zone.type;
 		editorForm.zoneIndex.value = zoneListInd;
-		editorForm.cellData.value = cellListToString(zone.cells);
 	});
 	return liElem;
 }
@@ -279,8 +287,9 @@ $().ready(function(){
 		var zone = zoneList[index];
 		zone.setStart(sanatizeInt(this.cellX.value),sanatizeInt(this.cellY.value));
 		zone.setColor(this.color.value);
-		zone.setType(this.type.value);
-		zone.setCells(stringToCells(this.cellData.value));
+		zone.setLayer(this.layer.value);
+		zone.setPath(this.path.value);
+		zone.setStroke(this.strokeColor.value, parseFloat(this.strokeOpacity.value) / 100);
 		return false;
 	});
 
@@ -304,9 +313,9 @@ $().ready(function(){
 		localmap = localStorage.key(i);
 		mapNameLi = document.createElement('li');
 		mapNameLi.innerHTML = localmap;
-		mapNameLi.onclick = function(){
+		/*mapNameLi.onclick = function(){
 			loadBattleMapLocal(localmap);
-		};
+		};*/
 		$('#savedMapsList').append(mapNameLi);
 	}
 	$('#savedMapsList li').click(function(){
