@@ -423,7 +423,24 @@ function CombatZone(battlemap, opts){
 
 CombatZone.prototype.updateTransform = function(){
 	var transformStr = this.battlemap.getTransformString(this.startCell[0], this.startCell[1]);
-	this.svgObject.transform(transformStr);
+	var rotate = "0";
+	switch(this.rotation){
+		case "ccw":
+			rotate = "r-90";
+			break;
+		case "cw":
+			rotate = "r90";
+			break;
+		case "about":
+			rotate = "r180";
+			break;
+		case "none":
+			rotate = "r0";
+			break;
+		default:
+			rotate = this.rotation;
+	}
+	this.svgObject.transform(transformStr + rotate + " " + this.startCell[0] + " " + this.startCell[1]);
 }
 
 CombatZone.prototype.makeSvgPathString = function(){
@@ -474,6 +491,11 @@ CombatZone.prototype.makeSvgPathString = function(){
 
 CombatZone.prototype.setStart = function(cellX, cellY){
 	this.startCell = [cellX,cellY];
+	this.updateTransform();
+}
+
+CombatZone.prototype.setRotation = function(rotation){
+	this.rotation = rotation;
 	this.updateTransform();
 }
 

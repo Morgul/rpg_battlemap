@@ -289,6 +289,7 @@ $().ready(function(){
 		zone.setColor(this.color.value);
 		zone.setLayer(this.layer.value);
 		zone.setPath(this.path.value);
+		zone.setRotation(this.rotation.value);
 		zone.setStroke(this.strokeColor.value, parseFloat(this.strokeOpacity.value) / 100);
 		return false;
 	});
