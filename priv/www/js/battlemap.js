@@ -29,6 +29,10 @@ function BattleMap(actionElem, gridElem, opts){
 	this.translateY = 0;
 	this.gridSpacing = 32; // pixels
 
+	// look and feel
+	this.backgroundColor = "#e0e0e0";
+	this.gridlineColor = "rgba(0,0,0,0,5)";
+
 	this.transformListeners = [];
 	for(var i in opts){
 		this[i] = opts[i]
@@ -67,7 +71,8 @@ function BattleMap(actionElem, gridElem, opts){
 			return false;
 		}
 		return true;
-	});
+	})
+	.css('background-color', this.backgroundColor);
 }
 
 /* clears the canvas and redraws the grid. */
@@ -83,7 +88,8 @@ BattleMap.prototype.drawGrid = function(){
 	var topcornery = 0 + this.translateY;
 	this.gridCtx.clearRect(0,0, width, height);
 	//this.gridCtx.setFillColor("black");
-	this.gridCtx.fillSytle = "black";
+	this.gridCtx.fillStyle = this.gridlineColor;
+	this.gridCtx.strokeStyle = "rgba(80,80,80, 0.5)";
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
 	this.svgPaper.setSize(width, height);
