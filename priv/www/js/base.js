@@ -50,6 +50,7 @@ function loadBattleMapLocal(mapname){
 		return;
 	}
 	var rawMap = localStorage.getObject(mapname);
+	$('#drawingBoard svg').remove();
 	window.battleMap = new BattleMap('drawingBoard', 'canvasBoard', rawMap);
 	rawMap.combatants.map(function(rawDude){
 		rawDude.onMouseOver = function(){
@@ -64,6 +65,19 @@ function loadBattleMapLocal(mapname){
 		zoneList.push(newZone);
 	});
 	rebuildZoneList();
+	resizeBattleMap();
+}
+
+function resizeBattleMap() {
+	var headerHeight = $('#head').height();
+	var guessheight = window.innerHeight - (headerHeight + 20) ;
+	$('#drawingBoard').height(guessheight);
+	var newHeight = $('#drawingBoard').height();
+	var newWidth = $('#drawingBoard').width();
+	$('#canvasBoard').attr("width", newWidth)
+	$('#canvasBoard').attr("height", newHeight);
+
+	window.battleMap.drawGrid();
 }
 
 function insertCombatant(combatant) {
@@ -181,18 +195,6 @@ $().ready(function(){
 	});
 
 	window.battleMap = new BattleMap('drawingBoard', 'canvasBoard', {});
-	function resizeBattleMap() {
-		var headerHeight = $('#head').height();
-		var guessheight = window.innerHeight - (headerHeight + 20) ;
-		$('#drawingBoard').height(guessheight);
-		var newHeight = $('#drawingBoard').height();
-		var newWidth = $('#drawingBoard').width();
-		$('#canvasBoard').attr("width", newWidth)
-		$('#canvasBoard').attr("height", newHeight);
-
-		window.battleMap.drawGrid();
-	}
-
 	$(window).resize(resizeBattleMap);
 
 	$('#drawingBoard').mousewheel(function(ev, delta){
