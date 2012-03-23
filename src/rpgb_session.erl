@@ -10,7 +10,8 @@
 	code_change/3]).
 % api
 -export([start_link/0, start_link/1, get_or_create/1, get/1, create/0,
-	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3, set_user/2]).
+	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3, set_user/2,
+	to_dict/1]).
 
 %% =================================================================
 %% Api
@@ -103,6 +104,16 @@ get_value(Key, {_, _, Dict, _}, Default) ->
 		error -> {ok, Default};
 		E -> E
 	end.
+
+to_dict(undefined) ->
+	dict:new();
+
+to_dict({_Id, User, Values, TimeStarted}) ->
+	dict:from_list([
+		{username, User},
+		{timestarted, TimeStarted},
+		{values, Values}
+	]).
 
 %% =================================================================
 %% Init
