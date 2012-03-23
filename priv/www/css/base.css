@@ -41,8 +41,10 @@ body
 
 #combatantList li, #zoneList li, #savedMapsList
 {
-	border-style: solid;
-	border-width: 3px;
+	background: white;
+	border: 1px solid #555;
+	text-align: center;
+	margin-bottom: 2px;
 }
 
 #zoneList
