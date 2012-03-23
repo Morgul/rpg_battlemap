@@ -564,6 +564,8 @@ CombatZone.prototype.setStroke = function(color, opacity){
 	if(color == undefined){
 		color = this.strokeColor;
 	}
+	this.strokeColor = color;
+	this.strokeOpacity = opacity;
 	this.svgObject.attr({
 		'stroke':color,
 		'stroke-opacity':opacity
