@@ -394,7 +394,7 @@ function CombatZone(battlemap, opts){
 	this.zIndex = 1;
 	this.rotation = "none"; // none, cw, ccw, about
 	this.path = CombatZone.makeSquare(1);
-	this.strokeOpacity = ".25";
+	this.strokeOpacity = .25;
 	this.strokeColor = "black";
 
 	for(var i in opts){
@@ -416,6 +416,7 @@ function CombatZone(battlemap, opts){
 		'stroke': this.strokeColor,
 		'stroke-opacity': this.strokeOpacity
 	});
+	this.svgObject.node.setAttribute('fill-rule', 'evenodd');
 	this.battlemap.addTransformListener(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
@@ -441,6 +442,56 @@ CombatZone.prototype.updateTransform = function(){
 			rotate = this.rotation;
 	}
 	this.svgObject.transform(transformStr + rotate + " " + this.startCell[0] + " " + this.startCell[1]);
+}
+
+CombatZone.prototype.toGrid = function(xory){
+	return xory * this.battlemap.gridSpacing;
+}
+
+CombatZone.prototype.alterXY = function(modFunc){
+	var pathArray = Raphael.parsePathString(this.path);
+	var newPathArr = pathArray.map(function(parts){
+		switch(parts[0]){
+			case "M":
+			case "L":
+			case "T":
+			case "m":
+			case "l":
+			case "t":
+				return [parts[0], modFunc(parts[1]), modFunc(parts[2])];
+				break;
+			case "H":
+			case "V":
+			case "h":
+			case "v":
+				return [parts[0], modFunc(parts[1])];
+				break;
+			case "S":
+			case "Q":
+			case "R":
+			case "s":
+			case "q":
+			case "r":
+				return [parts[0], modFunc(parts[1]), modFunc(parts[2]), modFunc(parts[3]), modFunc(parts[4])];
+				break;
+			case "C":
+			case "c":
+				var modded = [parts[1], parts[2], parts[3], parts[4], parts[5], parts[6]].map(modFunc);
+				modded.unshift(parts[0]);
+				return modded;
+				break;
+			case "A":
+			case "a":
+				return [parts[0], modFunc(parts[1]), modFunc(parts[2]), parts[3],
+					parts[4], parts[5], modFunc(parts[6]), modFunc(parts[7])];
+				break;
+			default:
+				return parts;
+		}
+	});
+	return newPathArr.map(function(parts){
+		return parts.join(" ");
+	}).join(" ");
 }
 
 CombatZone.prototype.makeSvgPathString = function(){
