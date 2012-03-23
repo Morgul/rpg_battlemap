@@ -164,6 +164,7 @@ function createZoneListItem(zone){
 		editorForm.cellX.value = zone.startCell[0];
 		editorForm.cellY.value = zone.startCell[1];
 		editorForm.zoneIndex.value = zoneListInd;
+		editorForm.strokeOpacity.value = zone.strokeOpacity * 100;
 	});
 	return liElem;
 }

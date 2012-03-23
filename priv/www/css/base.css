@@ -39,13 +39,13 @@ body
 	list-style:none;
 }
 
-#combatantList li, #zoneList li, #savedMapsList
+#combatantList li, #zoneList li, #savedMapsList li
 {
 	border-style: solid;
 	border-width: 3px;
 }
 
-#zoneList
+#zoneList, #savedMapsList
 {
 	padding: 0;
 }
