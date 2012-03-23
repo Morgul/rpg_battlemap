@@ -51,7 +51,8 @@ process_post(ReqData, Ctx) ->
 		{ok, AuthReq} ->
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
-			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL),
+			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL, [
+				{"openid.sreg.optional", "nickname"}]),
 			ReqData1 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData0),
 			ReqData2 = wrq:do_redirect(true, ReqData1),
 			{true, ReqData2, Ctx};
@@ -62,25 +63,26 @@ process_post(ReqData, Ctx) ->
 
 to_html(ReqData, Ctx) ->
 	?info("to html"),
-	ReqData1 = case wrq:path_info(action, ReqData) of
+	{ReqData1,Session} = case wrq:path_info(action, ReqData) of
 		"login" ->
-			{ok, _Session, ReqData0} = rpgb_session:get_or_create(ReqData),
-			ReqData0;
+			{ok, DahSession, ReqData0} = rpgb_session:get_or_create(ReqData),
+			{ReqData0,DahSession};
 		"login_complete" ->
-			{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
-			SessionId = rpgb_session:get_id(Session),
+			{ok, DahSession, ReqData0} = rpgb_session:get_or_create(ReqData),
+			SessionId = rpgb_session:get_id(DahSession),
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			QueryParams = wrq:req_qs(ReqData),
 			case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
 				{ok, UserId} ->
-					io:format("We have ourselves a user:  ~p", [UserId]);
+					io:format("We have ourselves a user:  ~p", [UserId]),
+					io:format("query params:  ~p", [QueryParams]);
 				{error, Fail} ->
 					io:format("And it's all fucked up:  ~p", [Fail])
 			end,
-			ReqData0
+			{ReqData0,DahSession}
 	end,
-	{ok, Out} = base_dtl:render([]),
+	{ok, Out} = base_dtl:render([{session, rpgb_session:to_dict(Session)}]),
 	{Out, ReqData1, Ctx}.
 
 %to_json(ReqData, Ctx) ->
