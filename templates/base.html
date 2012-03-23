@@ -17,7 +17,7 @@
 <body>
 <div id="head">
 {% if session.username %}
-<span class="login">Welcome, {{ session.username }}</span>
+<span class="login">Welcome, {{ session.username }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>
 {% else %}
 <form id="login" class="login" action="/account/login/" method="post">
 	<input name="openid" placeholder="{% trans "OpenID" %}" />
@@ -34,7 +34,7 @@
 		<h3><a href="#">Combatant</a></h3>
 		<div id="combatantInfo">
 			<div object-property="color" display-attr="style" style-display="border-color" style="float: left; width: 48px; height: 48px; border-width: 3px; margin:3px; border-style:solid;">
-			<img object-property="image" display-attr="src" style="width:100%; height: 100%;" />
+			<img object-property="image" display-attr="src" style="width:100%; height: 100%;" display-default="/images/default_combatant.png"/>
 		</div>
 			<p object-property="name">&nbsp;</p>
 			<p>cell
