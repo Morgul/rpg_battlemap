@@ -45,19 +45,19 @@ process_post(ReqData, Ctx) ->
 	Post = mochiweb_util:parse_qs(wrq:req_body(ReqData)),
 	Openid = proplists:get_value("openid", Post, ""),
 	?info("Openid:  ~p", [Openid]),
-	{ok, Session} = rpgb_session:get(ReqData),
+	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
 	SessionId = rpgb_session:get_id(Session),
 	case gen_server:call(openid, {prepare, SessionId, Openid, true}) of
 		{ok, AuthReq} ->
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL),
-			ReqData0 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData),
-			ReqData1 = wrq:do_redirect(true, ReqData0),
-			{true, ReqData1, Ctx};
+			ReqData1 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData0),
+			ReqData2 = wrq:do_redirect(true, ReqData1),
+			{true, ReqData2, Ctx};
 		{error, Err} ->
 			?info("Error from openid:  ~p", [Err]),
-			{false, ReqData, Ctx}
+			{false, ReqData0, Ctx}
 	end.
 
 to_html(ReqData, Ctx) ->
