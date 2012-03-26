@@ -66,6 +66,10 @@ to_html(ReqData, Session) ->
 	{ReqData0,Session0} = case wrq:path_info(action, ReqData) of
 		"login" ->
 			{ReqData,Session};
+		"logout" ->
+			SessionId = rpgb_session:get_id(Session),
+			rpgb_session:destroy(SessionId),
+			{ReqData, undefined};
 		"login_complete" ->
 			SessionId = rpgb_session:get_id(Session),
 			BaseURL = rpg_battlemap_app:get_url(),
