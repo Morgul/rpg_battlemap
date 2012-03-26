@@ -25,9 +25,47 @@ allowed_methods(ReqData, _Ctx) ->
 	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
 	{['GET', 'POST', 'HEAD'], ReqData0, Session}.
 
-%resouce_exists(ReqData, Ctx) ->
-%	?info("resource exists"),
-%	{false, ReqData, Ctx}.
+resource_exists(ReqData, Ctx) ->
+	?info("resource exists"),
+	case wrq:path_info(action, ReqData) of
+		"login_complete" ->
+			{false, ReqData, Ctx};
+		_ ->
+			{true, ReqData, Ctx}
+	end.
+
+previously_existed(ReqData, Ctx) ->
+	{true, ReqData, Ctx}.
+
+moved_temporarily(ReqData, Session) ->
+	SessionId = rpgb_session:get_id(Session),
+	BaseURL = rpg_battlemap_app:get_url(),
+	ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
+	QueryParams = wrq:req_qs(ReqData),
+	case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
+		{ok, OpenID} ->
+			?info("We have ourselves a user:  ~p", [OpenID]),
+			?info("query params:  ~p", [QueryParams]),
+			Username = proplists:get_value("openid.sreg.nickname", QueryParams, "Awesome User"),
+			{ok, Session1} = case boss_db:find(rpgb_user, [{open_id, equals, list_to_binary(OpenID)}], 1) of
+				[] ->
+					Userrec = boss_record:new(rpgb_user, [
+						{open_id, list_to_binary(OpenID)},
+						{name, list_to_binary(Username)},
+						{rpgb_ground_id, 'rpgb_ground-1'}
+					]),
+					?info("Das user:  ~p\n", [Userrec]),
+					{ok, Userrec0} = Userrec:save(),
+					rpgb_session:set_user(Userrec0:attributes(), Session);
+				[Userrec] ->
+					rpgb_session:set_user(Userrec:attributes(), Session)
+			end,
+			ReqData1 = wrq:do_redirect(true, wrq:set_resp_header("Location", "/", ReqData)),
+			{{true, "/"}, ReqData1, Session1};
+		{error, Fail} ->
+			?info("And it's all fucked up:  ~p", [Fail]),
+			{{true, "/"}, ReqData, Session}
+	end.
 
 %known_content_type(ReqData, Cts) ->
 %	?info("known type"),
@@ -69,36 +107,7 @@ to_html(ReqData, Session) ->
 		"logout" ->
 			SessionId = rpgb_session:get_id(Session),
 			rpgb_session:destroy(SessionId),
-			{ReqData, undefined};
-		"login_complete" ->
-			SessionId = rpgb_session:get_id(Session),
-			BaseURL = rpg_battlemap_app:get_url(),
-			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
-			QueryParams = wrq:req_qs(ReqData),
-			case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
-				{ok, OpenID} ->
-					io:format("We have ourselves a user:  ~p", [OpenID]),
-					io:format("query params:  ~p", [QueryParams]),
-					Username = proplists:get_value("openid.sreg.nickname", QueryParams, "Awesome User"),
-					case boss_db:find(rpgb_user, [{open_id, equals, list_to_binary(OpenID)}], 1) of
-						[] ->
-							Userrec = boss_record:new(rpgb_user, [
-								{open_id, list_to_binary(OpenID)},
-								{name, list_to_binary(Username)},
-								{rpgb_ground_id, 'rpgb_ground-1'}
-							]),
-							io:format("Das user:  ~p\n", [Userrec]),
-							{ok, Userrec0} = Userrec:save(),
-							{ok, Session1} = rpgb_session:set_user(Userrec0:attributes(), Session),
-							{ReqData, Session1};
-						[Userrec] ->
-							{ok, Session1} = rpgb_session:set_user(Userrec:attributes(), Session),
-							{ReqData, Session1}
-					end;
-				{error, Fail} ->
-					io:format("And it's all fucked up:  ~p", [Fail]),
-					{ReqData, Session}
-			end
+			{ReqData, undefined}
 	end,
 	{ok, Out} = base_dtl:render([{session, rpgb_session:to_dict(Session0)}]),
 	{Out, ReqData0, Session0}.
