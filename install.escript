@@ -1,10 +1,8 @@
 #! /usr/bin/env escript
-%%! -sname rpg_battlemap_dev
 -mode(compile).
 
 %% @doc Create the mnesia tables, or compile the boss_db models.  Update
 %% the node name in the %%! line for deployment.
-
 main(Args) ->
 	{ok, DepsDirs} = file:list_dir("deps"),
 	Paths = ["deps/" ++ X ++ "/ebin" || X <- DepsDirs],
@@ -52,6 +50,20 @@ compile_models([ModelFile | Tail]) ->
 	end.
 
 build_db() ->
+	case node() of
+		nonode@nohost ->
+			[] = os:cmd("epmd -daemon"),
+			case net_kernel:start([rpg_battlemap_dev, shortnames]) of
+				{ok, _} ->
+					ok;
+				{error, {{already_started, _}, _}}  ->
+					ok;
+				_ ->
+					erlang:error(node_fail)
+			end;
+		Else ->
+			Else
+	end,
 	mnesia:create_schema([node()]),
 	io:format("Schema created\n"),
 	mnesia:start(),

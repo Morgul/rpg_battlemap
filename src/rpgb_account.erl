@@ -65,22 +65,38 @@ to_html(ReqData, Ctx) ->
 	?info("to html"),
 	{ReqData1,Session} = case wrq:path_info(action, ReqData) of
 		"login" ->
-			{ok, DahSession, ReqData0} = rpgb_session:get_or_create(ReqData),
-			{ReqData0,DahSession};
+			{ok, Session0, ReqData0} = rpgb_session:get_or_create(ReqData),
+			{ReqData0,Session0};
 		"login_complete" ->
-			{ok, DahSession, ReqData0} = rpgb_session:get_or_create(ReqData),
-			SessionId = rpgb_session:get_id(DahSession),
+			{ok, Session0, ReqData0} = rpgb_session:get_or_create(ReqData),
+			SessionId = rpgb_session:get_id(Session0),
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			QueryParams = wrq:req_qs(ReqData),
 			case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
-				{ok, UserId} ->
-					io:format("We have ourselves a user:  ~p", [UserId]),
-					io:format("query params:  ~p", [QueryParams]);
+				{ok, OpenID} ->
+					io:format("We have ourselves a user:  ~p", [OpenID]),
+					io:format("query params:  ~p", [QueryParams]),
+					Username = proplists:get_value("openid.sreg.nickname", QueryParams, "Awesome User"),
+					case boss_db:find(rpgb_user, [{open_id, equals, list_to_binary(OpenID)}], 1) of
+						[] ->
+							Userrec = boss_record:new(rpgb_user, [
+								{open_id, list_to_binary(OpenID)},
+								{name, list_to_binary(Username)},
+								{rpgb_ground_id, 'rpgb_ground-1'}
+							]),
+							io:format("Das user:  ~p\n", [Userrec]),
+							{ok, Userrec0} = Userrec:save(),
+							{ok, Session1} = rpgb_session:set_user(Userrec0:attributes(), Session0),
+							{ReqData0, Session1};
+						[Userrec] ->
+							{ok, Session1} = rpgb_session:set_user(Userrec:attributes(), Session0),
+							{ReqData0, Session1}
+					end;
 				{error, Fail} ->
-					io:format("And it's all fucked up:  ~p", [Fail])
-			end,
-			{ReqData0,DahSession}
+					io:format("And it's all fucked up:  ~p", [Fail]),
+					{ReqData0, Session0}
+			end
 	end,
 	{ok, Out} = base_dtl:render([{session, rpgb_session:to_dict(Session)}]),
 	{Out, ReqData1, Ctx}.

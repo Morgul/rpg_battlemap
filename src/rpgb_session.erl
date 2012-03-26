@@ -93,8 +93,13 @@ set_user(User, {Id, undefined, Values, _}) ->
 	ets:insert(?MODULE, Session),
 	{ok, Session};
 
-set_user(_, _) ->
-	{error, user_already_set}.
+set_user(User, {_Id, User, _, _} = S) ->
+	{ok, S};
+
+set_user(User, {Id, _OldUser, _OldValues, _TimeStarted}) ->
+	Session = {Id, User, dict:new(), calendar:local_time()},
+	ets:insert(?MODULE, Session),
+	{ok, Session}.
 
 get_value(Key, {_, _, Dict, _}) ->
 	dict:find(Key, Dict).

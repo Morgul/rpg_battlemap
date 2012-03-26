@@ -4,7 +4,17 @@
 -compile([export_all]).
 
 before_create() ->
-	{ok, ?MODULE:new(Id, Name, OpenID, RpgbGroupId, erlang:now(), erlang:now())}.
+	[Name0, OpenID0] = [if
+		is_list(X) -> list_to_binary(X);
+		true -> X
+	end || X <- [Name, OpenID]],
+	io:format("bing"),
+	{ok, ?MODULE:new(Id, Name0, OpenID0, RpgbGroupId, erlang:now(), erlang:now())}.
 
 before_update() ->
-	{ok, ?MODULE:new(Id, Name, OpenID, RpgbGroupId, CreatedTime, erlang:now())}.
+	[Name0, OpenID0] = [if
+		is_list(X) -> list_to_binary(X);
+		true -> X
+	end || X <- [Name, OpenID]],
+	io:format("bang"),
+	{ok, ?MODULE:new(Id, Name0, OpenID0, RpgbGroupId, CreatedTime, erlang:now())}.
