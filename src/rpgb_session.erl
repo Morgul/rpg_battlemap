@@ -115,7 +115,7 @@ to_dict(undefined) ->
 
 to_dict({_Id, User, Values, TimeStarted}) ->
 	dict:from_list([
-		{username, User},
+		{user, User},
 		{timestarted, TimeStarted},
 		{values, Values}
 	]).

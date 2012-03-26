@@ -16,8 +16,8 @@
 </head>
 <body>
 <div id="head">
-{% if session.username %}
-<span class="login">Welcome, {{ session.username }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>
+{% if session.user %}
+<span class="login">Welcome, {{ session.user.name }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>
 {% else %}
 <form id="login" class="login" action="/account/login/" method="post">
 	<input name="openid" placeholder="{% trans "OpenID" %}" />
