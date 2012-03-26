@@ -20,9 +20,10 @@ init(Args) ->
 %	Out = [{"application/x-www-form-urlencoded", handle_post}],
 %	{Out, ReqData, Ctx}.
 
-allowed_methods(ReqData, Ctx) ->
+allowed_methods(ReqData, _Ctx) ->
 	?info("allowed methods"),
-	{['GET', 'POST', 'HEAD'], ReqData, Ctx}.
+	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
+	{['GET', 'POST', 'HEAD'], ReqData0, Session}.
 
 %resouce_exists(ReqData, Ctx) ->
 %	?info("resource exists"),
@@ -40,12 +41,11 @@ allowed_methods(ReqData, Ctx) ->
 %	?info("allow missing post"),
 %	{true, ReqData, Ctx}.
 	
-process_post(ReqData, Ctx) ->
+process_post(ReqData, Session) ->
 	?info("processing a likely login"),
 	Post = mochiweb_util:parse_qs(wrq:req_body(ReqData)),
 	Openid = proplists:get_value("openid", Post, ""),
 	?info("Openid:  ~p", [Openid]),
-	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
 	SessionId = rpgb_session:get_id(Session),
 	case gen_server:call(openid, {prepare, SessionId, Openid, true}) of
 		{ok, AuthReq} ->
@@ -53,23 +53,21 @@ process_post(ReqData, Ctx) ->
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL, [
 				{"openid.sreg.optional", "nickname"}]),
-			ReqData1 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData0),
+			ReqData1 = wrq:set_resp_header("Location", binary_to_list(AuthURL), ReqData),
 			ReqData2 = wrq:do_redirect(true, ReqData1),
-			{true, ReqData2, Ctx};
+			{true, ReqData2, Session};
 		{error, Err} ->
 			?info("Error from openid:  ~p", [Err]),
-			{false, ReqData0, Ctx}
+			{false, ReqData, Session}
 	end.
 
-to_html(ReqData, Ctx) ->
+to_html(ReqData, Session) ->
 	?info("to html"),
-	{ReqData1,Session} = case wrq:path_info(action, ReqData) of
+	{ReqData0,Session0} = case wrq:path_info(action, ReqData) of
 		"login" ->
-			{ok, Session0, ReqData0} = rpgb_session:get_or_create(ReqData),
-			{ReqData0,Session0};
+			{ReqData,Session};
 		"login_complete" ->
-			{ok, Session0, ReqData0} = rpgb_session:get_or_create(ReqData),
-			SessionId = rpgb_session:get_id(Session0),
+			SessionId = rpgb_session:get_id(Session),
 			BaseURL = rpg_battlemap_app:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			QueryParams = wrq:req_qs(ReqData),
@@ -87,19 +85,19 @@ to_html(ReqData, Ctx) ->
 							]),
 							io:format("Das user:  ~p\n", [Userrec]),
 							{ok, Userrec0} = Userrec:save(),
-							{ok, Session1} = rpgb_session:set_user(Userrec0:attributes(), Session0),
-							{ReqData0, Session1};
+							{ok, Session1} = rpgb_session:set_user(Userrec0:attributes(), Session),
+							{ReqData, Session1};
 						[Userrec] ->
-							{ok, Session1} = rpgb_session:set_user(Userrec:attributes(), Session0),
-							{ReqData0, Session1}
+							{ok, Session1} = rpgb_session:set_user(Userrec:attributes(), Session),
+							{ReqData, Session1}
 					end;
 				{error, Fail} ->
 					io:format("And it's all fucked up:  ~p", [Fail]),
-					{ReqData0, Session0}
+					{ReqData, Session}
 			end
 	end,
-	{ok, Out} = base_dtl:render([{session, rpgb_session:to_dict(Session)}]),
-	{Out, ReqData1, Ctx}.
+	{ok, Out} = base_dtl:render([{session, rpgb_session:to_dict(Session0)}]),
+	{Out, ReqData0, Session0}.
 
 %to_json(ReqData, Ctx) ->
 %	?info("to json"),

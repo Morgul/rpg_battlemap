@@ -45,7 +45,7 @@ get_or_create(ReqData) ->
 			SessionId1 = get_id(Session),
 			?info("session was created:  ~p", [SessionId1]),
 			{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid",
-				SessionId1, [{max_age, 60 * 60 * 24 * 7}]),
+				SessionId1, [{max_age, 60 * 60 * 24 * 7},{path,"/"}]),
 			ReqData0 = wrq:set_resp_header(CookieHKey, CookieHVal, ReqData),
 			{ok, Session, ReqData0}
 	end.
