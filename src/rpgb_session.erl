@@ -4,7 +4,12 @@
 
 -include("log.hrl").
 -include_lib("stdlib/include/qlc.hrl").
-
+-type request_data() :: any().
+-type session_id() :: binary().
+-type user_data() :: [{binary(),binary()}].
+-type timestamp() :: {pos_integer(),pos_integer(),pos_integer()}.
+-type session() ::
+	{session_id(), undefined | user_data(), dict(),timestamp()}.
 % gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
 	code_change/3]).
@@ -17,11 +22,23 @@
 %% Api
 %% =================================================================
 
+%% @doc Start the session server.
+-spec start_link() -> {'ok', pid()}.
 start_link() -> start_link([]).
 
+%% @doc There are currently no actual options, so just starts the session
+%% server.  The session is ets backed.
+-spec start_link(Opts :: [any()]) -> {'ok', pid()}.
 start_link(Opts) ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, Opts, []).
 
+%% @doc Based on the id or webmachine request data, return a session
+%% always.  There is no indication given if the session is new or old.
+%% If just the session id is passed in, `{ok, Session}' is returned,
+%% otherwise `{ok, Sessin, ReqData}' is returned.  The new ReqData will
+%% have appropriate headers set if needed.
+-spec get_or_create (SessionRef :: string() | binary() | request_data()) ->
+	{'ok', session()} | {'ok', session(), request_data()}.
 get_or_create(Id) when is_list(Id) ->
 	get_or_create(list_to_binary(Id));
 
@@ -50,6 +67,9 @@ get_or_create(ReqData) ->
 			{ok, Session, ReqData0}
 	end.
 
+%% @doc Get session data if available based on id or `request_data()'.
+-spec get/1 :: (SessionReference :: string() | binary() | request_data()) ->
+	{'error','notfound'} | {'ok', session()}.
 get(undefined) ->
 	{error, notfound};
 
@@ -71,6 +91,10 @@ get(ReqData) ->
 	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
 	?MODULE:get(SessionId).
 
+%% @doc Creates a new session in the ets table and returns it.  While the
+%% uuid's for the session are randomly generated, there is still a check
+%% to ensure they are unique.
+-spec create() -> {'ok', session()}.
 create() ->
 	Uuid = make_uuid(),
 	Session = {Uuid, undefined, dict:new(), calendar:local_time()},
@@ -81,13 +105,22 @@ create() ->
 			{ok, Session}
 	end.
 
+%% @doc Remove a session from the ets.
+-spec destroy (Id :: binary()) -> 'ok'.
 destroy(Id) ->
 	ets:delete(?MODULE, Id).
 
+%% @doc Extracts the id from a `session()'.
+-spec get_id(Session :: session()) -> binary().
 get_id({Id, _, _, _}) -> Id.
 
+%% @doc Extracts the user proplist from a `session()'.
+-spec get_user(Session :: session()) -> user_data().
 get_user({_, User, _, _}) -> User.
 
+%% @doc Sets the user of a session, overwriting an existing one.
+-spec set_user(User :: user_data(), Session :: session()) ->
+	{'ok', session()}.
 set_user(User, {Id, undefined, Values, _}) ->
 	Session = {Id, User, Values, calendar:local_time()},
 	ets:insert(?MODULE, Session),
@@ -101,15 +134,25 @@ set_user(User, {Id, _OldUser, _OldValues, _TimeStarted}) ->
 	ets:insert(?MODULE, Session),
 	{ok, Session}.
 
+%% @doc Extracts a value from the dictionary associated with the session.
+-spec get_value(Key :: any(), Session :: session()) ->
+	'error' | {'ok', any()}.
 get_value(Key, {_, _, Dict, _}) ->
 	dict:find(Key, Dict).
 
+%% @doc Extracts a value from the dictionary associated with the session.
+%% If the given key has no value, the default is returned.
+-spec get_value (Key :: any(), Session :: session(), Default :: any()) ->
+	{'ok', any()}.
 get_value(Key, {_, _, Dict, _}, Default) ->
 	case dict:find(Key, Dict) of
 		error -> {ok, Default};
 		E -> E
 	end.
 
+%% @doc Turns the session tuple into a dictionary.  Also accepts undefined,
+%% meaning a new dictionry is returned.
+-spec to_dict/1 :: (Session :: 'undefined' | session()) -> dict().
 to_dict(undefined) ->
 	dict:new();
 
@@ -124,6 +167,7 @@ to_dict({_Id, User, Values, TimeStarted}) ->
 %% Init
 %% =================================================================
 
+%% @hidden
 init(_Opts) ->
 	Ets = ets:new(?MODULE, [named_table, public]),
 	Self = self(),
@@ -134,6 +178,7 @@ init(_Opts) ->
 %% handle_call
 %% =================================================================
 
+%% @hidden
 handle_call(_Msg, _From, State) ->
 	{reply, {error, unhandled}, State}.
 
@@ -141,6 +186,7 @@ handle_call(_Msg, _From, State) ->
 %% handle_cast
 %% =================================================================
 
+%% @hidden
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -148,6 +194,7 @@ handle_cast(_Msg, State) ->
 %% handle_info
 %% =================================================================
 
+%% @hidden
 handle_info(clear_dead_session, {_, Ets}) ->
 	Now = calendar:local_time(),
 	NowSecs = calendar:datetime_to_gregorian_seconds(Now),
@@ -175,12 +222,14 @@ too_old(TestDate, Now) ->
 %% terminate
 %% =================================================================
 
+%% @hidden
 terminate(_Why, _State) -> ok.
 
 %% =================================================================
 %% code_change
 %% =================================================================
 
+%% @hidden
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
