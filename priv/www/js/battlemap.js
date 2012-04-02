@@ -7,6 +7,11 @@ Grid and battle ground context and data.  Responsible for drawing a
 grid and placing entities such they are aligned to the grid.  Entities
 such as combatants and terrain need only concern themselves with which
 grid cell they are in.
+
+Events:
+* viewChanged :: undefined - Either the pan or the zoom has changed, and
+the bound object should request a new transformation string.
+
 * actionElem :: string() - Id of the element to use for svg drawing.
 * gridElem :: string() - Id of the canvas to use for drawing the grid and
 other limited interactive elements.
@@ -149,32 +154,7 @@ BattleMap.prototype.pan = function(deltaX, deltaY){
 }
 
 BattleMap.prototype.triggerTransformListeners = function(){
-	for(var i = 0; i < this.transformListeners.length; i++){
-		try{
-			this.transformListeners[i].updateTransform();
-		} catch (ex) {
-			console.log('listener fail', this.transformListeners[i]);
-			this.removeTransformListener(this.transformListeners[i]);
-		}
-	}
-}
-
-/* Add an object interested in when things change on the battlefield.
-A transform listener must have a function "updateTranform".  In addition,
-the listener should have the properties "layer", "zIndex" and "svgObject"
-on it.  Those three properties are used to determine painting order.
-The layers (and order of painting) are "ground", "action", and "sky".
-zIndex is used to determine order within layers.*/
-BattleMap.prototype.addTransformListener = function(obj){
-	this.transformListeners.push(obj);
-	this.setPaintOrder();
-}
-
-BattleMap.prototype.removeTransformListener = function(obj){
-	this.transformListeners = this.transformListeners.filter(function(x){
-		return (obj != x);
-	});
-	this.setPaintOrder();
+	$(this).trigger('viewChanged', undefined);
 }
 
 BattleMap.prototype.setPaintOrder = function(){
@@ -267,6 +247,11 @@ tests.battleLayerSort = function(){
 
 /***********************************************************************
 Class Combatant
+
+Events:
+* transformUpdated :: Combatant() - when the updateTransformation
+function was called, this is triggered.
+* removed :: Combatant() - when this has been removed from the battlemap.
 ***********************************************************************/
 
 function Combatant(battlemap, opts){
@@ -329,7 +314,11 @@ function Combatant(battlemap, opts){
 		this.svgObject.mouseover(this.onMouseOver);
 	}
 
-	this.battlemap.addTransformListener(this);
+	var theThis = this;
+	//this.battlemap.addTransformListener(this);
+	$(this.battlemap).bind('viewChanged', function(){
+		theThis.updateTransform();
+	});
 	this.updateTransform();
 }
 
@@ -338,11 +327,13 @@ Combatant.prototype.layer = "action";
 Combatant.prototype.updateTransform = function(){
 	var transformStr = this.battlemap.getTransformString(this.cellX, this.cellY);
 	this.svgObject.transform(transformStr);
+	$(this).trigger("transformUpdated", this);
 }
 
 Combatant.prototype.remove = function(){
 	this.svgObject.remove();
 	this.battlemap.removeTransformListener(this);
+	$(this).trigger("removed", this);
 }
 
 Combatant.prototype.moveTo = function(newX, newY){
@@ -417,7 +408,11 @@ function CombatZone(battlemap, opts){
 		'stroke-opacity': this.strokeOpacity
 	});
 	this.svgObject.node.setAttribute('fill-rule', 'evenodd');
-	this.battlemap.addTransformListener(this);
+	var theThis = this;
+	$(this.battlemap).bind('viewChanged', function(){
+		theThis.updateTransform();
+	});
+	//this.battlemap.addTransformListener(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
