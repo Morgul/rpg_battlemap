@@ -376,6 +376,30 @@ Combatant.prototype.setSize = function(size){
 	}
 }
 
+Combatant.prototype.startPulsating = function(){
+	var theSvg = this.svgObject;
+	var regXY = 0;
+	var regHW = this.size * this.battlemap.gridSpacing;
+	var pulseSize = this.battlemap.gridSpacing / 10;
+	var xy = pulseSize * -1;
+	var hw = regHW + (pulseSize * 2);
+	var bigAttr = {'x':xy,'y':xy,'width':hw,'height':hw};
+	var regAttr = {'x':0,'y':0,'width':regHW, 'height':regHW};
+	var pulseGrow = function(){
+		theSvg.animate(bigAttr,1000,pulseShrink);
+	};
+	var pulseShrink = function(){
+		theSvg.animate(regAttr,1000,pulseGrow);
+	}
+	pulseGrow();
+}
+
+Combatant.prototype.stopPulsating = function(){
+	this.svgObject.stop();
+	this.svgObject.attr({'x':0,'y':0});
+	this.setSize(this.size);
+}
+
 Combatant.sortByInitiative = function(combater1, combater2){
 	return combater2.initiative - combater1.initiative;
 }
