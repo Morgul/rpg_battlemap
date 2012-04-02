@@ -38,7 +38,7 @@ function BattleMap(actionElem, gridElem, opts){
 	this.backgroundColor = "#e0e0e0";
 	this.gridlineColor = "rgba(0,0,0,0,5)";
 
-	this.transformListeners = [];
+	this.combatElements = [];
 	for(var i in opts){
 		this[i] = opts[i]
 	}
@@ -157,8 +157,25 @@ BattleMap.prototype.triggerTransformListeners = function(){
 	$(this).trigger('viewChanged', undefined);
 }
 
+/* a combat element has 3 required properties:  layer, zIndex, and
+svgObject.  Layer and zIndex are used for comparing.  If layer is equal,
+zIndex is compared.  svgObject is expected to a rapheal element object.
+order is ground -> action -> sky.
+*/
+BattleMap.prototype.addCombatElement = function(combatElem){
+	this.combatElements.push(combatElem);
+	this.setPaintOrder();
+}
+
+BattleMap.prototype.removeCombatElement = function(combatElem){
+	this.combatElements = this.combatElements.filter(function(elem){
+		return (elem != combatElem);
+	});
+	this.setPatinOrder();
+}
+
 BattleMap.prototype.setPaintOrder = function(){
-	var sorted = this.transformListeners.sort(BattleMap.layerSort);
+	var sorted = this.combatElements.sort(BattleMap.layerSort);
 	for(var i = 0; i < sorted.length; i++){
 		sorted[i].svgObject.toBack();
 	}
@@ -315,7 +332,7 @@ function Combatant(battlemap, opts){
 	}
 
 	var theThis = this;
-	//this.battlemap.addTransformListener(this);
+	this.battlemap.addCombatElement(this);
 	$(this.battlemap).bind('viewChanged', function(){
 		theThis.updateTransform();
 	});
@@ -332,7 +349,7 @@ Combatant.prototype.updateTransform = function(){
 
 Combatant.prototype.remove = function(){
 	this.svgObject.remove();
-	this.battlemap.removeTransformListener(this);
+	this.battlemap.removeCombatElement(this);
 	$(this).trigger("removed", this);
 }
 
@@ -412,7 +429,7 @@ function CombatZone(battlemap, opts){
 	$(this.battlemap).bind('viewChanged', function(){
 		theThis.updateTransform();
 	});
-	//this.battlemap.addTransformListener(this);
+	this.battlemap.addCombatElement(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
@@ -636,7 +653,7 @@ CombatZone.prototype.updatePath = function(){
 
 CombatZone.prototype.remove = function(){
 	this.svgObject.remove();
-	this.battlemap.removeTransformListener(this);
+	this.battlemap.removeCombatElement(this);
 }
 
 CombatZone.makeSquare = function(size){
