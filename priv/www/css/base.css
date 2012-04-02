@@ -37,6 +37,7 @@ body
 #combatantList, #zoneList, #savedMapsList
 {
 	list-style:none;
+	padding:0;
 }
 
 #combatantList li, #zoneList li, #savedMapsList li

@@ -31,7 +31,7 @@
 		<input name="mapName" id="mapname" value="Default Map" onchange="battleMap.name=this.value;" />
 		<button onclick="saveBattleMapLocal();">Save</button>
 		<div id="leftColumnItems">
-		<h3><a href="#">Combatant</a></h3>
+		<h3><a href="#">Combatants</a></h3>
 		<div id="combatantInfo">
 			<div object-property="color" display-attr="style" style-display="border-color" style="float: left; width: 48px; height: 48px; border-width: 3px; margin:3px; border-style:solid;">
 			<img object-property="image" display-attr="src" style="width:100%; height: 100%;" display-default="/images/default_combatant.png"/>
@@ -41,10 +41,9 @@
 				<span object-property="cellX">&nbsp;</span>, <span object-property="cellY">&nbsp;</span>
 			</p>
 			<p id="combatantConditions">&nbsp;</p>
+			<ul id="combatantList">
+			</ul>
 		</div>
-		<h3><a href="#">Turn Order</a></h3>
-		<ul id="combatantList">
-		</ul>
 		<h3><a href="#">New Combatant</a></h3>
 		<div id="addCombatant">
 			<form name="addCombatant">
@@ -90,8 +89,8 @@
 					<label for="rotation">Rotation</label>
 					<select name="rotation">
 						<option value="none">None</option>
-						<option value="cw">Clockwise a quarter</option>
-						<option value="ccw">Counter-Clockwise a quarter</option>
+						<option value="cw">&#x21BB; a quarter</option>
+						<option value="ccw">&#x21BA; a quarter</option>
 						<option value="about">Half-turn</option>
 					</select>
 				</p>
