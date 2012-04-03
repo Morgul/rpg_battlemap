@@ -53,6 +53,11 @@ body
 	padding: 0;
 }
 
+#combatantList
+{
+	padding-top: 3px;
+}
+
 #combatantInfo
 {
 }
