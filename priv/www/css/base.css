@@ -96,3 +96,11 @@ form p
 	height:32px;
 	background-image:url("/images/tombstone.png");
 }
+
+#zoneTrashcan
+{
+	width:32px;
+	height:32px;
+	background-image:url("/images/red-circle-x.png");
+	float:right;
+}

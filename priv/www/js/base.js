@@ -354,4 +354,14 @@ $().ready(function(){
 			return false;
 		});
 	});
+
+	$('#zoneTrashcan').click(function(ev){
+		var zoneInd = parseInt(document.forms['zoneEditor'].zoneIndex.value);
+		if(isNaN(zoneInd)){
+			return false;
+		}
+		zoneList[zoneInd].remove();
+		zoneList.splice(zoneInd, 1);
+		rebuildZoneList();
+	});
 });
