@@ -333,10 +333,11 @@ function Combatant(battlemap, opts){
 
 	var theThis = this;
 	this.battlemap.addCombatElement(this);
-	$(this.battlemap).bind('viewChanged', function(){
+	this.viewChangedHandler = function(){
 		theThis.updateTransform();
-	});
-	this.updateTransform();
+	};
+	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
+ 	this.updateTransform();
 }
 
 Combatant.prototype.layer = "action";
@@ -349,7 +350,7 @@ Combatant.prototype.updateTransform = function(){
 
 Combatant.prototype.remove = function(){
 	this.svgObject.remove();
-	$(this.battlemap).unbind("viewChanged");
+	$(this.battlemap).unbind("viewChanged", this.viewChangedHandler);
 	this.battlemap.removeCombatElement(this);
 	$(this).trigger("removed", this);
 }
@@ -451,10 +452,12 @@ function CombatZone(battlemap, opts){
 	});
 	this.svgObject.node.setAttribute('fill-rule', 'evenodd');
 	var theThis = this;
-	$(this.battlemap).bind('viewChanged', function(){
+	this.viowChangeHnadler = function(){
 		theThis.updateTransform();
-	});
-	this.battlemap.addCombatElement(this);
+	};
+
+	$(this.battlemap).bind('viewChanged', this.viewChangeHandler);
+ 	this.battlemap.addCombatElement(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
@@ -678,7 +681,7 @@ CombatZone.prototype.updatePath = function(){
 
 CombatZone.prototype.remove = function(){
 	this.svgObject.remove();
-	$(this.battlemap).unbind("viewChanged");
+	$(this.battlemap).unbind("viewChanged", this.viewChangedHandler);
 	this.battlemap.removeCombatElement(this);
 }
 
