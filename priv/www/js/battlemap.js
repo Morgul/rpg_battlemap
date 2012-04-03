@@ -452,11 +452,11 @@ function CombatZone(battlemap, opts){
 	});
 	this.svgObject.node.setAttribute('fill-rule', 'evenodd');
 	var theThis = this;
-	this.viowChangeHnadler = function(){
+	this.viewChangedHandler = function(){
 		theThis.updateTransform();
 	};
 
-	$(this.battlemap).bind('viewChanged', this.viewChangeHandler);
+	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
  	this.battlemap.addCombatElement(this);
 	this.svgObject.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
