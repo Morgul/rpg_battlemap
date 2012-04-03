@@ -342,4 +342,16 @@ $().ready(function(){
 			});
 		}
 	});
+
+	$('#combatantList').click(function(ev){
+		var combatantInd = parseInt(ev.target.getAttribute('combatantIndex'));
+		combatants.map(function(combatant, ind){
+			if(combatantInd == ind){
+				combatant.startPulsating();
+				return true;
+			}
+			combatant.stopPulsating();
+			return false;
+		});
+	});
 });
