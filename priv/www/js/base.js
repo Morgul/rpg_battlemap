@@ -88,33 +88,29 @@ function resizeBattleMap() {
 }
 
 function insertCombatant(combatant) {
-	var combatantList = $('#combatantList').sortable("toArray");
-	combatants[combatant.name] = combatant;
+	var combatantList = $('#combatantList li');
+	combatants.push(combatant);
 
-	// Sanatize intiative
-	sanatizeInit(combatant);
-
-	var added = false;
+	var listItem = generateInitListItem(combatants.length - 1, combatant);
 	//TODO: This would be faster as a binary search
-	$(combatantList).each(function(index) {
-		var item = combatantList[index];
-
-		// This will always add to the bottom of same-initiative
-		if (combatants[item].initiative < combatant.initiative)
-		{
-			$(generateInitListItem(combatant)).insertBefore('#' + item);
-			added = true;
-
-			// Break out of the .each()
-			return false;
-		}
-	});
-
-	// We go at the bottom of the list.
-	if (added == false)
-	{
-		$('#combatantList').append(generateInitListItem(combatant));
+	var max = combatantList.length - 1;
+	if(max == -1){
+		$('#combatantList').append(listItem);
+		return;
 	}
+
+	var i = combatantList.length - 1;
+	var combatantInd;
+	for(i; i >= 0; i--){
+		combatantInd = combatantList[i].getAttribute('combatantIndex');
+		combatantInd = parseInt(combatantInd);
+		if(combatants[combatantInd].initiative > combatant.initiative){
+			$(combatantList[i]).after(listItem);
+			return;
+		}
+	}
+
+	$(combatantList[0]).before(listItem);
 }
 
 function sanatizeInt(given, defVal){
@@ -182,22 +178,25 @@ function rebuildZoneList(){
 $().ready(function(){
 	$('#combatantList').sortable({
 		update: function(event, ui) {
-			var combatant = combatants[$(ui.item).text()];
-			var combatantList = $('#combatantList').sortable("toArray");
-			var index = combatantList.indexOf(combatant.name);
+			var combatantInd = parseInt(ui.item[0].getAttribute('combatantIndex'));
+			var combatantListIndexes = [];
+			$('#combatantList li').map(function(_ind,item){
+				combatantListIndexes.push(parseInt(item.getAttribute('combatantIndex')));
+				return true;
+			});
+			var combatant = combatants[combatantInd];
+			var lastInd = combatantListIndexes.length - 1;
 
-			if (index == 0)
-			{
-				combatant.initiative = parseInt(combatants[combatantList[1]].initiative) + 1;
-			}
-			else if (index == (combatantList.length - 1))
-			{
-				combatant.initiative = parseInt(combatants[combatantList[index - 1]].initiative) - 1;
-			}
-			else
-			{
-				var higher = parseInt(combatants[combatantList[index - 1]].initiative);
-				var lower = parseInt(combatants[combatantList[index + 1]].initiative);
+			if(combatantInd == combatantListIndexes[0]){
+				combatant.initiative = combatants[combatantListIndexes[1]].initiative + 1;
+			} else if(combatantInd == (combatantListIndexes[lastInd])){
+				combatant.initiative = combatants[combatantListIndexes[lastInd - 1]].initiative - 1;
+			} else {
+				var indexOf = combatantListIndexes.indexOf(combatantInd);
+				var higherInd = combatantListIndexes[indexOf - 1];
+				var lowerInd = combatantListIndexes[indexOf + 1];
+				var higher = combatants[higherInd].initiative;
+				var lower = combatants[lowerInd].initiative;
 
 				combatant.initiative = lower + ((higher - lower) / 2);
 			}
@@ -221,22 +220,13 @@ $().ready(function(){
 	window.battleMap.drawGrid();
 
 	window.zoneList = [];
-	window.combatants = {};
+	//window.combatants = {};
+	window.combatants = [];
 
-	window.generateInitListItem = function(combatant)
+	window.generateInitListItem = function(index, combatant)
 	{
 		var style = 'style="box-shadow: inset 0 0 10px 2px ' + combatant.color + ';"';
-		return '<li id="' + combatant.name + '" class="combatant"' + style + '>' + combatant.name + '</li>';
-	}
-
-	// Makes sure that instead of a string, we are dealing with a real number for initiative.
-	window.sanatizeInit = function(combatant){
-		var init = parseInt(combatant.initiative);
-		if (isNaN(init)) {
-			combatant.initiative = 0;
-		} else {
-			combatant.initiative = init;
-		}
+		return '<li combatantIndex="' + index + '" class="combatant"' + style + '>' + combatant.name + '</li>';
 	}
 
 	$('#addCombatant form').submit(function(){
@@ -249,6 +239,11 @@ $().ready(function(){
 			datadump(newCombatant, '#combatantInfo');
 			$('#combatantConditions').html(newCombatant.conditions.join(", "));
 		}
+		var init = parseFloat(creationObj.initiative);
+		if(isNaN(init)){
+			init = 0;
+		}
+		creationObj.initiative = init;
 		newCombatant = new Combatant(window.battleMap, creationObj);
 		insertCombatant(newCombatant);
 		return false;
