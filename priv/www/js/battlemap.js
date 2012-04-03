@@ -349,6 +349,7 @@ Combatant.prototype.updateTransform = function(){
 
 Combatant.prototype.remove = function(){
 	this.svgObject.remove();
+	$(this.battlemap).unbind("viewChanged");
 	this.battlemap.removeCombatElement(this);
 	$(this).trigger("removed", this);
 }
@@ -677,6 +678,7 @@ CombatZone.prototype.updatePath = function(){
 
 CombatZone.prototype.remove = function(){
 	this.svgObject.remove();
+	$(this.battlemap).unbind("viewChanged");
 	this.battlemap.removeCombatElement(this);
 }
 
