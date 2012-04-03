@@ -171,7 +171,7 @@ BattleMap.prototype.removeCombatElement = function(combatElem){
 	this.combatElements = this.combatElements.filter(function(elem){
 		return (elem != combatElem);
 	});
-	this.setPatinOrder();
+	this.setPaintOrder();
 }
 
 BattleMap.prototype.setPaintOrder = function(){

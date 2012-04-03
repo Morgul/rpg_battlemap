@@ -187,12 +187,19 @@ $().ready(function(){
 			var combatant = combatants[combatantInd];
 			var lastInd = combatantListIndexes.length - 1;
 
+			if(combatantListIndexes.length == 1){
+				return;
+			}
+
 			if(combatantInd == combatantListIndexes[0]){
 				combatant.initiative = combatants[combatantListIndexes[1]].initiative + 1;
 			} else if(combatantInd == (combatantListIndexes[lastInd])){
 				combatant.initiative = combatants[combatantListIndexes[lastInd - 1]].initiative - 1;
 			} else {
 				var indexOf = combatantListIndexes.indexOf(combatantInd);
+				if(indexOf == -1){
+					return;
+				}
 				var higherInd = combatantListIndexes[indexOf - 1];
 				var lowerInd = combatantListIndexes[indexOf + 1];
 				var higher = combatants[higherInd].initiative;
@@ -317,5 +324,22 @@ $().ready(function(){
 	}
 	$('#savedMapsList li').click(function(){
 		loadBattleMapLocal(this.innerHTML);
+	});
+
+	$('#combatantTrashcan').droppable({
+		accept:'#combatantList li[combatantIndex]',
+		drop:function(ev, ui){
+			var elem = ui.draggable[0];
+			var combatantInd = parseInt(elem.getAttribute('combatantIndex'));
+			elem.parentElement.removeChild(elem);
+			combatants[combatantInd].remove();
+			combatants.splice(combatantInd,1);
+			$('#combatantList li').map(function(_ind, lielem){
+				var cind = parseInt(lielem.getAttribute('combatantIndex'));
+				if(cind > combatantInd){
+					lielem.setAttribute('combatantIndex', cind - 1);
+				}
+			});
+		}
 	});
 });

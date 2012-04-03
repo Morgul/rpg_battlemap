@@ -89,3 +89,10 @@ form p
 	padding: 5px;
     box-shadow: 0 0 10px rgba(80, 80, 80, .5);
 }
+
+#combatantTrashcan
+{
+	width:32px;
+	height:32px;
+	background-image:url("/images/tombstone.png");
+}
