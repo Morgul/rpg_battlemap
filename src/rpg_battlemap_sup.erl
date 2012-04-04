@@ -18,7 +18,14 @@
 
 start_link(Args) ->
 		ssl:start(),
-    supervisor:start_link({local, ?MODULE}, ?MODULE, Args).
+    Out = supervisor:start_link({local, ?MODULE}, ?MODULE, Args),
+		case rpgb:get_env(trace) of
+			undefined -> Out;
+			{ok, Dir} ->
+				ok = filelib:ensure_dir(Dir ++ "/"),
+				wmtrace_resource:add_dispatch_rule("wmtrace", Dir),
+				Out
+		end.
 
 %% ===================================================================
 %% Supervisor callbacks

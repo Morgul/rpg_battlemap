@@ -5,7 +5,7 @@
 
 init(Args) ->
 	?info("init"),
-	{ok, Args}.
+	rpgb:res_init(Args).
 
 %content_types_provided(ReqData, Ctx) ->
 %	?info("types provided"),
