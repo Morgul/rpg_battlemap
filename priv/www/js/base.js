@@ -7,7 +7,7 @@ Storage.prototype.getObject = function(key){
 	return value && JSON.parse(value);
 }
 
-function saveBattleMapLocal(){
+function mapToSerializableObj(){
 	var mapForStorage = {
 		name: battleMap.name,
 		zoom: battleMap.zoom,
@@ -17,6 +17,9 @@ function saveBattleMapLocal(){
 		combatants: [],
 		zones: []
 	};
+	if(battleMap.url){
+		mapForStorage.url = battleMap.url;
+	}
 	var storeCombatant = function(combatDude){
 		var tmpCombat = {
 			name: combatDude.name,
@@ -48,6 +51,32 @@ function saveBattleMapLocal(){
 		};
 		return tmpZone;
 	});
+	return mapForStorage;
+}
+
+function saveBattleMapCloud(){
+	var mapForStorage = mapToSerializableObj();
+	if(! mapForStorage.url){
+		// TODO Try not to make this on our own.
+		mapForStorage.url = "/battles/new/slug";
+	}
+	$.ajax(mapForStorage.url, {
+		'contents':'json',
+		'contentType':'application/json',
+		'data':JSON.stringify(mapForStorage),
+		'error':function(){
+			console.log('save error', arguments);
+		},
+		'processData':false,
+		'success':function(){
+			console.log('save success', arguments);
+		},
+		'type':'PUT'
+	});
+}
+
+function saveBattleMapLocal(){
+	var mapForStorage = mapToSerializableObj();
 	localStorage.setObject(battleMap.name, mapForStorage);
 }
 
