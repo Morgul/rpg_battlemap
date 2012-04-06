@@ -66,6 +66,7 @@ function saveBattleMapCloud(){
 		'processData':false,
 		'success':function(){
 			console.log('save success', arguments);
+			saveBattleMapLocal();
 		},
 		'type':'POST',
 	};
@@ -74,6 +75,23 @@ function saveBattleMapCloud(){
 		ajaxOpts.type = 'PUT';
 	}
 	$.ajax(ajaxOpts);
+}
+
+function deleteBattleMapCloud(mapUri){
+	$.ajax({
+		'url':mapUri,
+		'error':function(){
+			console.log('delete error',arguments);
+		},
+		'success':function(){
+			console.log('delete success',arguments);
+		},
+		'type':'DELETE'
+	});
+}
+
+function deleteBattleMapLocal(mapName){
+	localStorage.removeItem(mapName);
 }
 
 function saveBattleMapLocal(){

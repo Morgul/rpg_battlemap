@@ -64,6 +64,14 @@ resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
 			{true, ReqData, Ctx}
 	end.
 
+delete_resource(ReqData, {battle, MapId, Session} = Ctx) ->
+	case boss_db:delete(MapId) of
+		ok -> {true, ReqData, Ctx};
+		{error, Err} ->
+			?warning("Could not delete ~s due to ~p", [MapId, Err]),
+			{false, ReqData, Ctx}
+	end.
+
 process_post(ReqData, {create_battle, Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	Userid = proplists:get_value(id, User),
