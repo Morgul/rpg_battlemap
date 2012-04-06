@@ -395,12 +395,14 @@ Combatant.prototype.startPulsating = function(){
 		theSvg.animate(regAttr,1000,pulseGrow);
 	}
 	pulseGrow();
+	this.pulsating = true;
 }
 
 Combatant.prototype.stopPulsating = function(){
 	this.svgObject.stop();
 	this.svgObject.attr({'x':0,'y':0});
 	this.setSize(this.size);
+	this.pulsating = false;
 }
 
 Combatant.sortByInitiative = function(combater1, combater2){

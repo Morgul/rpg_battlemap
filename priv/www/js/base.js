@@ -347,6 +347,10 @@ $().ready(function(){
 		var combatantInd = parseInt(ev.target.getAttribute('combatantIndex'));
 		combatants.map(function(combatant, ind){
 			if(combatantInd == ind){
+				if(combatant.pulsating){
+					combatant.stopPulsating();
+					return true;
+				}
 				combatant.startPulsating();
 				return true;
 			}
