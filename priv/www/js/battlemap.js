@@ -386,7 +386,7 @@ Combatant.prototype.startPulsating = function(){
 	var xy = pulseSize * -1;
 	var hw = regHW + (pulseSize * 2);
 	var bigAttr = {'x':xy,'y':xy,'width':hw,'height':hw};
-	var regAttr = {'x':0,'y':0,'width':regHW, 'height':regHW};
+	var regAttr = {'x':-xy,'y':-xy,'width':regHW - pulseSize * 2, 'height':regHW - pulseSize * 2};
 	var pulseGrow = function(){
 		theSvg.animate(bigAttr,1000,pulseShrink);
 	};
