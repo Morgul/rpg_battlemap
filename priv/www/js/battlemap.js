@@ -379,6 +379,7 @@ Combatant.prototype.setSize = function(size){
 }
 
 Combatant.prototype.startPulsating = function(){
+	this.stopPulsating();
 	var theSvg = this.svgObject;
 	var regXY = 0;
 	var regHW = this.size * this.battlemap.gridSpacing;
