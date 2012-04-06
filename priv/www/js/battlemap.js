@@ -435,22 +435,30 @@ function CombatZone(battlemap, opts){
 		this[i] = opts[i];
 	}
 
-	var svgPathString = this.makeSvgPathString();
+	//var svgPathString = this.makeSvgPathString();
 	var pap = this.battlemap.svgPaper;
-	this.svgObject = pap.path(svgPathString);
+	this.svgObject = pap.set();
+	this.floor = pap.path();
+	this.walls = pap.path();
 	var opacity = .5;
 	var strokeWidth = 5;
 	if(this.layer == "ground"){
 		opacity = 1;
 	}
-	this.svgObject.attr({
-		fill: this.color,
-		'fill-opacity': opacity,
-		'stroke-width': strokeWidth,
-		'stroke': this.strokeColor,
-		'stroke-opacity': this.strokeOpacity
+	this.floor.attr({
+		'fill':this.color,
+		'fill-opacity':opacity,
+		'stroke-opactiy':0
 	});
-	this.svgObject.node.setAttribute('fill-rule', 'evenodd');
+	this.floor.node.setAttribute('fill-rule','evenodd');
+	this.walls.attr({
+		'fill-opactiy':0,
+		'stroke-opacity':this.strokeOpactiy,
+		'stoke':this.strokeColor,
+		'stroke-width':strokeWidth
+	});
+	this.svgObject.push(this.floor,this.walls);
+	this.setPath(this.path);
 	var theThis = this;
 	this.viewChangedHandler = function(){
 		theThis.updateTransform();
@@ -458,7 +466,8 @@ function CombatZone(battlemap, opts){
 
 	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
  	this.battlemap.addCombatElement(this);
-	this.svgObject.node.setAttribute('pointer-events', 'none');
+	this.floor.node.setAttribute('pointer-events', 'none');
+	this.walls.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
 }
 
@@ -673,9 +682,10 @@ CombatZone.prototype.safeCell = function(xy){
 
 CombatZone.prototype.updatePath = function(){
 	var pathStr = this.makeSvgPathString();
-	this.svgObject.attr({
-		'path':pathStr
-	});
+	var floorPath = pathStr.replace("m","l").replace("M","L");
+	floorPath =  pathStr[0] + floorPath.substr(1);
+	this.floor.attr({'path':floorPath});
+	this.walls.attr({'path':pathStr});
 	this.updateTransform();
 }
 
@@ -686,11 +696,12 @@ CombatZone.prototype.remove = function(){
 }
 
 CombatZone.makeSquare = function(size){
-	return Raphael.format("M0 0L{0} 0L{0} {0}L0 {0}L0 0Z", size);
+	return Raphael.format("M 0 0 l {0} 0 l 0 {0} l -{0} 0 l 0 -{0} z", size);
 }
 
 CombatZone.makeOctogon = function(size){
-	return Raphael.format("M{0} 0L{1} 0L{2} {0}L{2} {1}L{1} {2}L{0} {2}L0 {1}L0 {0}L{0} 0Z", size, size * 2, size * 3);
+	return Raphael.format("M {0} 0 l {0} 0 l {0} {0} l 0 {0} l -{0} {0} l -{0} 0 l -{0} -{0} l 0 -{0} l {0} -{0} z", size);
+	//return Raphael.format("M{0} 0L{1} 0L{2} {0}L{2} {1}L{1} {2}L{0} {2}L0 {1}L0 {0}L{0} 0Z", size, size * 2, size * 3);
 }
 
 // CombatZone basic shapes
