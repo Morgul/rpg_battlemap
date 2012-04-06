@@ -18,8 +18,9 @@ do_actions(["compile" | Tail]) ->
 	do_actions(Tail);
 
 do_actions(["build_db" | Tail]) ->
-	build_db(),
-	do_actions(Tail);
+	{Tail0, DbOpts} = get_db_opts(Tail),
+	build_db(DbOpts),
+	do_actions(Tail0);
 
 do_actions(["-debug" | Tail]) ->
 	put(out_dir, ".eunit"),
@@ -49,11 +50,26 @@ compile_models([ModelFile | Tail]) ->
 			halt(1)
 	end.
 
-build_db() ->
+get_db_opts(Args) ->
+	get_db_opts(Args, []).
+
+get_db_opts([], Acc) ->
+	{[], Acc};
+get_db_opts([[$- | OptName] | Tail], Acc) ->
+	case OptName of
+		"nodename=" ++ Node ->
+			Acchead = {nodename, Node},
+			get_db_opts(Tail, [Acchead | Acc]);
+		_ ->
+			{Tail, Acc}
+	end.
+
+build_db(Opts) ->
+	NodeName = list_to_atom(proplists:get_value(nodename, Opts, "rpg_battlemap_dev")),
 	case node() of
 		nonode@nohost ->
 			[] = os:cmd("epmd -daemon"),
-			case net_kernel:start([rpg_battlemap_dev, shortnames]) of
+			case net_kernel:start([NodeName, shortnames]) of
 				{ok, _} ->
 					ok;
 				{error, {{already_started, _}, _}}  ->
@@ -87,6 +103,23 @@ build_db() ->
 
 		{rpgb_permission, [
 			{attributes, [id, tag, rpgb_user_id, rpgb_group_id]},
+			{disc_copies, [node()]}
+		]},
+
+		{rpgb_battlemap, [
+			{attributes, [id, name, owner_id, json, created_time, updated_time]},
+			{disc_copies, [node()]}
+		]},
+
+		{rpgb_participant, [
+			{attributes, [id, battle_id, user_id]},
+			{disc_copies, [node()]}
+		]},
+
+		{rpgb_zone, [
+			{attributes, [id, name, battle_id, start_cell_x, start_cell_y,
+				layer, z_index, rotation, stroke_opactiy, stroke_color, path,
+				created_time, updated_time]},
 			{disc_copies, [node()]}
 		]}
 

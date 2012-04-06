@@ -39,7 +39,7 @@ previously_existed(ReqData, Ctx) ->
 
 moved_temporarily(ReqData, Session) ->
 	SessionId = rpgb_session:get_id(Session),
-	BaseURL = rpg_battlemap_app:get_url(),
+	BaseURL = rpgb:get_url(),
 	ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 	QueryParams = wrq:req_qs(ReqData),
 	case gen_server:call(openid, {verify, SessionId, binary_to_list(ReturnTo), QueryParams}) of
@@ -87,7 +87,7 @@ process_post(ReqData, Session) ->
 	SessionId = rpgb_session:get_id(Session),
 	case gen_server:call(openid, {prepare, SessionId, Openid, true}) of
 		{ok, AuthReq} ->
-			BaseURL = rpg_battlemap_app:get_url(),
+			BaseURL = rpgb:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
 			AuthURL = openid:authentication_url(AuthReq, ReturnTo, BaseURL, [
 				{"openid.sreg.optional", "nickname"}]),

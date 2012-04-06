@@ -56,12 +56,8 @@ function mapToSerializableObj(){
 
 function saveBattleMapCloud(){
 	var mapForStorage = mapToSerializableObj();
-	if(! mapForStorage.url){
-		// TODO Try not to make this on our own.
-		mapForStorage.url = "/battles/new/slug";
-	}
-	$.ajax(mapForStorage.url, {
-		'contents':'json',
+	var ajaxOpts = {
+		'url':'/battles/create',
 		'contentType':'application/json',
 		'data':JSON.stringify(mapForStorage),
 		'error':function(){
@@ -71,8 +67,13 @@ function saveBattleMapCloud(){
 		'success':function(){
 			console.log('save success', arguments);
 		},
-		'type':'PUT'
-	});
+		'type':'POST',
+	};
+	if(mapForStorage.url){
+		ajaxOpts.url = mapForStorage.url;
+		ajaxOpts.type = 'PUT';
+	}
+	$.ajax(ajaxOpts);
 }
 
 function saveBattleMapLocal(){
