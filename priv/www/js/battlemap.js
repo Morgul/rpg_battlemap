@@ -448,11 +448,11 @@ function CombatZone(battlemap, opts){
 	this.floor.attr({
 		'fill':this.color,
 		'fill-opacity':opacity,
-		'stroke-opactiy':0
+		'stroke-opacity':0
 	});
 	this.floor.node.setAttribute('fill-rule','evenodd');
 	this.walls.attr({
-		'fill-opactiy':0,
+		'fill-opacity':0,
 		'stroke-opacity':this.strokeOpactiy,
 		'stoke':this.strokeColor,
 		'stroke-width':strokeWidth
@@ -490,7 +490,7 @@ CombatZone.prototype.updateTransform = function(){
 		default:
 			rotate = this.rotation;
 	}
-	this.svgObject.transform(transformStr + rotate + " " + this.startCell[0] + " " + this.startCell[1]);
+	this.svgObject.transform(transformStr + rotate + " 0 0");
 }
 
 CombatZone.prototype.toGrid = function(xory){
@@ -615,7 +615,7 @@ CombatZone.prototype.setStroke = function(color, opacity){
 	}
 	this.strokeColor = color;
 	this.strokeOpacity = opacity;
-	this.svgObject.attr({
+	this.walls.attr({
 		'stroke':color,
 		'stroke-opacity':opacity
 	});
@@ -630,7 +630,7 @@ CombatZone.prototype.setLayer = function(layer){
 	if(this.layer == "ground"){
 		opacity = 1;
 	}
-	this.svgObject.attr({
+	this.floor.attr({
 		'fill-opacity':opacity
 	});
 	this.battlemap.setPaintOrder();
