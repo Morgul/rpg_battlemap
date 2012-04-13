@@ -262,6 +262,22 @@ tests.battleLayerSort = function(){
 	return true;
 }
 
+tests.battleLayerSortZ = function(){
+	var battleLayerMembers = [{layer:'ground',zIndex:1,key:1},{layer:'ground',zIndex:2,key:2}];
+	var expected = [2,1];
+	var battleLayerMembersSorted = battleLayerMembers.sort(BattleMap.layerSort);
+	var got = battleLayerMembersSorted.map(function(a){
+		return a.key;
+	});
+	for(var i = 0; i < expected.length; i++){
+		if(expected[i] != got[i]){
+			console.error('test fail', expected, got);
+			return false;
+		}
+	}
+	return true;
+}
+
 /***********************************************************************
 Class Combatant
 
