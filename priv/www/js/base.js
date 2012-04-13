@@ -304,7 +304,7 @@ $().ready(function(){
 		return false;
 	});
 
-	$('#leftColumnItems').height($('#drawingBoard').height()).accordion({
+	$('#leftColumnItems').accordion({
 		autoHeight:false
 	});
 
