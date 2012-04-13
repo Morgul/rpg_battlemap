@@ -79,11 +79,12 @@ form p
 	float:left;
 	width:200px;
 	margin-left: 5px;
+	overflow: auto;
 }
 
 #leftColumnItems
 {
-	overflow: scroll;
+	padding-bottom: -10px;
 }
 
 #leftColumnItems > div
