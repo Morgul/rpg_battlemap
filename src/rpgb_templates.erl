@@ -11,5 +11,10 @@ to_html(Req, index) ->
 	{ok, Out} = base_dtl:render([{"session", rpgb_session:to_dict(Session)}]),
 	{Out, Req0, index};
 
+to_html(Req, edit) ->
+	{ok, Session, Req0} = rpgb_session:get_or_create(Req),
+	{ok, Out} = editor_dtl:render([{"session",rpgb_session:to_dict(Session)}]),
+	{Out,Req0,edit};
+
 to_html(Req, Ctx) ->
 	{<<>>, Req, Ctx}.
