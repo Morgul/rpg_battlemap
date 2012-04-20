@@ -223,7 +223,7 @@ BattleMap.prototype.unhighlight = function(){
 
 BattleMap.layerSort = function(thinga,thingb){
 	if(thinga.layer == thingb.layer){
-		thingb.zIndex - thinga.zIndex;
+		return thingb.zIndex - thinga.zIndex;
 	}
 	if(thinga.layer == "sky"){
 		return -1;
