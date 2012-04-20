@@ -118,6 +118,10 @@ $().ready(function(){
 			return false;
 		},
 		onHide: function (colpkr) {
+			hex = $('.colorpicker_hex input', colpkr).val();
+			$('#addCombatant input[name="color"]').val('#' + hex);
+			$('.colorSelector' + ' div').css('background-color', '#' + hex);
+
 			$(colpkr).fadeOut(500);
 			return false;
 		},
@@ -125,12 +129,25 @@ $().ready(function(){
 			$('.colorSelector' + ' div').css('background-color', '#' + hex);
 		},
 		onSubmit: function(hsb, hex, rgb, el) {
+			$('.colorSelector' + ' div').css('background-color', '#' + hex);
 			$('#addCombatant input[name="color"]').val("#" + hex);
+
 			$(el).ColorPickerHide();
 		},
 		onBeforeShow: function () {
-			var el = $('#addCombatant input[name="color"]')
-			$(this).ColorPickerSetColor(el.val());
+			var hex = color2Hex($('#addCombatant input[name="color"]').val());
+
+			if (hex) {
+				$(this).ColorPickerSetColor(hex);
+			}
+		}
+	});
+
+	$('#addCombatant input[name="color"]').change(function(){
+		if ($(this).val()) {
+			var hex = color2Hex($(this).val());
+			console.log(hex);
+			$('.colorSelector' + ' div').css('background-color', hex);
 		}
 	});
 
