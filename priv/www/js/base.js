@@ -114,6 +114,7 @@ function loadBattleMapLocal(mapname){
 		newCombatant = new Combatant(window.battleMap, rawDude);
 		insertCombatant(newCombatant);
 	});
+	zoneList = [];
 	rawMap.zones.map(function(rawZone){
 		newZone = new CombatZone(battleMap, rawZone);
 		zoneList.push(newZone);
