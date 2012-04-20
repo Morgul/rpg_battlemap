@@ -1,6 +1,16 @@
 {% extends "base.html" %}
+
+{% block page_scripts %}
+{% endblock %}
+
 {% block left_column_items %}
-	Hi friend!
+	<h2>Grid Properties</h2>
+	<label for="grid_color">Grid Color</label>
+	<input id="grid_color" name="grid_color" type="text" />
+
+	<label for="map_color">Map Color</label>
+	<input id="map_color" name="map_color" type="text" />
+
 {% endblock %}
 
 {# -*- vim: set ft=htmldjango: -- vim modeline -*- #}

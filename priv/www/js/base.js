@@ -156,7 +156,7 @@ function stringToCells(string, cellCoordDelim){
 	return pairs;
 }
 
-function populateMapList(maplistID){
+function populateMapList(selector){
 	var mapNameLi;
 	var localmap;
 	for(var i = 0; i < localStorage.length; i++){
@@ -166,10 +166,27 @@ function populateMapList(maplistID){
 		/*mapNameLi.onclick = function(){
 			loadBattleMapLocal(localmap);
 		};*/
-		$(maplistID).append(mapNameLi);
+		$(selector).append(mapNameLi);
 	}
-	$(maplistID + ' li').click(function(){
+	$(selector + ' li').click(function(){
 		loadBattleMapLocal(this.innerHTML);
+	});
+}
+
+function addColorPicker(selector){
+	$(selector).ColorPicker({
+		color: '#0000ff',
+		onShow: function (colpkr) {
+			$(colpkr).fadeIn(500);
+			return false;
+		},
+		onHide: function (colpkr) {
+			$(colpkr).fadeOut(500);
+			return false;
+		},
+		onChange: function (hsb, hex, rgb) {
+			$(selector + ' div').css('background-color', '#' + hex);
+		}
 	});
 }
 

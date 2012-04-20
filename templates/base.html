@@ -6,12 +6,14 @@
 <head>
 	<link type="text/css" href="/css/base.css" rel="stylesheet" />
 	<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
+	<link type="text/css" href="/contrib/colorpicker/css/colorpicker.css" rel="stylesheet" media="screen" />
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
 	<script type="text/javascript" src="/js/base.js"></script>
+	<script type="text/javascript" src="/contrib/colorpicker/js/colorpicker.js"></script>
 	{% block page_scripts %}
 	<script type="text/javascript" src="/js/index.js"></script>
 	{% endblock %}
@@ -80,6 +82,7 @@
 							<input style="width: 4em;" name="cellX" placeholder="X" type="number" />,
 							<input style="width: 4em;" name="cellY" placeholder="Y" type="number" /></p>
 						<p>
+							<div class="colorSelector"><div style="background-color: #0000ff"></div></div>
 							<label for="color">Color</label>
 							<input name="color" placeholder="blue" type="color" />
 						</p>

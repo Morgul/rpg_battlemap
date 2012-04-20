@@ -111,6 +111,29 @@ $().ready(function(){
 		return '<li combatantIndex="' + index + '" class="combatant"' + style + '>' + combatant.name + '</li>';
 	}
 
+	$('.colorSelector').ColorPicker({
+		color: '#0000ff',
+		onShow: function (colpkr) {
+			$(colpkr).fadeIn(500);
+			return false;
+		},
+		onHide: function (colpkr) {
+			$(colpkr).fadeOut(500);
+			return false;
+		},
+		onChange: function (hsb, hex, rgb) {
+			$('.colorSelector' + ' div').css('background-color', '#' + hex);
+		},
+		onSubmit: function(hsb, hex, rgb, el) {
+			$('#addCombatant input[name="color"]').val("#" + hex);
+			$(el).ColorPickerHide();
+		},
+		onBeforeShow: function () {
+			var el = $('#addCombatant input[name="color"]')
+			$(this).ColorPickerSetColor(el.val());
+		}
+	});
+
 	$('#addCombatant form').submit(function(){
 		var creationObj = {};
 		var newCombatant;

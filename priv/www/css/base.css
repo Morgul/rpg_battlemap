@@ -116,3 +116,28 @@ form p
 	background-image:url("/images/red-circle-x.png");
 	float:right;
 }
+
+#addCombatant input[name="color"]
+{
+	width: 105px;
+}
+
+div.colorSelector {
+	float:right;
+	display: inline-block;
+	position: relative;
+	top: 4px;
+	width: 36px;
+	height: 36px;
+	background: url(/contrib/colorpicker/images/select2.png);
+}
+
+div.colorSelector div {
+	position: absolute;
+	top: 4px;
+	left: 4px;
+	width: 28px;
+	height: 28px;
+	background: url(/contrib/colorpicker/images/select2.png) center;
+}
+
