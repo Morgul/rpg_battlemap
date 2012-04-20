@@ -472,8 +472,8 @@ function CombatZone(battlemap, opts){
 	this.floor.node.setAttribute('fill-rule','evenodd');
 	this.walls.attr({
 		'fill-opacity':0,
-		'stroke-opacity':this.strokeOpactiy,
-		'stoke':this.strokeColor,
+		'stroke-opacity':this.strokeOpacity,
+		'stroke':this.strokeColor,
 		'stroke-width':strokeWidth
 	});
 	this.svgObject.push(this.floor,this.walls);
