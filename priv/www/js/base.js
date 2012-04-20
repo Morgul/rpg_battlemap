@@ -377,6 +377,7 @@ $().ready(function(){
 
 	$('#combatantTrashcan').droppable({
 		accept:'#combatantList li[combatantIndex]',
+		tolerance: 'touch',
 		drop:function(ev, ui){
 			var elem = ui.draggable[0];
 			var combatantInd = parseInt(elem.getAttribute('combatantIndex'));
