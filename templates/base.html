@@ -9,9 +9,11 @@
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
-	{% block page_scripts %}
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
+	<script type="text/javascript" src="/js/base.js"></script>
+	{% block page_scripts %}
+	<script type="text/javascript" src="/js/index.js"></script>
 	{% endblock %}
 	<title>RPG Battle Map{% block title %}{% endblock %}</title>
 	{% block page_style %}
@@ -220,7 +222,6 @@
 
 		{#-------------------------------------------------------------------------------#}
 
-		<script type="text/javascript" src="/js/base.js"></script>
 	{% endblock %} {# end content block #}
 	</div>
 </body>
