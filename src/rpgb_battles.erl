@@ -7,10 +7,18 @@
 init(Mode) ->
 	rpgb:res_init(Mode).
 
+allowed_methods(ReqData, search_battles) ->
+	?info("allowed methods"),
+	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
+	{['GET'], ReqData0, {search_battles, Session}};
+
 allowed_methods(ReqData, Mode) ->
 	?info("allowed methods"),
 	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
 	{['GET', 'POST', 'HEAD', 'PUT', 'DELETE'], ReqData0, {Mode, Session}}.
+
+is_authorized(ReqData, {search_battles, _Session} = Ctx) ->
+	{true, ReqData, Ctx};
 
 is_authorized(ReqData, {_Mode, Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -19,6 +27,9 @@ is_authorized(ReqData, {_Mode, Session} = Ctx) ->
 		_User ->
 			{true, ReqData, Ctx}
 	end.
+
+forbidden(ReqData, {search_battles, _} = Ctx) ->
+	{false, ReqData, Ctx};
 
 forbidden(ReqData, {create_battle, _} = Ctx) ->
 	{false, ReqData, Ctx};
@@ -51,6 +62,9 @@ content_types_accepted(ReqData, Ctx) ->
 content_types_provided(ReqData, Ctx) ->
 	Types = [{"application/json",to_json}],
 	{Types, ReqData, Ctx}.
+
+resource_exists(ReqData, {search_battles, _} = Ctx) ->
+	{true, ReqData, Ctx};
 
 resource_exists(ReqData, {create_battle, _} = Ctx) ->
 	{true, ReqData, Ctx};
@@ -112,13 +126,27 @@ from_json(ReqData, {create_battle, Session} = Ctx) ->
 	% so just act cool.
 	{true, ReqData, Ctx}.
 
+to_json(ReqData, {search_battles, Session} = Ctx) ->
+	Limit = list_to_integer(wrq:get_qs_value("limit", "100",ReqData)),
+	User = case rpgb_session:get_user(Session) of
+		undefined -> [];
+		E -> E
+	end,
+	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
+	Records = boss_db:find(rpgb_battlemap, Conditions, Limit),
+	Jsons = [encode_map(Record) || Record <- Records],
+	{Jsons, ReqData, Ctx};
+
 to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	BattleMap = boss_db:find(MapId),
 	to_json(ReqData, {battle, BattleMap, Session});
 
 to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
+	Json = encode_map(BattleMap),
+	{Json, ReqData, Ctx}.
+
+encode_map(BattleMap) ->
 	{struct, MapStruct} = mochijson2:decode(BattleMap:json()),
 	Url = rpgb:get_url(["battles",BattleMap:id(),"slug"]),
 	MapStruct0 = {struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]},
-	Json = mochijson2:encode(MapStruct0),
-	{Json, ReqData, Ctx}.
+	mochijson2:encode(MapStruct0).
