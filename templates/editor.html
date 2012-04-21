@@ -1,15 +1,23 @@
 {% extends "base.html" %}
 
 {% block page_scripts %}
+	<link type="text/css" href="/css/editor.css" rel="stylesheet" />
+	<script type="text/javascript" src="/js/editor.js"></script>
 {% endblock %}
 
 {% block left_column_items %}
 	<h2>Grid Properties</h2>
-	<label for="grid_color">Grid Color</label>
-	<input id="grid_color" name="grid_color" type="text" />
+	<p>
+		<div class="colorSelector grid"><div style="background-color: #0000ff"></div></div>
+		<label for="grid_color">Grid Color</label>
+		<input id="grid_color" name="grid_color" type="text" />
+	</p>
 
-	<label for="map_color">Map Color</label>
-	<input id="map_color" name="map_color" type="text" />
+	<p>
+		<div class="colorSelector map"><div style="background-color: #0000ff"></div></div>
+		<label for="map_color">Map Color</label>
+		<input id="map_color" name="map_color" type="text" />
+	</p>
 
 {% endblock %}
 

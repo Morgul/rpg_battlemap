@@ -1,0 +1,8 @@
+#leftColumnItems input[type="text"]
+{
+	width: 150px;
+}
+
+div.colorSelector {
+	margin-right: 5px;
+}
