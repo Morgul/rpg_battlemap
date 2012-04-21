@@ -119,7 +119,8 @@ $().ready(function(){
 		},
 		onHide: function (colpkr) {
 			hex = $('.colorpicker_hex input', colpkr).val();
-			$('#addCombatant input[name="color"]').val('#' + hex);
+			var hexString = "#" + hex;
+			$('input[name="color"]').val(hex2Color(hexString));
 			$('.colorSelector' + ' div').css('background-color', '#' + hex);
 
 			$(colpkr).fadeOut(500);
@@ -130,7 +131,8 @@ $().ready(function(){
 		},
 		onSubmit: function(hsb, hex, rgb, el) {
 			$('.colorSelector' + ' div').css('background-color', '#' + hex);
-			$('#addCombatant input[name="color"]').val("#" + hex);
+			var hexString = "#" + hex;
+			$('input[name="color"]').val(hex2Color(hexString));
 
 			$(el).ColorPickerHide();
 		},
@@ -146,7 +148,6 @@ $().ready(function(){
 	$('#addCombatant input[name="color"]').change(function(){
 		if ($(this).val()) {
 			var hex = color2Hex($(this).val());
-			console.log(hex);
 			$('.colorSelector' + ' div').css('background-color', hex);
 		}
 	});
