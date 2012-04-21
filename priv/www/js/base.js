@@ -173,19 +173,45 @@ function populateMapList(selector){
 	});
 }
 
-function addColorPicker(selector){
-	$(selector).ColorPicker({
+function addColorPicker(pickerSelector, inputName)
+{
+	$(pickerSelector).ColorPicker({
 		color: '#0000ff',
 		onShow: function (colpkr) {
 			$(colpkr).fadeIn(500);
 			return false;
 		},
 		onHide: function (colpkr) {
+			hex = $('.colorpicker_hex input', colpkr).val();
+			var hexString = "#" + hex;
+			$('input[name=' + inputName + ']').val(hex2Color(hexString));
+			$(pickerSelector + ' div').css('background-color', '#' + hex);
+
 			$(colpkr).fadeOut(500);
 			return false;
 		},
 		onChange: function (hsb, hex, rgb) {
-			$(selector + ' div').css('background-color', '#' + hex);
+			$(pickerSelector + ' div').css('background-color', '#' + hex);
+		},
+		onSubmit: function(hsb, hex, rgb, el) {
+			$(pickerSelector + ' div').css('background-color', '#' + hex);
+			var hexString = "#" + hex;
+			$('input[name=' + inputName + ']').val(hex2Color(hexString));
+
+			$(el).ColorPickerHide();
+		},
+		onBeforeShow: function () {
+			var hex = color2Hex($('input[name=' + inputName + ']').val());
+
+			if (hex) {
+				$(this).ColorPickerSetColor(hex);
+			}
+		}
+	});
+	$('input[name=' + inputName + ']').change(function(){
+		if ($(this).val()) {
+			var hex = color2Hex($(this).val());
+			$(pickerSelector + ' div').css('background-color', hex);
 		}
 	});
 }

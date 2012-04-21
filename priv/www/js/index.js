@@ -111,46 +111,7 @@ $().ready(function(){
 		return '<li combatantIndex="' + index + '" class="combatant"' + style + '>' + combatant.name + '</li>';
 	}
 
-	$('.colorSelector').ColorPicker({
-		color: '#0000ff',
-		onShow: function (colpkr) {
-			$(colpkr).fadeIn(500);
-			return false;
-		},
-		onHide: function (colpkr) {
-			hex = $('.colorpicker_hex input', colpkr).val();
-			var hexString = "#" + hex;
-			$('input[name="color"]').val(hex2Color(hexString));
-			$('.colorSelector' + ' div').css('background-color', '#' + hex);
-
-			$(colpkr).fadeOut(500);
-			return false;
-		},
-		onChange: function (hsb, hex, rgb) {
-			$('.colorSelector' + ' div').css('background-color', '#' + hex);
-		},
-		onSubmit: function(hsb, hex, rgb, el) {
-			$('.colorSelector' + ' div').css('background-color', '#' + hex);
-			var hexString = "#" + hex;
-			$('input[name="color"]').val(hex2Color(hexString));
-
-			$(el).ColorPickerHide();
-		},
-		onBeforeShow: function () {
-			var hex = color2Hex($('#addCombatant input[name="color"]').val());
-
-			if (hex) {
-				$(this).ColorPickerSetColor(hex);
-			}
-		}
-	});
-
-	$('#addCombatant input[name="color"]').change(function(){
-		if ($(this).val()) {
-			var hex = color2Hex($(this).val());
-			$('.colorSelector' + ' div').css('background-color', hex);
-		}
-	});
+	addColorPicker('.colorSelector', 'color');
 
 	$('#addCombatant form').submit(function(){
 		var creationObj = {};
