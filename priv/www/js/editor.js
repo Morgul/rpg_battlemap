@@ -38,7 +38,8 @@ function Pointer(battlemap, size, fill, stroke) {
 	this.offset = {x: offset_.left, y: offset_.top};
 
 	// Build svg element
-	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
+	//this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
 
 	if (typeof fill !== 'undefined'){
 		this.svgElement.attr("fill", fill);
@@ -92,9 +93,9 @@ Pointer.prototype.mousemoveHandler = function(ev){
 	// handle our special logic
 	context.position.rawX = ev.pageX;
 	context.position.rawY = ev.pageY;
-	context.position.x = ev.pageX - context.offset.x;
-	context.position.y = ev.pageY - context.offset.y;
-	var cell = context.battlemap.getNearestCell(context.position.x, context.position.y);
+	var cell = context.battlemap.getNearestCell(ev.pageX - context.offset.x, ev.pageY - context.offset.y);
+	context.position.x = cell[0];
+	context.position.y = cell[1];
 	context.transform = context.battlemap.getTransformString(cell[0], cell[1]);
 
 	// trigger our mousemove event
