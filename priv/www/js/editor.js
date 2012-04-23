@@ -10,15 +10,16 @@ battlemap grid.
 						page coordinates.
 * svgElement :: Object() - The underlying svg element
 ******************************************************************************/
-function Pointer(size, fill, stroke) {
-	this.position = {x: 0, y: 0};
+function Pointer(battlemap, size, fill, stroke) {
+	this.battlemap = battlemap;
+	this.position = {x: 0, y: 0, rawX: 0, rawY: 0};
 
 	// Set offset
-	var offset_ = $(battleMap.actionElem).offset();
+	var offset_ = $(this.battlemap.actionElem).offset();
 	this.offset = {x: offset_.left, y: offset_.top};
 
 	// Build svg element
-	this.svgElement = battleMap.svgPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
 
 	if (typeof fill !== 'undefined'){
 		this.svgElement.attr("fill", fill);
@@ -37,22 +38,33 @@ Pointer.prototype = {
 	},
 
 	set transform(val){
-		//TODO: Strip scale information from this.
-		this.svgElement.transform(val);
+		var trans = Raphael.parseTransformString(val);
+		this.svgElement.transform("T" + trans[1][1] + "," + trans[1][2]);
 	}
 }
 
 Pointer.prototype.bindEvents = function(){
 	var _this = this;
 	this.mousemoveHandler = function(ev) {_this.mousemove_handler(ev);}
-	$(battleMap.actionElem).mousemove(this.mousemoveHandler);
+	$(this.battlemap.actionElem).mousemove(this.mousemoveHandler);
+	$(this.battlemap).bind("viewChanged", undefined, this.mousemoveHandler);
 }
 
 Pointer.prototype.mousemove_handler = function(ev){
+	if (typeof ev.pageX == 'undefined'){
+		ev.pageX = this.position.rawX;
+	}
+	if (typeof ev.pageY == 'undefined'){
+		ev.pageY = this.position.rawY;
+	}
+
+	console.log(ev.pageX, ev.pageY);
+	this.position.rawX = ev.pageX;
+	this.position.rawY = ev.pageY;
 	this.position.x = ev.pageX - this.offset.x;
 	this.position.y = ev.pageY - this.offset.y;
-	var cell = battleMap.getNearestCell(this.position.x, this.position.y);
-	this.transform = battleMap.getTransformString(cell[0], cell[1]);
+	var cell = this.battlemap.getNearestCell(this.position.x, this.position.y);
+	this.transform = this.battlemap.getTransformString(cell[0], cell[1]);
 }
 
 // ----------------------------------------------------------------------------
@@ -97,7 +109,7 @@ $().ready(function(){
 	$('#map_color').change();
 
 	// Draw the editor 'pointer'
-	window.pointer = new Pointer(4, "#09f", "#05d");
+	window.pointer = new Pointer(battleMap, 4, "#09f", "#05d");
 });
 
 
