@@ -76,8 +76,18 @@ function BattleMap(actionElem, gridElem, opts){
 			return false;
 		}
 		return true;
-	})
-	.css('background-color', this.backgroundColor);
+	});
+}
+
+/* defines the properties on battlemap. */
+BattleMap.prototype = {
+	get backgroundColor() {
+		return this._backgroundColor;
+	},
+	set backgroundColor(val) {
+		this._backgroundColor = val;
+		$(this.actionElem).css('background-color', val);
+	}
 }
 
 /* clears the canvas and redraws the grid. */
@@ -191,6 +201,12 @@ BattleMap.prototype.getTransformString = function(cellX, cellY){
 BattleMap.prototype.getCell = function(x,y){
 	var cellX = Math.floor((x - (this.translateX * this.zoom)) / (this.zoom * this.gridSpacing));
 	var cellY = Math.floor((y - (this.translateY * this.zoom)) / (this.zoom * this.gridSpacing));
+	return [cellX,cellY];
+}
+
+BattleMap.prototype.getNearestCell = function(x,y){
+	var cellX = Math.round((x - (this.translateX * this.zoom)) / (this.zoom * this.gridSpacing));
+	var cellY = Math.round((y - (this.translateY * this.zoom)) / (this.zoom * this.gridSpacing));
 	return [cellX,cellY];
 }
 
