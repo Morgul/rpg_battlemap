@@ -4,11 +4,30 @@ Class Pointer
 A simple class the represents the svg element acting as our pointer on the
 battlemap grid.
 
-* position :: {x, y} - Object with x parameter, and y parameters. This is in
-						cell-space.
+Events
+* mouseup - The mouseup event from the battlemap canvas. This is for your
+			convienence; it allows you to treat the pointer object as the
+			object recieving click events.
+
+* mousedown - The mousedown event from the battlemap canvas. This is for your
+			convienence; it allows you to treat the pointer object as the
+			object recieving click events.
+
+* mousemove - The mousemove event from the battlemap canvas. This is for your
+			convienence; it allows you to treat the pointer object as the
+			object recieving click events.
+
+Properties
+* transform :: string() - The transform string used by the internal svg element.
+
+* position :: {x, y, rawX, rawY} - Represents the position of the pointer. The
+			x,y properties are in cell coordinates, while rawX,rawY are in page
+			coordinates.
+
 * offset :: {x, y} - Object with x and y parameters. Represents the offset from
-						page coordinates.
-* svgElement :: Object() - The underlying svg element
+			page coordinates.
+
+ * svgElement :: Object() - The underlying svg element
 ******************************************************************************/
 function Pointer(battlemap, size, fill, stroke) {
 	this.battlemap = battlemap;
@@ -19,7 +38,7 @@ function Pointer(battlemap, size, fill, stroke) {
 	this.offset = {x: offset_.left, y: offset_.top};
 
 	// Build svg element
-	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
 
 	if (typeof fill !== 'undefined'){
 		this.svgElement.attr("fill", fill);
@@ -44,27 +63,42 @@ Pointer.prototype = {
 }
 
 Pointer.prototype.bindEvents = function(){
-	var _this = this;
-	this.mousemoveHandler = function(ev) {_this.mousemove_handler(ev);}
-	$(this.battlemap.actionElem).mousemove(this.mousemoveHandler);
-	$(this.battlemap).bind("viewChanged", undefined, this.mousemoveHandler);
+	$(this.battlemap.actionElem).mouseup({context: this}, this.mouseupHandler)
+	$(this.battlemap.actionElem).mouseup({context: this}, this.mousedownHandler)
+	$(this.battlemap.actionElem).mousemove({context: this}, this.mousemoveHandler);
+	$(this.battlemap).bind("viewChanged", {context: this}, this.mousemoveHandler);
 }
 
-Pointer.prototype.mousemove_handler = function(ev){
+Pointer.prototype.mouseupHandler = function(ev){
+	var context = ev.data.context;
+	$(context).trigger('mouseup', ev);
+}
+
+Pointer.prototype.mousedownHandler = function(ev){
+	var context = ev.data.context;
+	$(context).trigger('mouseup', ev);
+}
+
+Pointer.prototype.mousemoveHandler = function(ev){
+	var context = ev.data.context;
+
 	if (typeof ev.pageX == 'undefined'){
-		ev.pageX = this.position.rawX;
+		ev.pageX = context.position.rawX;
 	}
 	if (typeof ev.pageY == 'undefined'){
-		ev.pageY = this.position.rawY;
+		ev.pageY = context.position.rawY;
 	}
 
-	console.log(ev.pageX, ev.pageY);
-	this.position.rawX = ev.pageX;
-	this.position.rawY = ev.pageY;
-	this.position.x = ev.pageX - this.offset.x;
-	this.position.y = ev.pageY - this.offset.y;
-	var cell = this.battlemap.getNearestCell(this.position.x, this.position.y);
-	this.transform = this.battlemap.getTransformString(cell[0], cell[1]);
+	// handle our special logic
+	context.position.rawX = ev.pageX;
+	context.position.rawY = ev.pageY;
+	context.position.x = ev.pageX - context.offset.x;
+	context.position.y = ev.pageY - context.offset.y;
+	var cell = context.battlemap.getNearestCell(context.position.x, context.position.y);
+	context.transform = context.battlemap.getTransformString(cell[0], cell[1]);
+
+	// trigger our mousemove event
+	$(context).trigger('mousemove', ev);
 }
 
 // ----------------------------------------------------------------------------
