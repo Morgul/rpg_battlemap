@@ -185,6 +185,7 @@ function addColorPicker(pickerSelector, inputName)
 			hex = $('.colorpicker_hex input', colpkr).val();
 			var hexString = "#" + hex;
 			$('input[name=' + inputName + ']').val(hex2Color(hexString));
+			$('input[name=' + inputName + ']').change();
 			$(pickerSelector + ' div').css('background-color', '#' + hex);
 
 			$(colpkr).fadeOut(500);
@@ -197,6 +198,7 @@ function addColorPicker(pickerSelector, inputName)
 			$(pickerSelector + ' div').css('background-color', '#' + hex);
 			var hexString = "#" + hex;
 			$('input[name=' + inputName + ']').val(hex2Color(hexString));
+			$('input[name=' + inputName + ']').change();
 
 			$(el).ColorPickerHide();
 		},
@@ -214,6 +216,53 @@ function addColorPicker(pickerSelector, inputName)
 			$(pickerSelector + ' div').css('background-color', hex);
 		}
 	});
+}
+
+function pad(number, length) {
+    var str = '' + number;
+    while (str.length < length) {
+        str = '0' + str;
+    }
+
+    return str;
+}
+
+function rgb2Hex(color) {
+	var parsed = /rgba?\((\d+), *(\d+), *(\d+)/.exec(color);
+	return parsed ? '#' + pad((parsed[1] << 16 | parsed[2] << 8 | parsed[3]).toString(16), 6) : color;
+}
+
+function hex2rgb(color, alpha) {
+	if (color[0] == '#') {
+		color = color.substring(1, color.length);
+	}
+
+	if (color.length > 3)
+	{
+		var red = parseInt(color.substring(0, 2), 16);
+		var green = parseInt(color.substring(2, 4), 16);
+		var blue = parseInt(color.substring(4, 6), 16);
+	} else {
+		var red = parseInt(color[0] + color[0], 16);
+		var green = parseInt(color[1] + color[1], 16);
+		var blue = parseInt(color[2] + color[2], 16);
+	}
+
+	if (typeof alpha !== 'undefined') {
+		return "rgba(" + red + "," + green + "," + blue + "," + alpha + ")";
+	} else {
+		return "rgb(" + red + "," + green + "," + blue + ")";
+	}
+}
+
+function getAlphaFromRGBA(color) {
+	var parsed = /rgba?\((\d+), *(\d+), *(\d+), *([0-9.]+)/.exec(color);
+
+	if (parsed != null && parsed.length > 3) {
+		return parseFloat(parsed[4]);
+	} else {
+		return 0;
+	}
 }
 
 // Hardcoded lists are ugly. They're also fast, and 100% cross-browser compliant. Meh.
