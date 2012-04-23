@@ -16,7 +16,7 @@ the bound object should request a new transformation string.
 * gridElem :: string() - Id of the canvas to use for drawing the grid and
 other limited interactive elements.
 * opts :: Object() - Other parameters to assign to the battlemap.  This can
-be used to override the default zoom, translateX, transalteY, and 
+be used to override the default zoom, translateX, transalteY, and
 gridSpacing as well as set additional functions.
 ***********************************************************************/
 function BattleMap(actionElem, gridElem, opts){
@@ -24,7 +24,7 @@ function BattleMap(actionElem, gridElem, opts){
 	this.actionElem = '#' + actionElem;
 	this.gridElem = '#' + gridElem;
 	this.gridCtx = $(this.gridElem)[0].getContext('2d');
-	
+
 	var svgHeight = $(this.actionElem).height();
 	var svgWidth = $(this.actionElem).width();
 	this.svgPaper = Raphael(actionElem, svgWidth, svgHeight);
@@ -36,7 +36,7 @@ function BattleMap(actionElem, gridElem, opts){
 
 	// look and feel
 	this.backgroundColor = "#e0e0e0";
-	this.gridlineColor = "rgba(0,0,0,0,5)";
+	this.gridlineColor = "rgba(0,0,0,.5)";
 
 	this.combatElements = [];
 	for(var i in opts){
@@ -123,7 +123,7 @@ BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 /* set the zoom and redraw the grid */
 BattleMap.prototype.setZoom = function(z){
 	if(z < .1){
-		z = .1; 
+		z = .1;
 	}
 	if(z > 3){
 		z = 3;
