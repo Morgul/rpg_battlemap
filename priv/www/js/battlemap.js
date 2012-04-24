@@ -479,13 +479,14 @@ function CombatZone(battlemap, opts){
 	this.startCell = [0,0];
 	//this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
 	this.name = 'CombatZone of Doom';
-	this.color = 'darkgreen';
+	this._color = 'darkgreen';
 	this.layer = "ground";
 	this.zIndex = 1;
 	this.rotation = "none"; // none, cw, ccw, about
 	this.path = CombatZone.makeSquare(1);
-	this.strokeOpacity = .5;
-	this.strokeColor = "black";
+	this._strokeOpacity = .5;
+	this._strokeColor = "black";
+	this._strokeWidth = 5;
 
 	for(var i in opts){
 		this[i] = opts[i];
@@ -497,7 +498,6 @@ function CombatZone(battlemap, opts){
 	this.floor = pap.path();
 	this.walls = pap.path();
 	var opacity = .5;
-	var strokeWidth = 5;
 	if(this.layer == "ground"){
 		opacity = 1;
 	}
@@ -511,7 +511,7 @@ function CombatZone(battlemap, opts){
 		'fill-opacity':0,
 		'stroke-opacity':this.strokeOpacity,
 		'stroke':this.strokeColor,
-		'stroke-width':strokeWidth
+		'stroke-width':this.strokeWidth
 	});
 	this.svgObject.push(this.floor,this.walls);
 	this.setPath(this.path);
@@ -525,6 +525,37 @@ function CombatZone(battlemap, opts){
 	this.floor.node.setAttribute('pointer-events', 'none');
 	this.walls.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
+}
+
+CombatZone.prototype = {
+	get strokeColor(){
+		return this._strokeColor;
+	},
+	set strokeColor(val){
+		this._strokeColor = val;
+		this.walls.attr({'stroke': val});
+	},
+	get strokeOpacity(){
+		return this._strokeOpacity;
+	},
+	set strokeOpacity(val){
+		this._strokeOpacity= val;
+		this.walls.attr({'stroke-opacity': val});
+	},
+	get strokeWidth(){
+		return this._strokeWidth;
+	},
+	set strokeWidth(val){
+		this._strokeWidth= val;
+		this.walls.attr({'stroke-width': val});
+	},
+	get color(){
+		return this._color;
+	},
+	set color(val){
+		this._color = val;
+		this.floor.attr({'fill': val});
+	}
 }
 
 CombatZone.prototype.updateTransform = function(){
