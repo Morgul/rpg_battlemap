@@ -1,8 +1,29 @@
+#leftColumnItems input
+{
+	border: 2px solid #ddd;
+	border-radius: 4px;
+	padding-left: 2px;
+}
+
 #leftColumnItems input[type="text"]
 {
-	width: 150px;
+	width: 137px;
 }
 
 div.colorSelector {
 	margin-right: 5px;
+	position: relative;
+	top: 5px;
+}
+
+fieldset
+{
+	border: 1px solid #ccc;
+	padding: 5px;
+}
+
+fieldset legend
+{
+	font-weight: bold;
+	margin-left: 5px;
 }
