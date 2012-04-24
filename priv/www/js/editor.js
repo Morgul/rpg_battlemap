@@ -55,10 +55,17 @@ Editor.prototype.mousedownHandler = function(ev){
 			}
 
 			var zone = this.currentZone;
-			if (zone.getPoint(this.pointer.position.x, this.pointer.position.y) == null){
-				this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
-			} else {
-				console.log('Already got a point.');
+			var startPos = null;
+			if (this.currentZone.points.length > 0){
+				var startPos = this.currentZone.points[0].position;
+			}
+			var currentPos = this.pointer.position;
+
+			this.currentZone.addPoint(currentPos.x, currentPos.y);
+			if (startPos != null && startPos.x == currentPos.x &&
+				startPos.y == currentPos.y) {
+				// Clicking on the first point closes the zone.
+				this.currentZone.finishZone();
 			}
 		} else {
 			this.dblclick = false;
@@ -69,6 +76,10 @@ Editor.prototype.mousedownHandler = function(ev){
 Editor.prototype.dblclickHandler = function(ev){
 	console.log("dblclick");
 	this.dblclick = true;
+
+	// Doubleclicking finished the zone with a moveTo.
+	this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
+	this.currentZone.finishZone(true);
 }
 
 
@@ -82,6 +93,7 @@ function EditZone(battlemap, editor){
 	this.editor = editor;
 	this.points = new Array();
 	this.zone = new CombatZone(this.battlemap, {path: "Mz"});
+	this.finishPrefix = "L";
 }
 
 EditZone.prototype.p2s = function(x, y){
@@ -92,7 +104,7 @@ EditZone.prototype.addPoint = function(x, y){
 	var point = new Point(this.battlemap, x, y);
 	this.points.push(point);
 
-	//this.updateZone();
+	this.updateZone();
 
 	return point;
 }
@@ -111,11 +123,42 @@ EditZone.prototype.getPoint = function(x, y){
 }
 
 EditZone.prototype.updateZone = function(){
-	for (var key in this.points){
-		var pos = this.points[key].position
+	var pathArray = new Array();
+	var totalPoints = this.points.length;
+	var finishPrefix = this.finishPrefix;
+	$(this.points).each(function(index, point){
+		if (index == 0)
+		{
+			// We're the starting point.
+			pathArray.push("M" + point.position.x + "," + point.position.y);
+		} else if (index == totalPoints - 1){
+			// We're the last point.
+			pathArray.push(finishPrefix + point.position.x + "," + point.position.y);
+		} else {
+			pathArray.push("L" + point.position.x + "," + point.position.y);
+		}
+	});
 
-		this.zone.setPath("Mz")
+	console.log(pathArray.join(" ") + " z");
+
+	this.zone.setPath("M " + pathArray.join(" ") + " z")
+}
+
+EditZone.prototype.finishZone = function(moveTo){
+	if (typeof moveTo !== 'undefined'){
+		// Change this.finishPrefix from L (default) to M.
+		this.finishPrefix = "M";
+		console.log("moveTo!");
 	}
+
+	// Finish the path with a line/moveto back to the starting point.
+	var point = new Point(this.battlemap, this.points[0].position.x, this.points[0].position.y);
+	this.points.push(point);
+
+	this.updateZone();
+
+	// We're done with this zone, so inform the editor we've gone away now.
+	this.editor.currentZone = null;
 }
 
 /******************************************************************************
