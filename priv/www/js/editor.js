@@ -393,28 +393,47 @@ Point.prototype.moveHandler = function(ev){
 $().ready(function(){
 	addColorPicker('.grid', 'grid_color');
 	addColorPicker('.map', 'map_color');
+	addColorPicker('.zone', 'zone_color');
+	addColorPicker('.fill', 'fill_color');
 
 	// Grid Line Color editor
 	$('#grid_color').val(rgb2Hex(battleMap.gridlineColor));
 	$('#grid_alpha').val(getAlphaFromRGBA(battleMap.gridlineColor));
+	$('#grid_stroke').val(battleMap.gridStroke);
 	$('#grid_color').change(function(){
 		var color = color2Hex($('#grid_color').val());
 		var alpha = $('#grid_alpha').val();
+		var stroke = $('#grid_stroke').val();
 		battleMap.gridlineColor = hex2rgb(color, alpha);
+		battleMap.gridStroke = stroke;
 		battleMap.drawGrid();
 	});
 	$('#grid_color').blur(function(){
 		var color = color2Hex($('#grid_color').val());
 		var alpha = $('#grid_alpha').val();
+		var stroke = $('#grid_stroke').val();
 		battleMap.gridlineColor = hex2rgb(color, alpha);
+		battleMap.gridStroke = stroke;
 		battleMap.drawGrid();
 	});
+
+	// Grid Line alpha change handlers
 	$('#grid_alpha').change(function(){
 		$('#grid_color').change();
 	});
 	$('#grid_alpha').bind('input', function(){
 		$('#grid_color').change();
 	});
+
+	// Grid Line stroke change handlers
+	$('#grid_stroke').change(function(){
+		$('#grid_color').change();
+	});
+	$('#grid_stroke').bind('input', function(){
+		$('#grid_color').change();
+	});
+
+	// Fire the change event
 	$('#grid_color').change();
 
 	// Background Color editor
@@ -431,6 +450,14 @@ $().ready(function(){
 
 	// Create an editor
 	window.editor = new Editor(battleMap);
+
+	// Window resize handler
+	var zoneList = $('#zones');
+	$(window).resize(function(){
+		zoneList.height($(window).height() - zoneList.offset().top - 2);
+	});
+	// Don't ask about the extra 14 pixels. I have no clue. But, this works.
+	zoneList.height($(window).height() - zoneList.offset().top - 16);
 });
 
 

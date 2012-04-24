@@ -10,6 +10,12 @@
 	width: 137px;
 }
 
+#leftColumnItems input[type="number"]
+{
+	width: 48px;
+}
+
+
 div.colorSelector {
 	margin-right: 5px;
 	position: relative;
@@ -26,4 +32,10 @@ fieldset legend
 {
 	font-weight: bold;
 	margin-left: 5px;
+}
+
+fieldset p
+{
+	margin-top: 2px;
+	margin-bottom: 2px;
 }
