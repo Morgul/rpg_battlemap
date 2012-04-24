@@ -9,8 +9,11 @@ function Editor(battlemap){
 	this.currentZone = null;
 	this.pointer = new Pointer(this.battlemap, 4, "#09f", "#05d");
 	this.bindEvents();
+
+	// Mouse handling
 	this.dragging = false;
 	this.dblclick= false;
+	this.rightClick= false;
 }
 
 Editor.prototype = {
@@ -35,6 +38,7 @@ Editor.prototype.bindEvents = function(){
 	$(this.pointer).mouseup($.proxy(this.mouseupHandler, this));
 	$(this.pointer).mousedown($.proxy(this.mousedownHandler, this));
 	$(this.pointer).dblclick($.proxy(this.dblclickHandler, this));
+	$(this.pointer).bind('contextmenu', $.proxy(this.contextmenuHandler, this));
 }
 
 Editor.prototype.triggerUpdate = function(){
@@ -61,7 +65,13 @@ Editor.prototype.mousedownHandler = function(ev){
 			}
 			var currentPos = this.pointer.position;
 
-			this.currentZone.addPoint(currentPos.x, currentPos.y);
+			var point = this.currentZone.addPoint(currentPos.x, currentPos.y);
+			if (this.rightClick){
+				point.pointType = "M";
+				this.currentZone.updateZone();
+				this.rightClick = false;
+			}
+
 			if (startPos != null && startPos.x == currentPos.x &&
 				startPos.y == currentPos.y) {
 				// Clicking on the first point closes the zone.
@@ -74,12 +84,17 @@ Editor.prototype.mousedownHandler = function(ev){
 }
 
 Editor.prototype.dblclickHandler = function(ev){
-	console.log("dblclick");
 	this.dblclick = true;
 
-	// Doubleclicking finished the zone with a moveTo.
-	this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
-	this.currentZone.finishZone(true);
+	if(this.currentZone != null){
+		// Doubleclicking finished the zone with a moveTo.
+		this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
+		this.currentZone.finishZone(true);
+	}
+}
+
+Editor.prototype.contextmenuHandler = function(ev){
+	this.rightClick = true;
 }
 
 
@@ -118,7 +133,6 @@ EditZone.prototype.getPoint = function(x, y){
 		}
 	});
 
-	console.log(found);
 	return found;
 }
 
@@ -135,11 +149,9 @@ EditZone.prototype.updateZone = function(){
 			// We're the last point.
 			pathArray.push(finishPrefix + point.position.x + "," + point.position.y);
 		} else {
-			pathArray.push("L" + point.position.x + "," + point.position.y);
+			pathArray.push(point.pointType + point.position.x + "," + point.position.y);
 		}
 	});
-
-	console.log(pathArray.join(" ") + " z");
 
 	this.zone.setPath("M " + pathArray.join(" ") + " z")
 }
@@ -148,7 +160,6 @@ EditZone.prototype.finishZone = function(moveTo){
 	if (typeof moveTo !== 'undefined'){
 		// Change this.finishPrefix from L (default) to M.
 		this.finishPrefix = "M";
-		console.log("moveTo!");
 	}
 
 	// Finish the path with a line/moveto back to the starting point.
@@ -230,6 +241,7 @@ Pointer.prototype.bindEvents = function(){
 	$(this.battlemap.actionElem).mouseup($.proxy(this.mouseupHandler, this));
 	$(this.battlemap.actionElem).mousedown($.proxy(this.mousedownHandler, this));
 	$(this.battlemap.actionElem).dblclick($.proxy(this.dblclickHandler, this));
+	$(this.battlemap.actionElem).bind('contextmenu', $.proxy(this.contextmenuHandler, this));
 	$(this.battlemap.actionElem).mousemove($.proxy(this.mousemoveHandler, this));
 	$(this.battlemap).bind("viewChanged", $.proxy(this.mousemoveHandler, this));
 }
@@ -244,6 +256,12 @@ Pointer.prototype.mousedownHandler = function(ev){
 
 Pointer.prototype.dblclickHandler = function(ev){
 	$(this).trigger('dblclick', ev);
+}
+
+Pointer.prototype.contextmenuHandler = function(ev){
+	ev.preventDefault();
+	$(this).trigger('contextmenu', ev);
+	return false;
 }
 
 Pointer.prototype.mousemoveHandler = function(ev){
@@ -316,6 +334,8 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 	if ((typeof posX !== 'undefined') && (typeof posY !== 'undefined')){
 		this.position = {x: posX, y: posY};
 	}
+
+	this.pointType = "L" // "L", "M", "c"
 
 	$(this.battlemap).bind("viewChanged", {context: this}, this.moveHandler);
 }
