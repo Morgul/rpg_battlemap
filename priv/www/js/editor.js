@@ -9,6 +9,8 @@ function Editor(battlemap){
 	this.currentZone = null;
 	this.pointer = new Pointer(this.battlemap, 4, "#09f", "#05d");
 	this.bindEvents();
+	this.dragging = false;
+	this.dblclick= false;
 }
 
 Editor.prototype = {
@@ -30,26 +32,46 @@ Editor.prototype = {
 }
 
 Editor.prototype.bindEvents = function(){
-	$(this.pointer).mouseup($.proxy(this.clickHandler, this));
+	$(this.pointer).mouseup($.proxy(this.mouseupHandler, this));
+	$(this.pointer).mousedown($.proxy(this.mousedownHandler, this));
+	$(this.pointer).dblclick($.proxy(this.dblclickHandler, this));
 }
 
 Editor.prototype.triggerUpdate = function(){
 	$(this).trigger('prop-update', undefined);
 }
 
-Editor.prototype.clickHandler = function(ev){
-	if(this.currentZone == null){
-		this.currentZone = new EditZone(this.battlemap, this);
-	}
-
-
-	var zone = this.currentZone;
-	if (zone.getPoint(this.pointer.position.x, this.pointer.position.y) == null){
-		this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
-	} else {
-		console.log('Already got a point.');
-	}
+Editor.prototype.mouseupHandler = function(ev){
+	this.dragging = false;
 }
+
+Editor.prototype.mousedownHandler = function(ev){
+	this.dragging = true;
+
+	setTimeout($.proxy(function() {
+		console.log(this.dragging, this.dblclick);
+		if (this.dragging == false && this.dblclick == false){
+			if(this.currentZone == null){
+				this.currentZone = new EditZone(this.battlemap, this);
+			}
+
+			var zone = this.currentZone;
+			if (zone.getPoint(this.pointer.position.x, this.pointer.position.y) == null){
+				this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
+			} else {
+				console.log('Already got a point.');
+			}
+		} else {
+			this.dblclick = false;
+		}
+	}, this), 200);
+}
+
+Editor.prototype.dblclickHandler = function(ev){
+	console.log("dblclick");
+	this.dblclick = true;
+}
+
 
 /******************************************************************************
 Class EditZone
@@ -149,6 +171,7 @@ Pointer.prototype = {
 Pointer.prototype.bindEvents = function(){
 	$(this.battlemap.actionElem).mouseup($.proxy(this.mouseupHandler, this));
 	$(this.battlemap.actionElem).mousedown($.proxy(this.mousedownHandler, this));
+	$(this.battlemap.actionElem).dblclick($.proxy(this.dblclickHandler, this));
 	$(this.battlemap.actionElem).mousemove($.proxy(this.mousemoveHandler, this));
 	$(this.battlemap).bind("viewChanged", $.proxy(this.mousemoveHandler, this));
 }
@@ -159,6 +182,10 @@ Pointer.prototype.mouseupHandler = function(ev){
 
 Pointer.prototype.mousedownHandler = function(ev){
 	$(this).trigger('mousedown', ev);
+}
+
+Pointer.prototype.dblclickHandler = function(ev){
+	$(this).trigger('dblclick', ev);
 }
 
 Pointer.prototype.mousemoveHandler = function(ev){
