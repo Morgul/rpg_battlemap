@@ -470,7 +470,7 @@ function CombatZone(battlemap, opts){
 	this.zIndex = 1;
 	this.rotation = "none"; // none, cw, ccw, about
 	this.path = CombatZone.makeSquare(1);
-	this.strokeOpacity = .25;
+	this.strokeOpacity = .5;
 	this.strokeColor = "black";
 
 	for(var i in opts){
