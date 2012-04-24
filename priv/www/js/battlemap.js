@@ -47,6 +47,7 @@ function BattleMap(actionElem, gridElem, opts){
 	// look and feel
 	this.backgroundColor = "#e0e0e0";
 	this.gridlineColor = "rgba(0,0,0,.5)";
+	this._gridStroke = 1;
 
 	this.combatElements = [];
 	for(var i in opts){
@@ -97,7 +98,16 @@ BattleMap.prototype = {
 	set backgroundColor(val) {
 		this._backgroundColor = val;
 		$(this.actionElem).css('background-color', val);
+	},
+
+	get gridStroke(){
+		return this._gridStroke
+	},
+	set gridStroke(val){
+		this._gridStroke = val;
+		this.drawGrid();
 	}
+
 }
 
 /* clears the canvas and redraws the grid. */
@@ -130,14 +140,14 @@ BattleMap.prototype._getOffset = function(translate){
 BattleMap.prototype.drawVerticalsGrid = function(width, height){
 	var offset = (this.translateX % this.gridSpacing) * this.zoom;
 	for(offset; offset <= width; offset += (this.gridSpacing * this.zoom)){
-		this.gridCtx.fillRect(offset, 0, 1, height);
+		this.gridCtx.fillRect(offset - Math.floor(this.gridStroke/2), 0, this.gridStroke, height);
 	}
 }
 
 BattleMap.prototype.drawHorizontalsGrid = function(width, height){
 	var offset = (this.translateY % this.gridSpacing) * this.zoom;
 	for(offset; offset < height; offset += (this.gridSpacing * this.zoom)){
-		this.gridCtx.fillRect(0,offset,width,1);
+		this.gridCtx.fillRect(0,offset - Math.floor(this.gridStroke/2),width,this.gridStroke);
 	}
 }
 
