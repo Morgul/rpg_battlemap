@@ -49,7 +49,6 @@ Editor.prototype.mousedownHandler = function(ev){
 	this.dragging = true;
 
 	setTimeout($.proxy(function() {
-		console.log(this.dragging, this.dblclick);
 		if (this.dragging == false && this.dblclick == false){
 			if(this.currentZone == null){
 				this.currentZone = new EditZone(this.battlemap, this);
@@ -81,7 +80,8 @@ A class for managing the editor.
 function EditZone(battlemap, editor){
 	this.battlemap = battlemap;
 	this.editor = editor;
-	this.points = {};
+	this.points = new Array();
+	this.zone = new CombatZone(this.battlemap, {path: "Mz"});
 }
 
 EditZone.prototype.p2s = function(x, y){
@@ -90,19 +90,34 @@ EditZone.prototype.p2s = function(x, y){
 
 EditZone.prototype.addPoint = function(x, y){
 	var point = new Point(this.battlemap, x, y);
-	this.points[this.p2s(x, y)] = point;
+	this.points.push(point);
+
+	//this.updateZone();
 
 	return point;
 }
 
 EditZone.prototype.getPoint = function(x, y){
-	var point = this.points[this.p2s(x, y)];
-	if (typeof point == 'undefined'){
-		return null;
-	} else {
-		return point;
+	var found = null;
+	$(this.points).each(function(index, point) {
+		if (point != null && point.position.x == x && point.position.y == y){
+			found = point;
+			return false;
+		}
+	});
+
+	console.log(found);
+	return found;
+}
+
+EditZone.prototype.updateZone = function(){
+	for (var key in this.points){
+		var pos = this.points[key].position
+
+		this.zone.setPath("Mz")
 	}
 }
+
 /******************************************************************************
 Class Pointer
 
