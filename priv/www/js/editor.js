@@ -212,8 +212,7 @@ function Pointer(battlemap, size, fill, stroke) {
 	this.offset = {x: offset_.left, y: offset_.top};
 
 	// Build svg element
-	//this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
-	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
 
 	if (typeof fill !== 'undefined'){
 		this.svgElement.attr("fill", fill);
@@ -318,8 +317,7 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 		size = 3;
 	}
 	this.size = size;
-	//this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
-	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
 
 	if (typeof fill == 'undefined'){
 		fill = "#777";

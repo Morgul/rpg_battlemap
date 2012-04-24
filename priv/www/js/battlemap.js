@@ -29,11 +29,15 @@ function BattleMap(actionElem, gridElem, opts){
 	var svgWidth = $(this.actionElem).width();
 	this.svgPaper = Raphael(actionElem, svgWidth, svgHeight);
 
-	//TODO: This doesn't work! hides the underlying element!
-	// toolPaper is for drawing things above the grid, like tools
-	//  in the editor, or other UI elements
-	//this.toolPaper = Raphael(actionElem, svgWidth, svgHeight);
+	// Raphael has a "bug" where if you create two papers, attached to the same element,
+	// the calculated position for the element is based on document flow, not the x,y
+	// position of the parent element, making it impossible to have a paper ontop of another
+	// paper, while sharing the same parent. Luckily, we can specify an absolute screen coordinate
+	// for the second paper instead.
+	var offset = $(this.actionElem).offset();
+	this.toolPaper = Raphael(offset.left, offset.top, svgWidth, svgHeight);
 	//$(this.toolPaper.canvas).css("z-index", "99");
+	$(this.toolPaper.canvas).css("pointer-events", "none");
 
 	this.zoom = 1; // as long as it's above 0, we're okay.
 	this.translateX = 0; // translate as in motion on a 2d plane
@@ -114,7 +118,7 @@ BattleMap.prototype.drawGrid = function(){
 	this.drawVerticalsGrid(width, height);
 	this.drawHorizontalsGrid(width, height);
 	this.svgPaper.setSize(width, height);
-	//this.toolPaper.setSize(width, height);
+	this.toolPaper.setSize(width, height);
 	this.triggerTransformListeners();
 }
 
