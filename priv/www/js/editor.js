@@ -6,7 +6,7 @@ A class for managing the editor.
 function Editor(battlemap){
 	this.battlemap = battlemap;
 	this.zones = [];
-	this.currentZone = null;
+	this._currentZone = null;
 	this.pointer = new Pointer(this.battlemap, 4, "#09f", "#05d");
 	this.bindEvents();
 
@@ -31,6 +31,14 @@ Editor.prototype = {
 	set pointFill(val){
 		this._pointFill = val;
 		this.triggerUpdate();
+	},
+
+	get currentZone(){
+		return this._currentZone;
+	},
+	set currentZone(val){
+		this._currentZone = val;
+		this.zoneChanged();
 	}
 }
 
@@ -39,6 +47,10 @@ Editor.prototype.bindEvents = function(){
 	$(this.pointer).mousedown($.proxy(this.mousedownHandler, this));
 	$(this.pointer).dblclick($.proxy(this.dblclickHandler, this));
 	$(this.pointer).bind('contextmenu', $.proxy(this.contextmenuHandler, this));
+}
+
+Editor.prototype.zoneChanged = function(){
+	$(this).trigger('zone-changed', undefined);
 }
 
 Editor.prototype.triggerUpdate = function(){
@@ -109,6 +121,36 @@ function EditZone(battlemap, editor){
 	this.points = new Array();
 	this.zone = new CombatZone(this.battlemap, {path: "Mz"});
 	this.finishPrefix = "L";
+
+	this.updateProperties();
+}
+
+EditZone.prototype.updateProperties = function(){
+	var name = $('#zone_name').val();
+	var strokeColor = $('#zone_color').val();
+	var alpha = $('#zone_alpha').val();
+	var strokeWidth = $('#zone_stroke').val();
+	var fill = $('#fill_color').val();
+
+	if (name != ""){
+		this.zone.name = name;
+	}
+
+	if (strokeColor != ""){
+		this.zone.strokeColor = strokeColor;
+	}
+
+	if (alpha != ""){
+		this.zone.strokeOpacity = alpha;
+	}
+
+	if (strokeWidth != ""){
+		this.zone.strokeWidth = strokeWidth;
+	}
+
+	if (fill != ""){
+		this.zone.color = fill;
+	}
 }
 
 EditZone.prototype.p2s = function(x, y){
@@ -391,6 +433,8 @@ Point.prototype.moveHandler = function(ev){
 // ----------------------------------------------------------------------------
 
 $().ready(function(){
+	//TODO: Move this into the editor class. Or split it up somehow.
+
 	addColorPicker('.grid', 'grid_color');
 	addColorPicker('.map', 'map_color');
 	addColorPicker('.zone', 'zone_color');
@@ -448,8 +492,85 @@ $().ready(function(){
 	});
 	$('#map_color').change();
 
+	// ------------------------------------------------------------------------
+
 	// Create an editor
 	window.editor = new Editor(battleMap);
+
+	// ------------------------------------------------------------------------
+
+	// Zone Color editor
+	$('#zone_color').change(function(){
+		if(editor.currentZone != null){
+			var zone = editor.currentZone.zone;
+			var color = color2Hex($('#zone_color').val());
+			var fill = color2Hex($('#fill_color').val());
+			var alpha = $('#zone_alpha').val();
+			var stroke = $('#zone_stroke').val();
+			zone.strokeColor = hex2rgb(color);
+			zone.strokeOpacity = alpha;
+			zone.strokeWidth = stroke;
+			zone.color = fill;
+		}
+	});
+	$('#zone_color').blur(function(){
+		if(editor.currentZone != null){
+			var zone = editor.currentZone.zone;
+			var color = color2Hex($('#zone_color').val());
+			var fill = color2Hex($('#fill_color').val());
+			var alpha = $('#zone_alpha').val();
+			var stroke = $('#zone_stroke').val();
+			zone.strokeColor = hex2rgb(color);
+			zone.strokeOpacity = alpha;
+			zone.strokeWidth = stroke;
+			zone.color = fill;
+		}
+	});
+	// Zone alpha change handlers
+	$('#zone_alpha').change(function(){
+		$('#zone_color').change();
+	});
+	$('#zone_alpha').bind('input', function(){
+		$('#zone_color').change();
+	});
+
+	// Zone stroke change handlers
+	$('#zone_stroke').change(function(){
+		$('#zone_color').change();
+	});
+	$('#zone_stroke').bind('input', function(){
+		$('#zone_color').change();
+	});
+
+	// Zone fill color change handler
+	$('#fill_color').change(function(){
+		$('#zone_color').change();
+	});
+
+	$('#zone_name').val("New Zone");
+	$('#zone_color').val("black");
+	$('#zone_alpha').val(".7");
+	$('#zone_stroke').val("5");
+	$('#fill_color').val("#777777");
+
+	$('.zone div').css('background-color', '#000000');
+	$('.fill div').css('background-color', '#777777');
+
+	$(editor).bind('zone-changed', function(){
+		if(editor.currentZone != null){
+			var zone = editor.currentZone;
+			$('#zone_name').val(zone.zone.name);
+			$('#zone_color').val(zone.zone.strokeColor);
+			$('#zone_alpha').val(zone.zone.strokeOpacity);
+			$('#zone_stroke').val(zone.zone.strokeWidth);
+			$('#fill_color').val(zone.zone.color);
+
+			$('#zone_color').change();
+			$('#fill_color').change();
+		}
+	});
+
+	// ------------------------------------------------------------------------
 
 	// Window resize handler
 	var zoneList = $('#zones');
