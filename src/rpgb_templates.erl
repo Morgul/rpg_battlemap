@@ -4,6 +4,16 @@
 -include_lib("webmachine/include/webmachine.hrl").
 
 init([Page]) ->
+	case rpgb:get_env(trace) of
+		{ok, _Tracedir} ->
+			{File,Module} = case Page of
+				index ->
+					{"templates/base.html", base_dtl};
+				edit ->
+					{"templates/editor.html", editor_dtl}
+			end,
+			ok = erlydtl:compile(File, Module, [{out_dir, "ebin"}])
+	end,
 	{ok, Page}.
 
 to_html(Req, index) ->
