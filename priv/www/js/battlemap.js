@@ -366,6 +366,140 @@ tests.battleLayerSortZ = function(){
 }
 
 /***********************************************************************
+Class MapLocker
+
+Manages load and save for both remote and local, as well as a simple
+sync.
+***********************************************************************/
+
+Storage.prototype.setObject = function(key, value){
+	this.setItem(key, JSON.stringify(value));
+}
+
+Storage.prototype.getObject = function(key){
+	var value = this.getItem(key);
+	return value && JSON.parse(value);
+}
+
+function MapLocker(){
+	throw new Exception('lib, not for instanciation');
+}
+
+MapLocker._seq = function(max){
+	var a = [];
+	for(var i = 0; i < max; i++){
+		(function(n){
+			a[n] = n+1;
+		})(i);
+	}
+	return a;
+}
+
+MapLocker.listLocal = function(){
+	var seq = MapLocker._seq(localStorage.length);
+	var mapped = seq.map(function(val, index){
+		var key = localStorage.key(index);
+		var obj = localStorage.getObject(key);
+		return {'name':obj.name, 'url':obj.url};
+	});
+	return mapped;
+}
+
+MapLocker.listRemote = function(){
+	return $.get('/battles');
+}
+
+// overwrite remote means save in the cloud ignoring any mismatch for
+// etags.  This always saves remotely..
+MapLocker.save = function(battleMap, overwriteRemote){
+	var mapObj = MapLocker._battlemapToObj(battleMap);
+	MapLocker._saveLocal(battleMap);
+	var ajaxOpts = {};
+	if(battleMap.url){
+		ajaxOpts = {
+			'url':battleMap.url,
+			'contentType':'application/json',
+			'data':JSON.stringify(mapObj),
+			'type':'PUT',
+			'processData':false
+		};
+	} else {
+		ajaxOpts = {
+			'url':'/battles/create',
+			'contentType':'application/json',
+			'data':JSON.stringify(mapObj),
+			'type':'POST',
+			'processData':false
+		};
+		if(overwriteRemote){
+			ajaxOpts.headers = {'If-Match':'*'};
+		}
+	}
+	return $.ajax(ajaxOpts).success(function(){
+		MapLocker._setRemoteSync(battleMap, true);
+	});
+}
+
+MapLocker._battlemapToObj = function(battleMap){
+	var mapForStorage = {
+		name: battleMap.name,
+		zoom: battleMap.zoom,
+		translateX: battleMap.translateX,
+		translateY: battleMap.translateY,
+		gridSpacing: battleMap.gridSpacing,
+		combatants: [],
+		zones: []
+	};
+	if(battleMap.url){
+		mapForStorage.url = battleMap.url;
+	}
+	var storeCombatant = function(combatDude){
+		var tmpCombat = {
+			name: combatDude.name,
+			zIndex: combatDude.zIndex,
+			color: combatDude.color,
+			cellX: combatDude.cellX,
+			cellY: combatDude.cellY,
+			size: combatDude.size,
+			hp: combatDude.hp,
+			initiative: combatDude.initiative,
+			conditions: combatDude.conditions
+		};
+		mapForStorage.combatants.push(tmpCombat);
+	}
+	for(var cname in combatants){
+		storeCombatant(combatants[cname]);
+	}
+	mapForStorage.zones = zoneList.map(function(zone){
+		var tmpZone = {
+			startCell: zone.startCell,
+			name: zone.name,
+			color: zone.color,
+			layer: zone.layer,
+			zIndex: zone.zIndex,
+			rotation: zone.rotation,
+			path: zone.path,
+			strokeOpacity: zone.strokeOpacity,
+			strokeColor: zone.strokeColor
+		};
+		return tmpZone;
+	});
+	return mapForStorage;
+}
+
+MapLocker._saveLocal = function(battleMap){
+	var mapObj = MapLocker._battlemapToObj(battleMap);
+	mapObj._remoteSynced = false;
+	localStorage.setObject(mapObj.name, mapObj);
+}
+
+MapLocker._setRemoteSync = function(battleMap, synced){
+	var obj = localStorage.getObject(battleMap.name);
+	obj._remoteSynced = synced;
+	localStorage.setObject(obj.name, obj);
+}
+
+/***********************************************************************
 Class Combatant
 
 Events:

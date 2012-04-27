@@ -79,8 +79,9 @@ resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
 			{false, ReqData, Ctx};
 		undefined ->
 			{false, ReqData, Ctx};
-		_BattleMap ->
-			{true, ReqData, Ctx}
+		BattleMap ->
+			Ctx0 = {battle, BattleMap, Session},
+			{true, ReqData, Ctx0}
 	end.
 
 delete_resource(ReqData, {battle, MapId, Session} = Ctx) ->
