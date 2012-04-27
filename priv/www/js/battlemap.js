@@ -19,35 +19,70 @@ other limited interactive elements.
 be used to override the default zoom, translateX, transalteY, and
 gridSpacing as well as set additional functions.
 ***********************************************************************/
-function BattleMap(actionElem, gridElem, opts){
+function BattleMap(actionElem, opts){
 	this.name = "Default Map";
-	this.actionElem = '#' + actionElem;
-	this.gridElem = '#' + gridElem;
-	this.gridCtx = $(this.gridElem)[0].getContext('2d');
 
-	var svgHeight = $(this.actionElem).height();
-	var svgWidth = $(this.actionElem).width();
-	this.svgPaper = Raphael(actionElem, svgWidth, svgHeight);
+	this._actionElem = '#' + actionElem;
+	//this._gridElem = '#' + gridElem;
+	//this._gridCtx = $(this._gridElem)[0].getContext('2d');
 
+	this._svgPaper = Raphael(actionElem, '100%', '100%');
+
+	this._zoom = 1; // as long as it's above 0, we're okay.
+	this._translateX = 0; // translate as in motion on a 2d plane
+	this._translateY = 0;
+	this._gridSpacing = 32; // pixels
+
+	// look and feel
+	this._backgroundColor = "#e0e0e0";
+	this._gridlineColor = "rgba(0,0,0,.5)";
+	this._gridStroke = 1;
+
+	var attr;
+	this._gridPattern = document.createElementNS(this._svgPaper.canvas.namespaceURI, 'pattern');
+	var patternAttr = {
+		'x':'0',
+		'y':'0',
+		'width':'32',
+		'height':'32',
+		'id':'gridPattern',
+		'patternUnits':'userSpaceOnUse'
+	};
+	for(attr in patternAttr){
+		this._gridPattern.setAttribute(attr, patternAttr[attr]);
+	}
+
+	this._patternRect = document.createElementNS(this._svgPaper.canvas.namespaceURI, 'rect');
+	var patternRectAttr = {
+		'x':'0',
+		'y':'0',
+		'width':'100%',
+		'height':'100%',
+		'stroke':this._gridlineColor,
+		'stroke-width':this._gridStroke,
+		'stroke-opacity':1,
+		'fill-opacity':0
+	};
+	for(attr in patternRectAttr){
+		this._patternRect.setAttribute(attr, patternRectAttr[attr]);
+	}
+
+	$('defs', this._svgPaper.node).append(this._gridPattern);
+	$(this._gridPattern).append(this._patternRect);
+
+	this._gridRect = this._svgPaper.rect(0,0,'100%','100%');
+	this._gridRect.attr('stroke-opacity','0');
+	this._gridRect.node.setAttribute('fill','url(#gridPattern)');
+	
 	// Raphael has a "bug" where if you create two papers, attached to the same element,
 	// the calculated position for the element is based on document flow, not the x,y
 	// position of the parent element, making it impossible to have a paper ontop of another
 	// paper, while sharing the same parent. Luckily, we can specify an absolute screen coordinate
 	// for the second paper instead.
-	var offset = $(this.actionElem).offset();
-	this.toolPaper = Raphael(offset.left, offset.top, svgWidth, svgHeight);
+	/*var offset = $(this._actionElem).offset();
+	this._toolPaper = Raphael(offset.left, offset.top, svgWidth, svgHeight);
 	//$(this.toolPaper.canvas).css("z-index", "99");
-	$(this.toolPaper.canvas).css("pointer-events", "none");
-
-	this.zoom = 1; // as long as it's above 0, we're okay.
-	this.translateX = 0; // translate as in motion on a 2d plane
-	this.translateY = 0;
-	this.gridSpacing = 32; // pixels
-
-	// look and feel
-	this.backgroundColor = "#e0e0e0";
-	this.gridlineColor = "rgba(0,0,0,.5)";
-	this._gridStroke = 1;
+	$(this._toolPaper.canvas).css("pointer-events", "none");*/
 
 	this.combatElements = [];
 	for(var i in opts){
@@ -90,8 +125,74 @@ function BattleMap(actionElem, gridElem, opts){
 	});
 }
 
-/* defines the properties on battlemap. */
 BattleMap.prototype = {
+	get actionElem(){
+		return this._actionElem;
+	},
+
+	get gridElem(){
+		return this._gridElem;
+	},
+
+	get gridCtx(){
+		return this._gridCtx;
+	},
+
+	get svgPaper(){
+		return this._svgPaper;
+	},
+
+	get zoom(){
+		return this._zoom;
+	},
+	set zoom(val){
+		if(val < .1){
+			val = .1;
+		}
+		if(val > 3){
+			val = 3;
+		}
+		this._zoom = val;
+		/*this._gridPattern.setAttribute('width',this._gridSpacing * val);
+		this._gridPattern.setAttribute('height',this._gridSpacing * val);*/
+		this._gridPattern.setAttribute('patternTransform','scale(' + val + ')');
+		this._triggerTransformListeners();
+	},
+
+	get translateX(){
+		return this._translateX;
+	},
+	set translateX(val){
+		this._translateX = val;
+		this._gridPattern.setAttribute('x',val);
+		this._triggerTransformListeners();
+	},
+
+	get translateY(){
+		return this._translateY;
+	},
+	set translateY(val){
+		this._translateY = val;
+		this._gridPattern.setAttribute('y',val);
+		this._triggerTransformListeners();
+	},
+
+	get translation(){
+		return [this._translateX, this._translateY];
+	},
+	set translateion(val){
+		this._translateX = val[0];
+		this._translateY = val[1];
+		this._triggerTransformListeners();
+	},
+
+	get gridSpacing(){
+		return this._gridSpacing;
+	},
+	set gridSpacing(val){
+		this._gridSpacing = val;
+	},
+
 	get backgroundColor() {
 		return this._backgroundColor;
 	},
@@ -100,92 +201,39 @@ BattleMap.prototype = {
 		$(this.actionElem).css('background-color', val);
 	},
 
+	get gridlineColor(){
+		return this._gridlineColor;
+	},
+	set gridlineColor(val){
+		this._gridlineColor;
+		this._gridRect.setAttribute('stroke',this._gridlineColor);
+	},
+
 	get gridStroke(){
 		return this._gridStroke
 	},
 	set gridStroke(val){
 		this._gridStroke = val;
-		this.drawGrid();
+		this._gridRect.setAttribute('stroke-width',this._gridStroke);
 	}
 
-}
-
-/* clears the canvas and redraws the grid. */
-BattleMap.prototype.drawGrid = function(){
-	this.skipDraw = true;
-	// resize canvas to avoid weird grid scaling.
-	var parentWidth = $(this.gridElem).parent().width();
-	var parentHeight = $(this.gridElem).parent().height();
-	$(this.gridElem).width(parentWidth).height(parentHeight);
-	var height = $(this.gridElem).height();
-	var width = $(this.gridElem).width();
-	var topcornerx = 0 + this.translateX;
-	var topcornery = 0 + this.translateY;
-	this.gridCtx.clearRect(0,0, width, height);
-	//this.gridCtx.setFillColor("black");
-	this.gridCtx.fillStyle = this.gridlineColor;
-	this.gridCtx.strokeStyle = "rgba(80,80,80, 0.5)";
-	this.drawVerticalsGrid(width, height);
-	this.drawHorizontalsGrid(width, height);
-	this.svgPaper.setSize(width, height);
-	this.toolPaper.setSize(width, height);
-	this.triggerTransformListeners();
-}
+};
 
 BattleMap.prototype._getOffset = function(translate){
-	var offset = translate % this.gridSpacing;
-	return offset * this.zoom;
+	var offset = translate % this._gridSpacing;
+	return offset * this._zoom;
 }
 
-BattleMap.prototype.drawVerticalsGrid = function(width, height){
-	var offset = (this.translateX % this.gridSpacing) * this.zoom;
-	for(offset; offset <= width; offset += (this.gridSpacing * this.zoom)){
-		this.gridCtx.fillRect(offset - Math.floor(this.gridStroke/2), 0, this.gridStroke, height);
-	}
-}
-
-BattleMap.prototype.drawHorizontalsGrid = function(width, height){
-	var offset = (this.translateY % this.gridSpacing) * this.zoom;
-	for(offset; offset < height; offset += (this.gridSpacing * this.zoom)){
-		this.gridCtx.fillRect(0,offset - Math.floor(this.gridStroke/2),width,this.gridStroke);
-	}
-}
-
-/* set the zoom and redraw the grid */
-BattleMap.prototype.setZoom = function(z){
-	if(z < .1){
-		z = .1;
-	}
-	if(z > 3){
-		z = 3;
-	}
-	this.zoom = z;
-	this.drawGrid();
-}
-
-/* sets the spacing and redraws the grid */
-BattleMap.prototype.setGridSpacing = function(spacing){
-	this.gridSpacing = spacing;
-	this.drawGrid();
-}
-
-/* sets the translation and redraws the grid. */
-BattleMap.prototype.setTranslation = function(x, y){
-	this.translateX = x;
-	this.translateY = y;
-	this.drawGrid();
-}
-
-/* sets the translation using deltas instead of absolute values.  redraws
-the grid. */
-BattleMap.prototype.pan = function(deltaX, deltaY){
-	this.translateX += deltaX;
-	this.translateY += deltaY;
-	this.drawGrid();
-}
-
-BattleMap.prototype.triggerTransformListeners = function(){
+BattleMap.prototype._triggerTransformListeners = function(){
 	$(this).trigger('viewChanged', undefined);
+}
+
+BattleMap.prototype.pan = function(deltax,deltay){
+	this._translateX += deltax;
+	this._translateY += deltay;
+	this._gridPattern.setAttribute('x',this._translateX);
+	this._gridPattern.setAttribute('y',this._translateY);
+	this._triggerTransformListeners();
 }
 
 /* a combat element has 3 required properties:  layer, zIndex, and
@@ -206,6 +254,8 @@ BattleMap.prototype.removeCombatElement = function(combatElem){
 }
 
 BattleMap.prototype.setPaintOrder = function(){
+	$(this._gridRect).remove();
+	$(this._svgPaper.canvas).append(this._gridRect);
 	var sorted = this.combatElements.sort(BattleMap.layerSort);
 	for(var i = 0; i < sorted.length; i++){
 		sorted[i].svgObject.toBack();

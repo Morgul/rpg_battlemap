@@ -132,8 +132,6 @@ function resizeBattleMap() {
 	var newWidth = $('#drawingBoard').width();
 	$('#canvasBoard').attr("width", newWidth)
 	$('#canvasBoard').attr("height", newHeight);
-
-	window.battleMap.drawGrid();
 }
 
 function cellListToString(cells){
@@ -365,11 +363,9 @@ $().ready(function(){
 			delta = ev.originalEvent.wheelDelta;
 		}
 		delta = (delta / 100) * sensitivity;
-		battleMap.setZoom(battleMap.zoom + delta);
+		battleMap.zoom = (battleMap.zoom + delta);
 		return false;
 	});
 
 	resizeBattleMap();
-	window.battleMap.drawGrid();
-
 });
