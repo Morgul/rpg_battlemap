@@ -43,6 +43,9 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 				{error, Reason} ->
 					?info("Error finding battlemap ~p:  ~p", [MapId, Reason]),
 					{false, ReqData, {battle, MapId, Session}};
+				undefined ->
+					?info("Didn't find the battlemap ~p", [MapId]),
+					{false, ReqData, {battle, MapId, Session}};
 				BattleMap ->
 					SessionUser = rpgb_session:get_user(Session),
 					Uid = proplists:get_value(id, SessionUser),
@@ -73,6 +76,8 @@ resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
 	case boss_db:find(MapId) of
 		{error, Reason} ->
 			?info("Could not find map ~p", [MapId]),
+			{false, ReqData, Ctx};
+		undefined ->
 			{false, ReqData, Ctx};
 		_BattleMap ->
 			{true, ReqData, Ctx}
@@ -138,6 +143,15 @@ generate_etag(ReqData, Ctx) ->
 from_json(ReqData, {create_battle, Session} = Ctx) ->
 	% by the time we get here, it's actually already been created.
 	% so just act cool.
+	{true, ReqData, Ctx};
+
+from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
+	Body = wrq:req_body(ReqData),
+	{struct, Props} = mochijson2:decode(Body),
+	Name = proplists:get_value(<<"name">>, Props),
+	{struct, Props} = mochijson2:decode(Body),
+	BattleMap0 = BattleMap:set([{name, Name},{json, Body}]),
+	{ok, BattleMap1} = BattleMap0:save(),
 	{true, ReqData, Ctx}.
 
 to_json(ReqData, {search_battles, Session} = Ctx) ->
