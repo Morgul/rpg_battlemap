@@ -121,6 +121,20 @@ create_path(ReqData, {create_battle, Session} = Ctx) ->
 	Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
 	{Uri, ReqData, Ctx}.
 
+generate_etag(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
+	BattleMap = boss_db:find(MapId),
+	generate_etag(ReqData, {battle, BattleMap, Session});
+
+generate_etag(ReqData, {battle, BattleMap, Session} = Ctx) ->
+	Iolist = io_lib:format("~p:~p", [BattleMap:id(), BattleMap:updated_time()]),
+	IoBin = iolist_to_binary(Iolist),
+	Md5 = erlang:md5(IoBin),
+	Etag = mochihex:to_hex(Md5),
+	{Etag, ReqData, Ctx};
+
+generate_etag(ReqData, Ctx) ->
+	{undefined, ReqData, Ctx}.
+	
 from_json(ReqData, {create_battle, Session} = Ctx) ->
 	% by the time we get here, it's actually already been created.
 	% so just act cool.
@@ -135,7 +149,7 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
 	Records = boss_db:find(rpgb_battlemap, Conditions, Limit),
 	Jsons = [encode_map(Record) || Record <- Records],
-	{Jsons, ReqData, Ctx};
+	{mochijson2:encode(Jsons), ReqData, Ctx};
 
 to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	BattleMap = boss_db:find(MapId),
@@ -143,10 +157,9 @@ to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 
 to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Json = encode_map(BattleMap),
-	{Json, ReqData, Ctx}.
+	{mochijson2:encode(Json), ReqData, Ctx}.
 
 encode_map(BattleMap) ->
 	{struct, MapStruct} = mochijson2:decode(BattleMap:json()),
 	Url = rpgb:get_url(["battles",BattleMap:id(),"slug"]),
-	MapStruct0 = {struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]},
-	mochijson2:encode(MapStruct0).
+	{struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]}.
