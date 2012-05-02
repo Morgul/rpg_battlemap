@@ -254,7 +254,7 @@ function Pointer(battlemap, size, fill, stroke) {
 	this.offset = {x: offset_.left, y: offset_.top};
 
 	// Build svg element
-	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
 
 	if (typeof fill !== 'undefined'){
 		this.svgElement.attr("fill", fill);
@@ -268,14 +268,14 @@ function Pointer(battlemap, size, fill, stroke) {
 }
 
 Pointer.prototype = {
-	get transform(){
+	/*get transform(){
 		return this._transform
 	},
 
 	set transform(val){
 		var trans = Raphael.parseTransformString(val);
 		this.svgElement.transform("T" + trans[1][1] + "," + trans[1][2]);
-	}
+	}*/
 }
 
 Pointer.prototype.bindEvents = function(){
@@ -284,7 +284,12 @@ Pointer.prototype.bindEvents = function(){
 	$(this.battlemap.actionElem).dblclick($.proxy(this.dblclickHandler, this));
 	$(this.battlemap.actionElem).bind('contextmenu', $.proxy(this.contextmenuHandler, this));
 	$(this.battlemap.actionElem).mousemove($.proxy(this.mousemoveHandler, this));
-	$(this.battlemap).bind("viewChanged", $.proxy(this.mousemoveHandler, this));
+	$(this.battlemap).bind("viewChanged", $.proxy(this.viewChangeHandler, this));
+}
+
+Pointer.prototype.viewChangeHandler = function(){
+	var trans = this.battlemap.getTransformString();
+	this.svgElement.transform(trans);
 }
 
 Pointer.prototype.mouseupHandler = function(ev){
@@ -305,6 +310,12 @@ Pointer.prototype.contextmenuHandler = function(ev){
 	return false;
 }
 
+Pointer.prototype.updatePosition = function(){
+	var centerx = this.position.x * this.battlemap.gridSpacing;
+	var centery = this.position.y * this.battlemap.gridSpacing;
+	this.svgElement.attr({cx:centerx,cy:centery});
+}
+
 Pointer.prototype.mousemoveHandler = function(ev){
 	if (typeof ev.pageX == 'undefined'){
 		ev.pageX = this.position.rawX;
@@ -319,7 +330,8 @@ Pointer.prototype.mousemoveHandler = function(ev){
 	var cell = this.battlemap.getNearestCell(ev.pageX - this.offset.x, ev.pageY - this.offset.y);
 	this.position.x = cell[0];
 	this.position.y = cell[1];
-	this.transform = this.battlemap.getTransformString(cell[0], cell[1]);
+	this.updatePosition();
+	//this.transform = this.battlemap.getTransformString(cell[0], cell[1]);
 
 	// trigger our mousemove event
 	$(this).trigger('mousemove', ev);
@@ -359,7 +371,7 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 		size = 3;
 	}
 	this.size = size;
-	this.svgElement = this.battlemap.toolPaper.circle(0, 0, size);
+	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
 
 	if (typeof fill == 'undefined'){
 		fill = "#777";
