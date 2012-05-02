@@ -908,7 +908,6 @@ function CombatZone(battlemap, opts){
 	}
 
 	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
- 	this.battlemap.addZone(this);
 	this.floor.node.setAttribute('pointer-events', 'none');
 	this.walls.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
@@ -953,6 +952,7 @@ CombatZone.prototype = {
 	set startCell(xyArr){
 		this._startCell = xyArr;
 		this.updateTransform();
+		this.updatePath();
 	},
 
 	get rotation(){
@@ -1121,21 +1121,8 @@ CombatZone.prototype.makeSvgPathString = function(){
 				break;
 		}
 	});
-	return outPath;
-}
-
-CombatZone.prototype.setStart = function(cellX, cellY){
-	var xyArr = [cellX,cellY];
-	this.startCell = xyArr;
-}
-
-CombatZone.prototype.setStroke = function(color, opacity){
-	if(color){
-		this.strokecolor = color;
-	}
-	if(opacity){
-		this.strokeOpacity = opacity;
-	}
+	var firstMove = "M " + this._startCell[0] * this.battlemap.gridSpacing + " " + this._startCell[1] * this.battlemap.gridSpacing;
+	return firstMove + " " + outPath;
 }
 
 CombatZone.prototype.toJsonable = function(){
@@ -1207,11 +1194,11 @@ CombatZone.prototype.remove = function(){
 }
 
 CombatZone.makeSquare = function(size){
-	return Raphael.format("M 0 0 l {0} 0 l 0 {0} l -{0} 0 l 0 -{0} z", size);
+	return Raphael.format("l {0} 0 l 0 {0} l -{0} 0 l 0 -{0} z", size);
 }
 
 CombatZone.makeOctogon = function(size){
-	return Raphael.format("M {0} 0 l {0} 0 l {0} {0} l 0 {0} l -{0} {0} l -{0} 0 l -{0} -{0} l 0 -{0} l {0} -{0} z", size);
+	return Raphael.format("m {0} 0 l {0} 0 l {0} {0} l 0 {0} l -{0} {0} l -{0} 0 l -{0} -{0} l 0 -{0} l {0} -{0} z", size);
 	//return Raphael.format("M{0} 0L{1} 0L{2} {0}L{2} {1}L{1} {2}L{0} {2}L0 {1}L0 {0}L{0} 0Z", size, size * 2, size * 3);
 }
 
