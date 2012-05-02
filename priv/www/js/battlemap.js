@@ -240,7 +240,7 @@ BattleMap.prototype = {
 	},
 	set gridlineColor(val){
 		this._gridlineColor;
-		this._gridRect.setAttribute('stroke',this._gridlineColor);
+		this._gridRect.attr('stroke',this._gridlineColor);
 	},
 
 	get gridStroke(){
@@ -248,7 +248,7 @@ BattleMap.prototype = {
 	},
 	set gridStroke(val){
 		this._gridStroke = val;
-		this._gridRect.setAttribute('stroke-width',this._gridStroke);
+		this._gridRect.attr('stroke-width',this._gridStroke);
 	},
 
 	get combatants(){
