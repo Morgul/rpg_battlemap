@@ -840,7 +840,7 @@ Combatant.prototype.startPulsating = function(){
 Combatant.prototype.stopPulsating = function(){
 	this.svgObject.stop();
 	this.svgObject.attr({'x':0,'y':0});
-	this.setSize(this.size);
+	this.size = this._size;
 	this.pulsating = false;
 }
 
