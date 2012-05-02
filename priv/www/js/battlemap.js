@@ -344,7 +344,11 @@ BattleMap.prototype.removeCombatant = function(combatant){
 		if(elem != combatant){
 			return true;
 		}
-		combatant.remove();
+		try{
+			combatant.remove();
+		} catch(err){
+			console.log('err removing combatant', err);
+		}
 		return false;
 	});
 	this.setPaintOrder();
@@ -361,7 +365,11 @@ BattleMap.prototype.removeZone = function(zone){
 		if(elem != zone){
 			return true;
 		}
-		zone.remove();
+		try{
+			zone.remove();
+		} catch(err){
+			console.log('err removing zone', err);
+		}
 		return false;
 	});
 	this.setPaintOrder();
@@ -854,21 +862,18 @@ transparent or not.
 function CombatZone(battlemap, opts){
 	this.battlemap = battlemap;
 	//this.cells = CombatZone.square;
-	this.startCell = [0,0];
+	this._startCell = [0,0];
 	//this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
 	this.name = 'CombatZone of Doom';
 	this._color = 'darkgreen';
-	this.layer = "ground";
-	this.zIndex = 1;
-	this.rotation = "none"; // none, cw, ccw, about
-	this.path = CombatZone.makeSquare(1);
+	this._layer = "ground";
+	this._zIndex = 1;
+	this._rotation = "none"; // none, cw, ccw, about
+	this._path = CombatZone.makeSquare(1);
 	this._strokeOpacity = .5;
 	this._strokeColor = "black";
 	this._strokeWidth = 5;
-
-	for(var i in opts){
-		this[i] = opts[i];
-	}
+	this._fillRule = 'evenodd';
 
 	//var svgPathString = this.makeSvgPathString();
 	var pap = this.battlemap.svgPaper;
@@ -876,7 +881,7 @@ function CombatZone(battlemap, opts){
 	this.floor = pap.path();
 	this.walls = pap.path();
 	var opacity = .5;
-	if(this.layer == "ground"){
+	if(this._layer == "ground"){
 		opacity = 1;
 	}
 	this.floor.attr({
@@ -892,14 +897,18 @@ function CombatZone(battlemap, opts){
 		'stroke-width':this.strokeWidth
 	});
 	this.svgObject.push(this.floor,this.walls);
-	this.setPath(this.path);
+	//this.setPath(this.path);
 	var theThis = this;
 	this.viewChangedHandler = function(){
 		theThis.updateTransform();
 	};
 
+	for(var i in opts){
+		this[i] = opts[i];
+	}
+
 	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
- 	this.battlemap.addCombatElement(this);
+ 	this.battlemap.addZone(this);
 	this.floor.node.setAttribute('pointer-events', 'none');
 	this.walls.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
@@ -978,6 +987,22 @@ CombatZone.prototype = {
 	set path(val){
 		this._path = val;
 		this.updatePath();
+	},
+
+	get zIndex(){
+		return this._zIndex;
+	},
+	set zIndex(val){
+		this._zIndex = val;
+		this.battlemap.setPaintOrder();
+	},
+
+	get fillRule(){
+		return this._fillRule;
+	},
+	set fillRule(val){
+		this._fillRule = val;
+		this.floor.node.setAttribute('fill-rule', val);
 	}
 }
 
@@ -1176,9 +1201,9 @@ CombatZone.prototype.updatePath = function(){
 }
 
 CombatZone.prototype.remove = function(){
-	this.svgObject.remove();
 	$(this.battlemap).unbind("viewChanged", this.viewChangedHandler);
-	this.battlemap.removeCombatElement(this);
+	this.svgObject.remove();
+	this.battlemap.removeZone(this);
 }
 
 CombatZone.makeSquare = function(size){
