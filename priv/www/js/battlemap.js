@@ -367,13 +367,6 @@ BattleMap.prototype.removeZone = function(zone){
 	this.setPaintOrder();
 }
 
-/*BattleMap.prototype.removeCombatElement = function(combatElem){
-	this.combatElements = this.combatElements.filter(function(elem){
-		return (elem != combatElem);
-	});
-	this.setPaintOrder();
-}*/
-
 BattleMap.prototype.setPaintOrder = function(){
 	$(this._gridRect).remove();
 	$(this._svgPaper.canvas).append(this._gridRect);
@@ -806,7 +799,7 @@ Combatant.prototype.updateTransform = function(){
 Combatant.prototype.remove = function(){
 	this.svgObject.remove();
 	$(this.battlemap).unbind("viewChanged", this.viewChangedHandler);
-	this.battlemap.removeCombatElement(this);
+	this.battlemap.removeCombatant(this);
 	$(this).trigger("removed", this);
 }
 
