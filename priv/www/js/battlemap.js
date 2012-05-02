@@ -1009,6 +1009,7 @@ CombatZone.prototype = {
 CombatZone.prototype.updateTransform = function(){
 	var transformStr = this.battlemap.getTransformString(this._startCell[0], this._startCell[1]);
 	var rotate = "0";
+	var startCellPart = " " + (this._startCell[0] * this.battlemap.gridSpacing) + " " + (this._startCell[1] * this.battlemap.gridSpacing) + " ";
 	switch(this._rotation){
 		case "ccw":
 			rotate = "r-90";
@@ -1025,7 +1026,7 @@ CombatZone.prototype.updateTransform = function(){
 		default:
 			rotate = this._rotation;
 	}
-	this.svgObject.transform(transformStr + rotate + " 0 0");
+	this.svgObject.transform(transformStr + rotate + startCellPart);
 }
 
 CombatZone.prototype.toGrid = function(xory){
