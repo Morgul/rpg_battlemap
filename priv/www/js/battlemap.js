@@ -1,5 +1,15 @@
 // dependency on rapheal and jquery.
 
+// Usefule for easily getting/setting jsonables in storages.
+Storage.prototype.setObject = function(key, value){
+	this.setItem(key, JSON.stringify(value));
+}
+
+Storage.prototype.getObject = function(key){
+	var value = this.getItem(key);
+	return value && JSON.parse(value);
+}
+
 /***********************************************************************
 Class BattleMap
 
@@ -73,6 +83,7 @@ function BattleMap(actionElem, opts){
 	this._gridRect = this._svgPaper.rect(0,0,'100%','100%');
 	this._gridRect.attr('stroke-opacity','0');
 	this._gridRect.node.setAttribute('fill','url(#gridPattern)');
+	this._gridRect.node.style.pointerEvents = "none";
 	
 	// Raphael has a "bug" where if you create two papers, attached to the same element,
 	// the calculated position for the element is based on document flow, not the x,y
@@ -84,9 +95,23 @@ function BattleMap(actionElem, opts){
 	//$(this.toolPaper.canvas).css("z-index", "99");
 	$(this._toolPaper.canvas).css("pointer-events", "none");*/
 
-	this.combatElements = [];
-	for(var i in opts){
+	this._combatants = [];
+	this._zones = [];
+
+	//this.combatElements = [];
+	var i;
+	var tmpCombatants = opts.combatants;
+	var tmpZones = opts.zones;
+	delete opts.combatants;
+	delete opts.zones;
+	for(i in opts){
 		this[i] = opts[i]
+	}
+	for(i in tmpCombatants){
+		this.addCombatant(tmpCombatants[i]);
+	}
+	for(i in tmpZones){
+		this.addZone(tmpZones[i]);
 	}
 
 	var dragData = {
@@ -116,13 +141,27 @@ function BattleMap(actionElem, opts){
 			var deltaY = ev.pageY - dragData.lastDragY;
 			dragData.lastDragX = ev.pageX;
 			dragData.lastDragY = ev.pageY;
-			deltaX = deltaX / dragData.mapRef.zoom;
-			deltaY = deltaY / dragData.mapRef.zoom;
+			//deltaX = deltaX / dragData.mapRef.zoom;
+			//deltaY = deltaY / dragData.mapRef.zoom;
 			dragData.mapRef.pan(deltaX, deltaY);
 			return false;
 		}
 		return true;
 	});
+
+	var wheelData = {
+		mapRef: this
+	};
+	$(this.actionElem).mousewheel(function(ev, delta){
+		var sensitivity = 10;
+		if(isNaN(delta)){
+			delta = ev.originalEvent.wheelDelta;
+		}
+		delta = delta * (sensitivity / 10)
+		wheelData.mapRef.zoom = (wheelData.mapRef.zoom + delta);
+		return false;
+	});
+
 }
 
 BattleMap.prototype = {
@@ -153,9 +192,6 @@ BattleMap.prototype = {
 			val = 3;
 		}
 		this._zoom = val;
-		/*this._gridPattern.setAttribute('width',this._gridSpacing * val);
-		this._gridPattern.setAttribute('height',this._gridSpacing * val);*/
-		this._gridPattern.setAttribute('patternTransform','scale(' + val + ')');
 		this._triggerTransformListeners();
 	},
 
@@ -164,7 +200,6 @@ BattleMap.prototype = {
 	},
 	set translateX(val){
 		this._translateX = val;
-		this._gridPattern.setAttribute('x',val);
 		this._triggerTransformListeners();
 	},
 
@@ -173,7 +208,6 @@ BattleMap.prototype = {
 	},
 	set translateY(val){
 		this._translateY = val;
-		this._gridPattern.setAttribute('y',val);
 		this._triggerTransformListeners();
 	},
 
@@ -215,8 +249,23 @@ BattleMap.prototype = {
 	set gridStroke(val){
 		this._gridStroke = val;
 		this._gridRect.setAttribute('stroke-width',this._gridStroke);
-	}
+	},
 
+	get combatants(){
+		return this._combatants;
+	},
+
+	get zones(){
+		return this._zones;
+	},
+	get skys(){
+		// filter by sky
+		return [];
+	},
+	get grounds(){
+		// filter by ground
+		return [];
+	}
 };
 
 BattleMap.prototype._getOffset = function(translate){
@@ -225,14 +274,15 @@ BattleMap.prototype._getOffset = function(translate){
 }
 
 BattleMap.prototype._triggerTransformListeners = function(){
-	$(this).trigger('viewChanged', undefined);
+	var patternMatrix = this.getTransformMatrix(0,0);
+	
+	this._gridPattern.setAttribute('patternTransform',patternMatrix.toString());
+	$(this).trigger('viewChanged', patternMatrix);
 }
 
 BattleMap.prototype.pan = function(deltax,deltay){
 	this._translateX += deltax;
 	this._translateY += deltay;
-	this._gridPattern.setAttribute('x',this._translateX);
-	this._gridPattern.setAttribute('y',this._translateY);
 	this._triggerTransformListeners();
 }
 
@@ -241,43 +291,131 @@ svgObject.  Layer and zIndex are used for comparing.  If layer is equal,
 zIndex is compared.  svgObject is expected to a rapheal element object.
 order is ground -> action -> sky.
 */
-BattleMap.prototype.addCombatElement = function(combatElem){
+/*BattleMap.prototype.addCombatElement = function(combatElem){
 	this.combatElements.push(combatElem);
 	this.setPaintOrder();
+}*/
+
+BattleMap.prototype.addCombatant = function(combatant){
+	if(this._combatants.length == 0){
+		this._combatants.push(combatant);
+		this._triggerTransformListeners();
+		this.setPaintOrder();
+		return combatant;
+	}
+
+	var sorted = this._combatants.sort(function(ca, cb){
+		return cb.initiative - ca.initiative;
+	});
+	
+	// Eventually we'll use a binary search.
+	// for now, just brute force it.
+	for(var i = 0; i < sorted.length; i++){
+		if(sorted[i].initiative > combatant.intiative){
+			if(i == 0){
+				this._combatants.unshift(combatant);
+				break;
+			} else if(sorted[i - 1].initiative != combatant.initiative){
+				this._combatants.splice(i, 0, combatant);
+			} else {
+				if((this._combatants[i].intiative - this._combatants[i-1].initiative) > 1){
+					combatant.initiative = this._combatants[i - 1].initiative + 1;
+				} else {
+					var newInit = (this._combatants[i].initiative + this._combatants[i - 1].initiative) / 2;
+					combatant.initiative = newInit;
+				}
+				this._combatants.splice(i, 0, combatant);
+			}
+			this.setPaintOrder();
+			return combatant;
+		}
+	}
+	i = sorted.length - 1;
+	if(sorted[i].initiative == combatant.initiative){
+		combatant.initiative = sorted[i].initiative + 1;
+	}
+	this._combatants.push(combatant);
+	this.setPaintOrder();
+	return combatant;
 }
 
-BattleMap.prototype.removeCombatElement = function(combatElem){
-	this.combatElements = this.combatElements.filter(function(elem){
-		return (elem != combatElem);
+BattleMap.prototype.removeCombatant = function(combatant){
+	this._combatants = this._combatants.filter(function(elem){
+		if(elem != combatant){
+			return true;
+		}
+		combatant.remove();
+		return false;
 	});
 	this.setPaintOrder();
 }
 
+BattleMap.prototype.addZone = function(zone){
+	this._zones.push(zone);
+	this._triggerTransformListeners();
+	this.setPaintOrder();
+}
+
+BattleMap.prototype.removeZone = function(zone){
+	this._zones = this._zones.filter(function(elem){
+		if(elem != zone){
+			return true;
+		}
+		zone.remove();
+		return false;
+	});
+	this.setPaintOrder();
+}
+
+/*BattleMap.prototype.removeCombatElement = function(combatElem){
+	this.combatElements = this.combatElements.filter(function(elem){
+		return (elem != combatElem);
+	});
+	this.setPaintOrder();
+}*/
+
 BattleMap.prototype.setPaintOrder = function(){
 	$(this._gridRect).remove();
 	$(this._svgPaper.canvas).append(this._gridRect);
-	var sorted = this.combatElements.sort(BattleMap.layerSort);
-	for(var i = 0; i < sorted.length; i++){
-		sorted[i].svgObject.toBack();
+	var skyZones = this.skys;
+	var groundZones = this.grounds;
+	var sortFunc = function(zoneA, zoneB){
+		return zoneB.zIndex - zoneA.zIndex;
+	};
+	skyZones = skyZones.sort(sortFunc);
+	groundZones = groundZones.sort(sortFunc);
+	var toBackFunc = function(elem){
+		elem.svgObject.toBack();
 	}
+	skyZones.map(toBackFunc);
+	this._combatants.map(toBackFunc);
+	groundZones.map(toBackFunc);
 }
 
+BattleMap.prototype.getTransformMatrix = function(){
+	return Raphael.matrix(this.zoom,0,0,this.zoom,this.translateX,this.translateY);
+}
+	
 BattleMap.prototype.getTransformString = function(cellX, cellY){
-	var transX = ((this.gridSpacing * cellX) + this.translateX) * this.zoom;
-	var transY = ((this.gridSpacing * cellY) + this.translateY) * this.zoom;
-	var out = "S" + this.zoom + "," + this.zoom + ",0,0T" + transX + "," + transY;
-	return out;
+	var m = this.getTransformMatrix();
+	return m.toTransformString();
+}
+
+BattleMap.prototype.getCellXY = function(x,y){
+	var outx = x * this.gridSpacing;
+	var outy = y * this.gridSpacing;
+	return [outx,outy];
 }
 
 BattleMap.prototype.getCell = function(x,y){
-	var cellX = Math.floor((x - (this.translateX * this.zoom)) / (this.zoom * this.gridSpacing));
-	var cellY = Math.floor((y - (this.translateY * this.zoom)) / (this.zoom * this.gridSpacing));
+	var cellX = Math.floor((x - this.translateX) / (this.zoom * this.gridSpacing));
+	var cellY = Math.floor((y - this.translateY) / (this.zoom * this.gridSpacing));
 	return [cellX,cellY];
 }
 
 BattleMap.prototype.getNearestCell = function(x,y){
-	var cellX = Math.round((x - (this.translateX * this.zoom)) / (this.zoom * this.gridSpacing));
-	var cellY = Math.round((y - (this.translateY * this.zoom)) / (this.zoom * this.gridSpacing));
+	var cellX = Math.round((x - this.translateX) / (this.zoom * this.gridSpacing));
+	var cellY = Math.round((y - this.translateY) / (this.zoom * this.gridSpacing));
 	return [cellX,cellY];
 }
 
@@ -294,7 +432,8 @@ BattleMap.prototype.highlight = function(cellX, cellY, size){
 		delete this.highlighted;
 	}
 	var size = this.gridSpacing * size;
-	this.highlighted = this.svgPaper.rect(0,0,size,size);
+	var xy = this.getCellXY(cellX,cellY);
+	this.highlighted = this.svgPaper.rect(xy[0],xy[1],size,size);
 	this.highlighted.attr({
 		'fill-opacity':0,
 		'stroke':'gray',
@@ -306,6 +445,115 @@ BattleMap.prototype.highlight = function(cellX, cellY, size){
 BattleMap.prototype.unhighlight = function(){
 	this.highlighted.remove();
 	delete this.highlighted;
+}
+
+BattleMap.prototype.saveRemote = function(force){
+	var mapObj = this.toJsonable();
+	var ajaxOpts = {};
+	var def = $.Deferred();
+	if(this.url){
+		ajaxOpts = {
+			'url':this.url,
+			'contentType':'application/json',
+			'data':JSON.stringify(mapObj),
+			'type':'PUT',
+			'processData':false
+		};
+	} else {
+		ajaxOpts = {
+			'url':'/battles/create',
+			'contentType':'application/json',
+			'data':JSON.stringify(mapObj),
+			'type':'POST',
+			'processData':false
+		};
+		if(force){
+			ajaxOpts.headers = {'If-Match':'*'};
+		} else {
+			ajaxOpts.headers = {'If-Match':mapObj.etag};
+		}
+	}
+	$.ajax(ajaxOpts).success(function(obj,success,xhr){
+		if(! this.url){
+			this.url = obj;
+		} else {
+			this.etag = xhr.getResponseHeader('etag');
+		}
+		def.resolve(this);
+	}).fail(function(obj,fail,xhr){
+		def.reject(obj);
+	});
+	return def;
+}
+
+BattleMap.prototype.saveLocal = function(){
+	var mapObj = this.toJsonable();
+	localStorage.setObject(this.name, mapObj);
+}
+
+BattleMap.loadRemote = function(actionElem, url){
+	var def = $.Deferred();
+	$.get(url).success(function(obj,success,xhr){
+		obj.url = url;
+		obj.etag = xhr.getResponseHeader('etag');
+		var map = new BattleMap(actionElem, obj);
+		def.respond(map);
+	}).fail(function(obj,fail,xhr){
+		def.reject(obj);
+	});
+	return def;
+}
+
+BattleMap.loadLocal = function(actionElem, name){
+	var obj = localStorage.getObject(name);
+	return new BattleMap(actionElem, obj);
+}
+
+BattleMap.prototype.deleteLocal = function(){
+	localStorage.removeItem(this.name);
+}
+
+BattleMap.prototype.deleteRemote = function(){
+	return $.ajax({
+		url:this.url,
+		type:'DELETE'
+	});
+}
+
+BattleMap.listRemote = function(){
+	return $.get('/battles');
+}
+
+BattleMap.listLocal = function(){
+	var seq = BattleMap._seq(localStorage.length);
+	var mapped = seq.map(function(val, index){
+		var key = localStorage.key(index);
+		var obj = localStorage.getObject(key);
+		return {'name':obj.name, 'url':obj.url};
+	});
+	return mapped;
+}
+
+BattleMap.prototype.toJsonable = function(){
+	var mapForStorage = {
+		name: this.name,
+		zoom: this.zoom,
+		translateX: this.translateX,
+		translateY: this.translateY,
+		gridSpacing: this.gridSpacing,
+		combatants: [],
+		zones: []
+	};
+	if(this.url){
+		mapForStorage.url = this.url;
+	}
+	mapForStorage.combatants = this._combatants.map(function(elem){
+		return elem.toJsonable();
+	});
+	mapForStorage.zones = this._zones.map(function(elem){
+		return elem.toJsonable();
+	});
+	return mapForStorage;
 }
 
 BattleMap.layerSort = function(thinga,thingb){
@@ -326,6 +574,17 @@ BattleMap.layerSort = function(thinga,thingb){
 	}
 	return -1;
 }
+
+BattleMap._seq = function(max){
+	var a = [];
+	for(var i = 0; i < max; i++){
+		(function(n){
+			a[n] = n+1;
+		})(i);
+	}
+	return a;
+}
+
 
 /***********************************************************************
 Battlemap tests:  TODO move to other file
@@ -366,140 +625,6 @@ tests.battleLayerSortZ = function(){
 }
 
 /***********************************************************************
-Class MapLocker
-
-Manages load and save for both remote and local, as well as a simple
-sync.
-***********************************************************************/
-
-Storage.prototype.setObject = function(key, value){
-	this.setItem(key, JSON.stringify(value));
-}
-
-Storage.prototype.getObject = function(key){
-	var value = this.getItem(key);
-	return value && JSON.parse(value);
-}
-
-function MapLocker(){
-	throw new Exception('lib, not for instanciation');
-}
-
-MapLocker._seq = function(max){
-	var a = [];
-	for(var i = 0; i < max; i++){
-		(function(n){
-			a[n] = n+1;
-		})(i);
-	}
-	return a;
-}
-
-MapLocker.listLocal = function(){
-	var seq = MapLocker._seq(localStorage.length);
-	var mapped = seq.map(function(val, index){
-		var key = localStorage.key(index);
-		var obj = localStorage.getObject(key);
-		return {'name':obj.name, 'url':obj.url};
-	});
-	return mapped;
-}
-
-MapLocker.listRemote = function(){
-	return $.get('/battles');
-}
-
-// overwrite remote means save in the cloud ignoring any mismatch for
-// etags.  This always saves remotely..
-MapLocker.save = function(battleMap, overwriteRemote){
-	var mapObj = MapLocker._battlemapToObj(battleMap);
-	MapLocker._saveLocal(battleMap);
-	var ajaxOpts = {};
-	if(battleMap.url){
-		ajaxOpts = {
-			'url':battleMap.url,
-			'contentType':'application/json',
-			'data':JSON.stringify(mapObj),
-			'type':'PUT',
-			'processData':false
-		};
-	} else {
-		ajaxOpts = {
-			'url':'/battles/create',
-			'contentType':'application/json',
-			'data':JSON.stringify(mapObj),
-			'type':'POST',
-			'processData':false
-		};
-		if(overwriteRemote){
-			ajaxOpts.headers = {'If-Match':'*'};
-		}
-	}
-	return $.ajax(ajaxOpts).success(function(){
-		MapLocker._setRemoteSync(battleMap, true);
-	});
-}
-
-MapLocker._battlemapToObj = function(battleMap){
-	var mapForStorage = {
-		name: battleMap.name,
-		zoom: battleMap.zoom,
-		translateX: battleMap.translateX,
-		translateY: battleMap.translateY,
-		gridSpacing: battleMap.gridSpacing,
-		combatants: [],
-		zones: []
-	};
-	if(battleMap.url){
-		mapForStorage.url = battleMap.url;
-	}
-	var storeCombatant = function(combatDude){
-		var tmpCombat = {
-			name: combatDude.name,
-			zIndex: combatDude.zIndex,
-			color: combatDude.color,
-			cellX: combatDude.cellX,
-			cellY: combatDude.cellY,
-			size: combatDude.size,
-			hp: combatDude.hp,
-			initiative: combatDude.initiative,
-			conditions: combatDude.conditions
-		};
-		mapForStorage.combatants.push(tmpCombat);
-	}
-	for(var cname in combatants){
-		storeCombatant(combatants[cname]);
-	}
-	mapForStorage.zones = zoneList.map(function(zone){
-		var tmpZone = {
-			startCell: zone.startCell,
-			name: zone.name,
-			color: zone.color,
-			layer: zone.layer,
-			zIndex: zone.zIndex,
-			rotation: zone.rotation,
-			path: zone.path,
-			strokeOpacity: zone.strokeOpacity,
-			strokeColor: zone.strokeColor
-		};
-		return tmpZone;
-	});
-	return mapForStorage;
-}
-
-MapLocker._saveLocal = function(battleMap){
-	var mapObj = MapLocker._battlemapToObj(battleMap);
-	mapObj._remoteSynced = false;
-	localStorage.setObject(mapObj.name, mapObj);
-}
-
-MapLocker._setRemoteSync = function(battleMap, synced){
-	var obj = localStorage.getObject(battleMap.name);
-	obj._remoteSynced = synced;
-	localStorage.setObject(obj.name, obj);
-}
-
-/***********************************************************************
 Class Combatant
 
 Events:
@@ -512,17 +637,14 @@ function Combatant(battlemap, opts){
 	this.battlemap = battlemap;
 	// opts should override most of these.
 	this.name = "Jethro";
-	this.color = "green";
-	this.cellX = 0;
-	this.cellY = 0;
-	this.size = 1;
+	this._color = "green";
+	this._cellX = 0;
+	this._cellY = 0;
+	this._size = 1;
 	this.hp = 5;
 	this.initiative = 10;
 	this.conditions = [];
 	this.zIndex = 1;
-	for(var i in opts){
-		this[i] = opts[i];
-	}
 
 	// determine some data used for drag actions
 	var boundingRect = $(battlemap.actionElem)[0].getBoundingClientRect();
@@ -541,9 +663,14 @@ function Combatant(battlemap, opts){
 	if(this.image){
 		var padding = cellSize / 32;
 		this.svgData.image = pap.image(this.image, padding, padding,
-			(cellSize * this.size) - (padding * 2), (cellSize * this.size) - (padding * 2));
+			(cellSize * this._size) - (padding * 2), (cellSize * this._size) - (padding * 2));
 		this.svgObject.push(this.svgData.image);
 	}
+
+	for(var i in opts){
+		this[i] = opts[i];
+	}
+
 	this.svgObject.drag(function(moveX, moveY, pageX, pageY, ev){
 		var x = pageX - this.deltaX;
 		var y = pageY - this.deltaY;
@@ -569,7 +696,7 @@ function Combatant(battlemap, opts){
 	}
 
 	var theThis = this;
-	this.battlemap.addCombatElement(this);
+	//this.battlemap.addCombatant(this);
 	this.viewChangedHandler = function(){
 		theThis.updateTransform();
 	};
@@ -577,9 +704,100 @@ function Combatant(battlemap, opts){
  	this.updateTransform();
 }
 
-Combatant.prototype.layer = "action";
+Combatant.prototype.toJsonable = function(){
+	return {
+		name: this.name,
+		zIndex: this.zIndex,
+		color: this.color,
+		cellX: this.cellX,
+		cellY: this.cellY,
+		size: this.size,
+		hp: this.hp,
+		initiative: this.initiative,
+		conditions: this.conditions
+	};
+}
 
+Combatant.prototype = {
+	get layer(){
+		return "action";
+	},
+
+	get color(){
+		return this._color;
+	},
+	set color(val){
+		this._color = val;
+		this.svgData.colorRect.attr({fill:val});
+	},
+
+	get size(){
+		return this._size;
+	},
+	set size(val){
+		this._size = val;
+		var cellSize = this.battlemap.gridSpacing;
+		var rectSize = cellSize * this._size;
+		this.svgData.colorRect.attr({width:rectSize,height:rectSize});
+		if(this.image){
+			var padding = cellSize / 32;
+			var imageSize = (cellSize * this._size) - (padding * 2);
+			this.svgData.image.attr({width:imageSize,height:imageSize});
+		}
+	},
+
+	get cellX(){
+		return this._cellX;
+	},
+	set cellX(val){
+		this._cellX = val;
+		this.updateTransform();
+	},
+
+	get cellY(){
+		return this._cellY;
+	},
+	set cellY(val){
+		this._cellY = val;
+		this.updateTransform();
+	},
+
+	get cell(){
+		return [this._cellX, this._cellY];
+	},
+	set cell(xy){
+		this._cellX = xy[0];
+		this._cellY = xy[1];
+		this.updateTransform();
+	},
+
+	get image(){
+		return this._image;
+	},
+	set image(val){
+		if(this._image){
+			this.svgData.image.attr({image:val});
+			this._image = val;
+		} else {
+			this.svgData.image = this.battlemap.svgPaper.image(val);
+			this.svgObject.push(this.svgData.image);
+			this._image = val;
+			this.updateTransform();
+		}
+	}
+}
+		
 Combatant.prototype.updateTransform = function(){
+	var basex = this._cellX * this.battlemap.gridSpacing;
+	var basey = this._cellY * this.battlemap.gridSpacing;
+	this.svgData.colorRect.attr({ x:basex, y:basey});
+	if(this._image){
+		var padding = this.battlemap.gridSpacing * 0.1;
+		this.svgData.image.attr({x:basex + padding, y:basey + padding,
+			width:(this.battlemap.gridSpacing * this._size) - (padding * 2),
+			height:(this.battlemap.gridSpacing * this._size) - (padding * 2)
+		});
+	}
 	var transformStr = this.battlemap.getTransformString(this.cellX, this.cellY);
 	this.svgObject.transform(transformStr);
 	$(this).trigger("transformUpdated", this);
@@ -596,23 +814,6 @@ Combatant.prototype.moveTo = function(newX, newY){
 	this.cellX = newX;
 	this.cellY = newY;
 	this.updateTransform();
-}
-
-Combatant.prototype.setColor = function(color){
-	this.color = color;
-	this.svgData.colorRect.attr({fill:color});
-}
-
-Combatant.prototype.setSize = function(size){
-	this.size = size;
-	var cellSize = this.battlemap.gridSpacing;
-	var rectSize = cellSize * this.size;
-	this.svgData.colorRect.attr({width:rectSize,height:rectSize});
-	if(this.image){
-		var padding = cellSize / 32;
-		var imageSize = (cellSize * this.size) - (padding * 2);
-		this.svgData.image.attr({width:imageSize,height:imageSize});
-	}
 }
 
 Combatant.prototype.startPulsating = function(){
@@ -719,6 +920,7 @@ CombatZone.prototype = {
 		this._strokeColor = val;
 		this.walls.attr({'stroke': val});
 	},
+
 	get strokeOpacity(){
 		return this._strokeOpacity;
 	},
@@ -726,6 +928,7 @@ CombatZone.prototype = {
 		this._strokeOpacity= val;
 		this.walls.attr({'stroke-opacity': val});
 	},
+
 	get strokeWidth(){
 		return this._strokeWidth;
 	},
@@ -733,19 +936,62 @@ CombatZone.prototype = {
 		this._strokeWidth= val;
 		this.walls.attr({'stroke-width': val});
 	},
+
 	get color(){
 		return this._color;
 	},
 	set color(val){
 		this._color = val;
 		this.floor.attr({'fill': val});
+	},
+
+	get startCell(){
+		return this._startCell;
+	},
+	set startCell(xyArr){
+		this._startCell = xyArr;
+		this.updateTransform();
+	},
+
+	get rotation(){
+		return this._rotation;
+	},
+	set rotation(val){
+		this._rotation = val;
+		this.updateTransform();
+	},
+
+	get layer(){
+		return this._layer;
+	},
+	set layer(val){
+		if(val != "sky"){
+			val = "ground";
+		}
+		this._layer = val;
+		var opacity = 0.5;
+		if(val == "ground"){
+			opacity = 1;
+		}
+		this.floor.attr({
+			'fill-opacity':opacity
+		});
+		this.battlemap.setPaintOrder();
+	},
+
+	get path(){
+		return this._path;
+	},
+	set path(val){
+		this._path = val;
+		this.updatePath();
 	}
 }
 
 CombatZone.prototype.updateTransform = function(){
-	var transformStr = this.battlemap.getTransformString(this.startCell[0], this.startCell[1]);
+	var transformStr = this.battlemap.getTransformString(this._startCell[0], this._startCell[1]);
 	var rotate = "0";
-	switch(this.rotation){
+	switch(this._rotation){
 		case "ccw":
 			rotate = "r-90";
 			break;
@@ -759,7 +1005,7 @@ CombatZone.prototype.updateTransform = function(){
 			rotate = "r0";
 			break;
 		default:
-			rotate = this.rotation;
+			rotate = this._rotation;
 	}
 	this.svgObject.transform(transformStr + rotate + " 0 0");
 }
@@ -769,7 +1015,7 @@ CombatZone.prototype.toGrid = function(xory){
 }
 
 CombatZone.prototype.alterXY = function(modFunc){
-	var pathArray = Raphael.parsePathString(this.path);
+	var pathArray = Raphael.parsePathString(this._path);
 	var newPathArr = pathArray.map(function(parts){
 		switch(parts[0]){
 			case "M":
@@ -816,7 +1062,7 @@ CombatZone.prototype.alterXY = function(modFunc){
 
 CombatZone.prototype.makeSvgPathString = function(){
 	var cellSize = this.battlemap.gridSpacing;
-	var pathArray = Raphael.parsePathString(this.path);
+	var pathArray = Raphael.parsePathString(this._path);
 	var toGrid = function(xory){
 		return xory * cellSize;
 	};
@@ -861,55 +1107,31 @@ CombatZone.prototype.makeSvgPathString = function(){
 }
 
 CombatZone.prototype.setStart = function(cellX, cellY){
-	this.startCell = [cellX,cellY];
-	this.updateTransform();
+	var xyArr = [cellX,cellY];
+	this.startCell = xyArr;
 }
-
-CombatZone.prototype.setRotation = function(rotation){
-	this.rotation = rotation;
-	this.updateTransform();
-}
-
-CombatZone.prototype.setColor = function(color){
-	this.color = color;
-	this.svgObject.attr({
-		'fill': color
-	});
-};
 
 CombatZone.prototype.setStroke = function(color, opacity){
-	if(opacity == undefined){
-		opacity = this.strokeOpacity;
+	if(color){
+		this.strokecolor = color;
 	}
-	if(color == undefined){
-		color = this.strokeColor;
+	if(opacity){
+		this.strokeOpacity = opacity;
 	}
-	this.strokeColor = color;
-	this.strokeOpacity = opacity;
-	this.walls.attr({
-		'stroke':color,
-		'stroke-opacity':opacity
-	});
 }
 
-CombatZone.prototype.setLayer = function(layer){
-	if(layer != "sky"){
-		layer = "ground";
-	}
-	this.layer = layer;
-	var opacity = 0.5;
-	if(this.layer == "ground"){
-		opacity = 1;
-	}
-	this.floor.attr({
-		'fill-opacity':opacity
-	});
-	this.battlemap.setPaintOrder();
-}
-
-CombatZone.prototype.setPath = function(pathStr){
-	this.path = pathStr;
-	this.updatePath();
+CombatZone.prototype.toJsonable = function(){
+	return {
+		startCell: this.startCell,
+		name: this.name,
+		color: this.color,
+		layer: this.layer,
+		zIndex: this.zIndex,
+		rotation: this.rotation,
+		path: this.path,
+		strokeOpacity: this.strokeOpacity,
+		strokeColor: this.strokeColor
+	};
 }
 
 /*CombatZone.prototype.addCell = function(xy, pos){

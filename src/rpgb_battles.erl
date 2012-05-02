@@ -10,12 +10,18 @@ init(Mode) ->
 allowed_methods(ReqData, search_battles) ->
 	?info("allowed methods"),
 	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
-	{['GET'], ReqData0, {search_battles, Session}};
+	{['GET','HEAD'], ReqData0, {search_battles, Session}};
 
 allowed_methods(ReqData, Mode) ->
 	?info("allowed methods"),
 	{ok, Session, ReqData0} = rpgb_session:get_or_create(ReqData),
-	{['GET', 'POST', 'HEAD', 'PUT', 'DELETE'], ReqData0, {Mode, Session}}.
+	Methods = case Mode of
+		create_battle ->
+			['POST', 'HEAD'];
+		battle ->
+			['GET','PUT', 'DELETE', 'HEAD']
+	end,
+	{Methods, ReqData0, {Mode, Session}}.
 
 is_authorized(ReqData, {search_battles, _Session} = Ctx) ->
 	{true, ReqData, Ctx};
@@ -56,6 +62,23 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 							{true, ReqData, {battle, MapId, Session}}
 					end
 			end
+	end.
+
+is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
+	Body = wrq:req_body(ReqData),
+	{struct, Props} = mochijson2:decode(Body),
+	Name = proplists:get_value(<<"name">>, Props),
+	case BattleMap:name() of
+		Name ->
+			{false, ReqData, Ctx};
+		OtherName ->
+			case boss_db:find(rpgb_battlemap, [{name, equals, OtherName}, {owner_id, equals, BattleMap:owner_id()}]) of
+				[] ->
+					{false, ReqData, Ctx};
+				_ ->
+					?info("A map named ~p already exists for the user ~p", [OtherName, BattleMap:owner_id()]),
+					{true, ReqData, Ctx}
+		end
 	end.
 
 content_types_accepted(ReqData, Ctx) ->
@@ -103,10 +126,17 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 		{json, Body},
 		{owner_id, Userid}
 	]),
-	{ok, BattleMap0} = BattleMap:save(),
-	NameSlug = rpgb:sluggify(Name),
-	Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
-	{true, ReqData, {create_battle, Uri, Session}}.
+	case boss_db:find(rpgb_battlemap, [{name, equals, Name},{owner_id,equals,Userid}]) of
+		[] ->
+			{ok, BattleMap0} = BattleMap:save(),
+			NameSlug = rpgb:sluggify(Name),
+			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
+			{true, ReqData, {create_battle, Uri, Session}};
+		_Recs ->
+			?info("Creation failed, map named ~p already exists for user ~p", [Name, Userid]),
+			ReqData0 = wrq:set_resp_body(mochinjson2:encode(<<"map with given name already exists">>)),
+			{{halt, 409}, ReqData0, Ctx}
+	end.
 
 post_is_create(ReqData, {create_battle, Session} = Ctx) ->
 	{true, ReqData, Ctx}.
@@ -163,7 +193,14 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 	end,
 	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
 	Records = boss_db:find(rpgb_battlemap, Conditions, Limit),
-	Jsons = [encode_map(Record) || Record <- Records],
+	Jsons = [begin
+		Url = rpgb:get_url(["battles",Record:id(),"slug"]),
+		Name = Record:name(),
+		{struct, [
+			{<<"url">>, Url},
+			{<<"name">>, Name}
+		]}
+	end || Record <- Records],
 	{mochijson2:encode(Jsons), ReqData, Ctx};
 
 to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
