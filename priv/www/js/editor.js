@@ -450,7 +450,6 @@ $().ready(function(){
 		var stroke = $('#grid_stroke').val();
 		battleMap.gridlineColor = hex2rgb(color, alpha);
 		battleMap.gridStroke = stroke;
-		battleMap.drawGrid();
 	});
 	$('#grid_color').blur(function(){
 		var color = color2Hex($('#grid_color').val());
@@ -458,7 +457,6 @@ $().ready(function(){
 		var stroke = $('#grid_stroke').val();
 		battleMap.gridlineColor = hex2rgb(color, alpha);
 		battleMap.gridStroke = stroke;
-		battleMap.drawGrid();
 	});
 
 	// Grid Line alpha change handlers
