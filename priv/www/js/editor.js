@@ -195,7 +195,7 @@ EditZone.prototype.updateZone = function(){
 		}
 	});
 
-	this.zone.setPath("M " + pathArray.join(" ") + " z")
+	this.zone.path = "M " + pathArray.join(" ") + " z";
 }
 
 EditZone.prototype.finishZone = function(moveTo){
@@ -370,18 +370,18 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 	if (typeof size == 'undefined'){
 		size = 3;
 	}
-	this.size = size;
+	this._size = size;
 	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
 
 	if (typeof fill == 'undefined'){
 		fill = "#777";
 	}
-	this.fillColor = fill;
+	this._fillColor = fill;
 
 	if (typeof stroke == 'undefined'){
 		stroke = "#777";
 	}
-	this.strokeColor = stroke;
+	this._strokeColor = stroke;
 
 	if ((typeof posX !== 'undefined') && (typeof posY !== 'undefined')){
 		this.position = {x: posX, y: posY};
@@ -389,7 +389,7 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 
 	this.pointType = "L" // "L", "M", "c"
 
-	$(this.battlemap).bind("viewChanged", {context: this}, this.moveHandler);
+	$(this.battlemap).bind("viewChanged", $.proxy(this.viewChangeHandler, this));
 }
 
 Point.prototype = {
@@ -400,8 +400,10 @@ Point.prototype = {
 		this._position.x = val.x;
 		this._position.y = val.y;
 
-		var trans = Raphael.parseTransformString(this.battlemap.getTransformString(val.x, val.y));
-		this.svgElement.transform("T" + trans[1][1] + "," + trans[1][2]);
+		this.svgElement.attr({
+			cx:this._position.x * this.battlemap.gridSpacing,
+			cy:this._position.y * this.battlemap.gridSpacing
+		});
 	},
 
 	get size(){
@@ -409,8 +411,8 @@ Point.prototype = {
 	},
 	set size(val){
 		if (typeof val !== 'undefined'){
-			//TODO: Update the size of the SVG Element
 			this._size = val;
+			this.svgElement.attr('r',this._size);
 		}
 	},
 
@@ -435,10 +437,17 @@ Point.prototype = {
 	}
 }
 
+Point.prototype.viewChangeHandler = function(){
+	var trans = this.battlemap.getTransformString();
+	this.svgElement.transform(trans);
+}
+
 Point.prototype.moveHandler = function(ev){
 	var context = ev.data.context;
-	var trans = Raphael.parseTransformString(context.battlemap.getTransformString(context.position.x, context.position.y));
-	context.svgElement.transform("T" + trans[1][1] + "," + trans[1][2]);
+	context.svgElement.attr({
+		cx:context.position.x * context.battlemap.gridSpacing,
+		cy:context.position.y * context.battlemap.gridSpacing
+	});
 }
 
 
