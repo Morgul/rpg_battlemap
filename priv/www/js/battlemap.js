@@ -259,12 +259,14 @@ BattleMap.prototype = {
 		return this._zones;
 	},
 	get skys(){
-		// filter by sky
-		return [];
+		return this.zones.filter(function(z){
+			return z.layer == "sky";
+		});
 	},
 	get grounds(){
-		// filter by ground
-		return [];
+		return this.zones.filter(function(z){
+			return z.layer == "ground";
+		});
 	}
 };
 
@@ -910,6 +912,10 @@ function CombatZone(battlemap, opts){
 
 	for(var i in opts){
 		this[i] = opts[i];
+	}
+
+	if(! this.suppressAdd){
+		battlemap.addZone(this);
 	}
 
 	$(this.battlemap).bind('viewChanged', this.viewChangedHandler);
