@@ -376,8 +376,7 @@ BattleMap.prototype.removeZone = function(zone){
 }
 
 BattleMap.prototype.setPaintOrder = function(){
-	$(this._gridRect).remove();
-	$(this._svgPaper.canvas).append(this._gridRect);
+	this._gridRect.toBack();
 	var skyZones = this.skys;
 	var groundZones = this.grounds;
 	var sortFunc = function(zoneA, zoneB){
@@ -665,11 +664,16 @@ function Combatant(battlemap, opts){
 		var padding = cellSize / 32;
 		this.svgData.image = pap.image(this.image, padding, padding,
 			(cellSize * this._size) - (padding * 2), (cellSize * this._size) - (padding * 2));
+		this.svgData.image.node.setAttribute('pointer-events','none');
 		this.svgObject.push(this.svgData.image);
 	}
 
 	for(var i in opts){
 		this[i] = opts[i];
+	}
+
+	if(! this.supressAdd){
+		battlemap.addCombatant(this);
 	}
 
 	this.svgObject.drag(function(moveX, moveY, pageX, pageY, ev){
@@ -781,6 +785,7 @@ Combatant.prototype = {
 			this._image = val;
 		} else {
 			this.svgData.image = this.battlemap.svgPaper.image(val);
+			this.svgData.image.node.setAttribute('pointer-events','none');
 			this.svgObject.push(this.svgData.image);
 			this._image = val;
 			this.updateTransform();
