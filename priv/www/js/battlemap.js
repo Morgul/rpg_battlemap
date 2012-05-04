@@ -33,6 +33,7 @@ function BattleMap(actionElem, opts){
 	this.name = "Default Map";
 
 	this._actionElem = $(actionElem)[0];
+	$(this._actionElem).children().remove();
 	//this._gridElem = '#' + gridElem;
 	//this._gridCtx = $(this._gridElem)[0].getContext('2d');
 
