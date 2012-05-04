@@ -667,7 +667,7 @@ function Combatant(battlemap, opts){
 		this.svgData.image = pap.image(this.image, padding, padding,
 			(cellSize * this._size) - (padding * 2), (cellSize * this._size) - (padding * 2));
 		this.svgData.image.node.setAttribute('pointer-events','none');
-		this.svgObject.push(this.svgData.image);
+		this.svgObject.splice(0, 0, this.svgData.image);
 	}
 
 	for(var i in opts){
@@ -788,7 +788,7 @@ Combatant.prototype = {
 		} else {
 			this.svgData.image = this.battlemap.svgPaper.image(val);
 			this.svgData.image.node.setAttribute('pointer-events','none');
-			this.svgObject.push(this.svgData.image);
+			this.svgObject.splice(0,0,this.svgData.image);
 			this._image = val;
 			this.updateTransform();
 		}
