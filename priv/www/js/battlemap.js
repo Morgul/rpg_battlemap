@@ -505,9 +505,9 @@ BattleMap.loadRemote = function(url, actionElem){
 		obj.etag = xhr.getResponseHeader('etag');
 		if(actionElem){
 			var map = new BattleMap(actionElem, obj);
-			def.respond(map);
+			def.resolve(map);
 		} else {
-			def.respond(obj);
+			def.resolve(obj);
 		}
 	}).fail(function(obj,fail,xhr){
 		def.reject(obj);
@@ -524,12 +524,20 @@ BattleMap.loadLocal = function(name, actionElem){
 }
 
 BattleMap.prototype.deleteLocal = function(){
-	localStorage.removeItem(this.name);
+	BattleMap.deleteLocal(this.name);
+}
+
+BattleMap.deleteLocal = function(name){
+	localStorage.removeItem(name);
 }
 
 BattleMap.prototype.deleteRemote = function(){
+	return BattleMap.deleteRemote(this.url);
+}
+
+BattleMap.deleteRemote = function(url){
 	return $.ajax({
-		url:this.url,
+		'url':url,
 		type:'DELETE'
 	});
 }

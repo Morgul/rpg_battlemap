@@ -8,3 +8,13 @@
 	margin-bottom: 2px;
 
 }
+.ui-battlemapLocker-delete {
+	position:absolute;
+	top:0px;
+	right: 0.5em;
+}
+.ui-battlemapLocker-pull {
+	position:absolute;
+	top:0px;
+	left: 0.5em;
+}
