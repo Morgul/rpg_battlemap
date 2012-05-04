@@ -922,6 +922,7 @@ function CombatZone(battlemap, opts){
 	this.floor.node.setAttribute('pointer-events', 'none');
 	this.walls.node.setAttribute('pointer-events', 'none');
 	this.updateTransform();
+	this.updatePath();
 }
 
 CombatZone.prototype = {

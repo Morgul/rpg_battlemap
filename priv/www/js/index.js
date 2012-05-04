@@ -165,12 +165,13 @@ $().ready(function(){
 	$('#zoneEditor form').submit(function(){
 		var index = parseInt(this.zoneIndex.value);
 		var zone = zoneList[index];
-		zone.setStart(sanatizeInt(this.cellX.value),sanatizeInt(this.cellY.value));
-		zone.setColor(this.color.value);
-		zone.setLayer(this.layer.value);
-		zone.setPath(this.path.value);
-		zone.setRotation(this.rotation.value);
-		zone.setStroke(this.strokeColor.value, parseFloat(this.strokeOpacity.value) / 100);
+		zone.start = [sanatizeInt(this.cellX.value),sanatizeInt(this.cellY.value)];
+		zone.color = this.color.value;
+		zone.layer = this.layer.value;
+		zone.path = this.path.value;
+		zone.rotation = this.rotation.value;
+		zone.strokeColor = this.strokeColor.value;
+		zone.strokeOpacity = parseFloat(this.strokeOpacity.value) / 100;
 		return false;
 	});
 
