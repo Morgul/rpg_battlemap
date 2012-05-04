@@ -4,8 +4,6 @@ function resizeBattleMap() {
 	$('#drawingBoard').height(guessheight);
 	var newHeight = $('#drawingBoard').height();
 	var newWidth = $('#drawingBoard').width();
-	$('#canvasBoard').attr("width", newWidth)
-	$('#canvasBoard').attr("height", newHeight);
 }
 
 function cellListToString(cells){

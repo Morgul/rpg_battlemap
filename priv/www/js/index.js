@@ -186,7 +186,7 @@ $().ready(function(){
 		}
 	});
 
-	populateMapList('#savedMapsList');
+	$('#savedMapsList').battlemapLocker();
 
 	$('#combatantTrashcan').droppable({
 		accept:'#combatantList li[combatantIndex]',

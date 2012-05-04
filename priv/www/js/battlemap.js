@@ -543,7 +543,7 @@ BattleMap.listLocal = function(){
 	var mapped = seq.map(function(val, index){
 		var key = localStorage.key(index);
 		var obj = localStorage.getObject(key);
-		return {'name':obj.name, 'url':obj.url};
+		return {'name':obj.name, 'url':obj.url, 'etag':obj.etag};
 	});
 	return mapped;
 }

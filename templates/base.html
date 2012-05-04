@@ -4,14 +4,18 @@
 {#---------------------------------------------------------------------------------------#}
 
 <head>
+
 	<link type="text/css" href="/css/base.css" rel="stylesheet" />
 	<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
 	<link type="text/css" href="/contrib/colorpicker/css/colorpicker.css" rel="stylesheet" media="screen" />
+	<link type="text/css" href="/css/jquery.ui.battlemapLocker.css" rel="stylesheet" />
+
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
 	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
 	<script type="text/javascript" src="/js/battlemap.js"></script>
+	<script type="text/javascript" src="/js/jquery.ui.battlemapLocker.js"></script>
 	<script type="text/javascript" src="/js/base.js"></script>
 	<script type="text/javascript" src="/contrib/colorpicker/js/colorpicker.js"></script>
 	{% block page_scripts %}
@@ -201,9 +205,7 @@
 				{#-----------------------------------------------------------------------#}
 
 				<h3><a href="#">Saved Maps</a></h3>
-				<div>
-					<ul id="savedMapsList">
-					</ul>
+				<div id="savedMapsList">
 				</div>
 
 				{#-----------------------------------------------------------------------#}
@@ -218,7 +220,6 @@
 		<div id="rightColumn" class="ui-corner-all">
 		{% block right_column %}
 			<div id="drawingBoard">
-				<canvas id="canvasBoard"></canvas>
 			</div>
 		{% endblock %} {# end right_column block #}
 		</div>
