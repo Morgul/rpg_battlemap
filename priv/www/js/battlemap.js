@@ -299,6 +299,10 @@ order is ground -> action -> sky.
 }*/
 
 BattleMap.prototype.addCombatant = function(combatant){
+	if(this._combatants.indexOf(combatant) > -1){
+		return false;
+	}
+
 	if(this._combatants.length == 0){
 		this._combatants.push(combatant);
 		this._triggerTransformListeners();

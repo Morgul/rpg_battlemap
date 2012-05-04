@@ -1,8 +1,9 @@
 function insertCombatant(combatant) {
 	var combatantList = $('#combatantList li');
-	combatants.push(combatant);
+	battleMap.addCombatant(combatant);
 
-	var listItem = generateInitListItem(combatants.length - 1, combatant);
+	var listItem = generateInitListItem(battleMap.combatants.length - 1, combatant);
+
 	//TODO: This would be faster as a binary search
 	var max = combatantList.length - 1;
 	if(max == -1){
@@ -15,7 +16,7 @@ function insertCombatant(combatant) {
 	for(i; i >= 0; i--){
 		combatantInd = combatantList[i].getAttribute('combatantIndex');
 		combatantInd = parseInt(combatantInd);
-		if(combatants[combatantInd].initiative > combatant.initiative){
+		if(battleMap.combatants[combatantInd].initiative > combatant.initiative){
 			$(combatantList[i]).after(listItem);
 			return;
 		}
@@ -41,7 +42,7 @@ function createZoneListItem(zone){
 	liElem.innerHTML = zone.name;
 	$(liElem).click(function(){
 		var zoneListInd = this.getAttribute('zoneIndex');
-		var zone = zoneList[zoneListInd];
+		var zone = battleMap.zones[zoneListInd];
 		var editorForm = $('#zoneEditor form')[0];
 		for(var prop in zone){
 			if(editorForm[prop] && (editorForm[prop].value != undefined)){
@@ -59,7 +60,7 @@ function createZoneListItem(zone){
 function rebuildZoneList(){
 	var zoneListElem = $('#zoneList')
 	zoneListElem.empty();
-	zoneList.map(function(zone, index){
+	battleMap.zones.map(function(zone, index){
 		var liElem = createZoneListItem(zone);
 		liElem.setAttribute('zoneIndex', index);
 		zoneListElem.append(liElem);
@@ -198,8 +199,7 @@ $().ready(function(){
 			var elem = ui.draggable[0];
 			var combatantInd = parseInt(elem.getAttribute('combatantIndex'));
 			elem.parentElement.removeChild(elem);
-			combatants[combatantInd].remove();
-			combatants.splice(combatantInd,1);
+			battleMap.combatants[combatantInd].remove();
 			$('#combatantList li').map(function(_ind, lielem){
 				var cind = parseInt(lielem.getAttribute('combatantIndex'));
 				if(cind > combatantInd){
@@ -230,8 +230,8 @@ $().ready(function(){
 		if(isNaN(zoneInd)){
 			return false;
 		}
-		zoneList[zoneInd].remove();
-		zoneList.splice(zoneInd, 1);
+		var zone = battleMap.zones[zoneInd];
+		zone.remove();
 		rebuildZoneList();
 	});
 });
