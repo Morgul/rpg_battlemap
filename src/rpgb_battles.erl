@@ -186,7 +186,12 @@ from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	{true, ReqData, Ctx}.
 
 to_json(ReqData, {search_battles, Session} = Ctx) ->
-	Limit = list_to_integer(wrq:get_qs_value("limit", "100",ReqData)),
+	Limit0 = list_to_integer(wrq:get_qs_value("limit", "100",ReqData)),
+	Limit = if
+		Limit0 > 10000 -> 1000;
+		Limit0 < 1 -> 1;
+		true -> Limit0
+	end,
 	User = case rpgb_session:get_user(Session) of
 		undefined -> [];
 		E -> E
