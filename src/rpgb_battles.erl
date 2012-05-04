@@ -201,9 +201,11 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 	Jsons = [begin
 		Url = rpgb:get_url(["battles",Record:id(),"slug"]),
 		Name = Record:name(),
+		{Etag, _, _} = generate_etag(ReqData, {battle, Record, Session}),
 		{struct, [
 			{<<"url">>, Url},
-			{<<"name">>, Name}
+			{<<"name">>, Name},
+			{<<"etag">>, list_to_binary(Etag)}
 		]}
 	end || Record <- Records],
 	{mochijson2:encode(Jsons), ReqData, Ctx};
