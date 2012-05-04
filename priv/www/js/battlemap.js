@@ -32,11 +32,11 @@ gridSpacing as well as set additional functions.
 function BattleMap(actionElem, opts){
 	this.name = "Default Map";
 
-	this._actionElem = '#' + actionElem;
+	this._actionElem = $(actionElem)[0];
 	//this._gridElem = '#' + gridElem;
 	//this._gridCtx = $(this._gridElem)[0].getContext('2d');
 
-	this._svgPaper = Raphael(actionElem, '100%', '100%');
+	this._svgPaper = Raphael(this.actionElem, '100%', '100%');
 
 	this._zoom = 1; // as long as it's above 0, we're okay.
 	this._translateX = 0; // translate as in motion on a 2d plane
@@ -497,22 +497,29 @@ BattleMap.prototype.saveLocal = function(){
 	localStorage.setObject(this.name, mapObj);
 }
 
-BattleMap.loadRemote = function(actionElem, url){
+BattleMap.loadRemote = function(url, actionElem){
 	var def = $.Deferred();
 	$.get(url).success(function(obj,success,xhr){
 		obj.url = url;
 		obj.etag = xhr.getResponseHeader('etag');
-		var map = new BattleMap(actionElem, obj);
-		def.respond(map);
+		if(actionElem){
+			var map = new BattleMap(actionElem, obj);
+			def.respond(map);
+		} else {
+			def.respond(obj);
+		}
 	}).fail(function(obj,fail,xhr){
 		def.reject(obj);
 	});
 	return def;
 }
 
-BattleMap.loadLocal = function(actionElem, name){
+BattleMap.loadLocal = function(name, actionElem){
 	var obj = localStorage.getObject(name);
-	return new BattleMap(actionElem, obj);
+	if(actionElem){
+		return new BattleMap(actionElem, obj);
+	}
+	return obj;
 }
 
 BattleMap.prototype.deleteLocal = function(){

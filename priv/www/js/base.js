@@ -228,7 +228,7 @@ function hex2Color(color)
 $().ready(function(){
 
 	// Draw the battlemap
-	window.battleMap = new BattleMap('drawingBoard', 'canvasBoard', {});
+	window.battleMap = new BattleMap('#drawingBoard', {});
 	$(window).resize(resizeBattleMap);
 
 	resizeBattleMap();

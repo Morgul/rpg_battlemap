@@ -102,10 +102,6 @@ $().ready(function(){
 		}
 	});
 
-	window.zoneList = [];
-	//window.combatants = {};
-	window.combatants = [];
-
 	window.generateInitListItem = function(index, combatant)
 	{
 		var style = 'style="box-shadow: inset 0 0 10px 2px ' + combatant.color + ';"';
