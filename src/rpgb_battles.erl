@@ -183,7 +183,7 @@ from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	{struct, Props} = mochijson2:decode(Body),
 	BattleMap0 = BattleMap:set([{name, Name},{json, Body}]),
 	{ok, BattleMap1} = BattleMap0:save(),
-	{true, ReqData, Ctx}.
+	{true, ReqData, {battle, BattleMap1, Session}}.
 
 to_json(ReqData, {search_battles, Session} = Ctx) ->
 	Limit0 = list_to_integer(wrq:get_qs_value("limit", "100",ReqData)),
