@@ -2,10 +2,10 @@
 	$.widget("ui.battlemapLocker", {
 
 		options: {
-			loadCallback: function(){
+			load: function(){
 				console.log('load complete', arguments);
 			},
-			saveCallback: function(){
+			save: function(){
 				console.log('save complete', arguments);
 			}
 		},
@@ -26,6 +26,18 @@
 			$(this._ulElement).remove();
 		},
 
+		refresh: function(){
+			$(this._ulElement).children.remove();
+			var localList = BattleMap.listLocal();
+			var theThis = this;
+			localList.map(function(mapData){
+				theThis._addMapItem(mapData);
+			});
+			BattleMap.listRemote().done($.proxy(function(results){
+				console.log('hi', theThis);
+			}, theThis));
+		},
+
 		_addMapItem: function(mapItem){
 			var theThis = this;
 			console.log(mapItem, this, this._ulElement, this.element, self);
@@ -40,10 +52,11 @@
 					addClass('ui-battlemapLocker-pull ui-icon ui-icon-arrowthick-1-s').
 					click(function(){
 						BattleMap.loadRemote(mapItem.url).done($.proxy(function(){
-							theThis.loadCallback.apply(theThis, arguments);
+							theThis.load.apply(theThis, arguments);
 						}));
 						return false;
 					}).
+					attr('title', 'Load the map using the remote data rather than local data').
 					prependTo(mapDiv);
 			}
 
@@ -61,6 +74,7 @@
 					mapDiv.remove();
 					return false;
 				}).
+				attr('title','delete the map from both local and remote').
 				appendTo(mapDiv);
 		}
 	});

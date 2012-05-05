@@ -9,11 +9,13 @@
 
 }
 .ui-battlemapLocker-delete {
+	cursor: pointer;
 	position:absolute;
 	top:0px;
 	right: 0.5em;
 }
 .ui-battlemapLocker-pull {
+	cursor: pointer;
 	position:absolute;
 	top:0px;
 	left: 0.5em;
