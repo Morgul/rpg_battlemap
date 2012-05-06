@@ -1,3 +1,4 @@
+/* for the map locker */
 .ui-battlemapLocker {
 	list-style: none;
 	padding: 2px 5px;
@@ -24,4 +25,13 @@
 	float: left;
 	border: 1px solid;
 	border-radius: 3px;
+}
+
+/* for the save local/remote button(s) */
+.ui-battlemap-savebutton-local {
+	border-radius: 4px 0px 0px 4px;
+	margin-right: 0px;
+}
+.ui-battlemap-savebutton-remote {
+	border-radius: 0px 4px 4px 0px;
 }

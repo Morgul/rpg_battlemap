@@ -1,3 +1,5 @@
+// a List that can list, load, and delete battlemaps locally and remotely.
+
 (function($){
 	$.widget("ui.battlemapLocker", {
 
@@ -52,7 +54,7 @@
 					addClass('ui-battlemapLocker-pull ui-icon ui-icon-arrowthick-1-s').
 					click(function(){
 						BattleMap.loadRemote(mapItem.url).done($.proxy(function(){
-							theThis.load.apply(theThis, arguments);
+							theThis.options.load.apply(theThis, arguments);
 						}));
 						return false;
 					}).
@@ -82,10 +84,42 @@
 	});
 })(jQuery);
 
-// load (from remote if available);
-// save local
-// push to remote
-// pull from remote
-// determine if there's a difference between remote and local, which 
-// sets if the 'remote' is a push or pull
-// delete (local and remote)
+// a button to conveiently save a battlemap both locally and remotely.
+(function($){
+
+	$.widget("ui.battlemapSaveButton", {
+
+		options: {
+			battlemap: false,
+		},
+
+		_create: function(){
+			var theThis = this;
+			$(this.element).
+				click(function(){
+					if(theThis.options.battlemap){
+						theThis.options.battlemap.saveLocal();
+					}
+					return false;
+				}).
+				addClass('ui-battlemap-savebutton-local').
+				button();
+
+			$('<button>&nbsp;</button>').
+				click(function(){
+					if(theThis.options.battlemap){
+						theThis.options.battlemap.saveRemote();
+					}
+					return false;
+				}).
+				addClass('ui-battlemap-savebutton-remote').
+				insertAfter(this.element).
+				button({'text':false,'icons':{'primary':'ui-icon-arrowthick-1-n'}})
+		},
+
+		remove: function(){
+			$(this.element).children.remove();
+		},
+	});
+
+})(jQuery);

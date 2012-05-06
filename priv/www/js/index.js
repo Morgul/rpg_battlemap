@@ -188,6 +188,8 @@ $().ready(function(){
 
 	$('#savedMapsList').battlemapLocker();
 
+	$('#saveButton').battlemapSaveButton({'battlemap':battleMap});
+
 	$('#combatantTrashcan').droppable({
 		accept:'#combatantList li[combatantIndex]',
 		tolerance: 'touch',
