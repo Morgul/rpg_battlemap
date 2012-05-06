@@ -93,7 +93,7 @@ resource_exists(ReqData, {search_battles, _} = Ctx) ->
 	{true, ReqData, Ctx};
 
 resource_exists(ReqData, {create_battle, _} = Ctx) ->
-	{true, ReqData, Ctx};
+	{false, ReqData, Ctx};
 
 resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
 	case boss_db:find(MapId) of
@@ -106,6 +106,12 @@ resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
 			Ctx0 = {battle, BattleMap, Session},
 			{true, ReqData, Ctx0}
 	end.
+
+allow_missing_post(ReqData, {create_battle, _} = Ctx) ->
+	{true, ReqData, Ctx};
+
+allow_missing_post(ReqData, Ctx) ->
+	{false, ReqData, Ctx}.
 
 delete_resource(ReqData, {battle, MapId, Session} = Ctx) ->
 	case boss_db:delete(MapId) of
@@ -134,12 +140,12 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 			{true, ReqData, {create_battle, Uri, Session}};
 		_Recs ->
 			?info("Creation failed, map named ~p already exists for user ~p", [Name, Userid]),
-			ReqData0 = wrq:set_resp_body(mochinjson2:encode(<<"map with given name already exists">>)),
+			ReqData0 = wrq:set_resp_body(iolist_to_binary(mochijson2:encode(<<"map with given name already exists">>)), ReqData),
 			{{halt, 409}, ReqData0, Ctx}
 	end.
 
 post_is_create(ReqData, {create_battle, Session} = Ctx) ->
-	{true, ReqData, Ctx}.
+	{false, ReqData, Ctx}.
 
 create_path(ReqData, {create_battle, Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),

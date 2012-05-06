@@ -6,7 +6,7 @@
 
 
 init(Args) ->
-	rpgb:res_init(undefined).
+	{ok, undefined}.
 
 resource_exists(ReqData, Context) ->
 	Path = case wrq:path(ReqData) of
