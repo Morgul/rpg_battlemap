@@ -3,20 +3,25 @@
 	padding: 2px 5px;
 }
 .ui-battlemapLocker div {
+	cursor: pointer;
 	border: 1px solid #555;
 	text-align: center;
 	margin-bottom: 2px;
-
+	padding: 5px 2px;
 }
 .ui-battlemapLocker-delete {
 	cursor: pointer;
-	position:absolute;
-	top:0px;
-	right: 0.5em;
+	position:relative;
+	top:-2px;
+	float: right;
+	border: 1px solid;
+	border-radius: 3px;
 }
 .ui-battlemapLocker-pull {
 	cursor: pointer;
-	position:absolute;
-	top:0px;
-	left: 0.5em;
+	position:relative;
+	top:-2px;
+	float: left;
+	border: 1px solid;
+	border-radius: 3px;
 }

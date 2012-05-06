@@ -42,7 +42,7 @@
 			var theThis = this;
 			console.log(mapItem, this, this._ulElement, this.element, self);
 
-			var mapDiv = $('<div>' + mapItem.name + '</div>').attr({
+			var mapDiv = $('<div></div>').attr({
 				'mapUrl':mapItem.url,
 				'mapEtag':mapItem.etag
 			}).appendTo(this._ulElement);
@@ -76,6 +76,8 @@
 				}).
 				attr('title','delete the map from both local and remote').
 				appendTo(mapDiv);
+
+			$(mapDiv).append(mapItem.name);
 		}
 	});
 })(jQuery);
