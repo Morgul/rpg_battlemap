@@ -141,7 +141,7 @@
 					if(theThis.options.suppressLocal){
 						return false;
 					}
-					var mapObj = BattleMap.loadLocal(thisThis.options.mapInfo.name);
+					var mapObj = BattleMap.loadLocal(theThis.options.mapInfo.name);
 					theThis.options.load(mapObj);
 				}).
 				appendTo(this.element).
