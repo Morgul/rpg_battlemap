@@ -3,28 +3,21 @@
 	list-style: none;
 	padding: 2px 5px;
 }
-.ui-battlemapLocker div {
-	cursor: pointer;
-	border: 1px solid #555;
-	text-align: center;
-	margin-bottom: 2px;
-	padding: 5px 2px;
+
+/* for the load button set */
+.ui-battlemapLocker-pull {
+	border-radius: 4px 0px 0px 4px;
+	margin-right: 0px;
+}
+.ui-battlemapLocker-localload {
+	border-radius: 0px 0px 0px 0px;
+	margin-right: 0px;
+	margin-left: 0px;
+	width: 130px;
 }
 .ui-battlemapLocker-delete {
-	cursor: pointer;
-	position:relative;
-	top:-2px;
-	float: right;
-	border: 1px solid;
-	border-radius: 3px;
-}
-.ui-battlemapLocker-pull {
-	cursor: pointer;
-	position:relative;
-	top:-2px;
-	float: left;
-	border: 1px solid;
-	border-radius: 3px;
+	border-radius: 0px 4px 4px 0px;
+	margin-left: 0px;
 }
 
 /* for the save local/remote button(s) */

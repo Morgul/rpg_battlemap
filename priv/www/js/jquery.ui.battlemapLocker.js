@@ -21,24 +21,19 @@
 				theThis._addMapItem(mapData);
 			});
 			BattleMap.listRemote().done($.proxy(function(results){
-				results.map(function(remMapInfo){
-					$('div[mapName="' + remMapInfo.name + '"]', theThis._ulElement, topDiv).each(function(ind, elem){
-						if($(elem).attr('mapUrl')){
-							return true;
-						}
-						$(elem).attr('mapUrl',remMapInfo.url);
-						$('<span></span>').
-							addClass('ui-battlemapLocker-pull ui-icon ui-icon-arrowthick-1-s').
-							click(function(){
-								BattleMap.loadRemote(remMapInfo.url).done($.proxy(function(){
-									theThis.options.load.apply(theThis, arguments);
-								}));
-								return false;
-							}).
-							attr('title', 'Load the map using the remote data rather than local data').
-							prependTo($(elem));
-					});
+				results.map(function(mapInfo){
+					var localDiv = $('div[mapName="' + mapInfo.name + '"]');
+					if(localDiv.length){
+						localDiv.battlemapLoadButton("option","mapInfo",mapInfo);
+						return true;
+					}
+
+					this._addMapItem(mapInfo, true);
+					return true;
 				});
+				var localDivs = $('div[mapName]', theThis.element);
+				
+				console.log(results);
 			}, theThis));
 		},
 
@@ -58,7 +53,7 @@
 			}, theThis));
 		},
 
-		_addMapItem: function(mapItem){
+		_addMapItem: function(mapItem, supressLocalLoad){
 			var theThis = this;
 			console.log(mapItem, this, this._ulElement, this.element, self);
 
@@ -68,37 +63,111 @@
 				'mapName':mapItem.name
 			}).appendTo(this._ulElement);
 
-			if(mapItem.url){
-				$('<span></span>').
-					addClass('ui-battlemapLocker-pull ui-icon ui-icon-arrowthick-1-s').
-					click(function(){
-						BattleMap.loadRemote(mapItem.url).done($.proxy(function(){
-							theThis.options.load.apply(theThis, arguments);
-						}));
-						return false;
-					}).
-					attr('title', 'Load the map using the remote data rather than local data').
-					prependTo(mapDiv);
-			}
+			$(mapDiv).battlemapLoadButton({
+				'mapInfo': mapItem,
+				'supressLocalLoad': supressLocalLoad
+			});
+		}
+	});
+})(jQuery);
 
-			$('<span></span>').
-				addClass('ui-icon ui-icon-closethick ui-battlemapLocker-delete').
+// a set of 3 buttons for remote load, load, and delete.
+(function($){
+	$.widget("ui.battlemapLoadButton", {
+
+		options: {
+			mapInfo: {},
+			suppressLocalLoad: false,
+			load: function(){
+				console.log('load', arguments);
+			}
+		},
+
+		_create: function(){
+			var theThis = this;
+			this._remoteLoadButton = this._makeRemoteLoadButton();
+			this._localLoadButton = this._makeLocalLoadButton();
+			this._deleteButton = this._makeDeleteButton();
+			if(!this.options.mapInfo.url){
+				this._remoteLoadButton.attr('disabled','disabled');
+			}
+			if(this.options.suppressLocalLoad){
+				this._localLoadButton.attr('disabled','disabled');
+			}
+		},
+
+		_setOption: function(option, value){
+			$.Widget.prototype._setOption.apply(this, arguments);
+			switch(option){
+				case "mapInfo":
+					if(value.url){
+						this._remoteLoadButton.removeAttr('disabled');
+					} else {
+						this._remoteLoadButotn.attr('disabled', 'disabled');
+					}
+					break;
+				case "supressLocalLoad":
+					if(value){
+						this._localLoadButton.attr('disabled','disabled');
+					} else {
+						this._localLoadButotn.removeAttr('disabled');
+					}
+					break;
+			}
+		},
+
+		_makeRemoteLoadButton: function(){
+			var theThis = this;
+			return $('<button>&nbsp;</button>').
+				addClass('ui-battlemapLocker-pull').
 				click(function(){
-					if(mapItem.url){
-						BattleMap.deleteRemote(mapItem.url).done(function(){
-							BattleMap.deleteLocal(mapItem.name);
-							mapDiv.remove();
-						});
+					if(! theThis.options.mapInfo.url){
 						return false;
 					}
-					BattleMap.deleteLocal(mapItem.name);
-					mapDiv.remove();
+					BattleMap.loadRemote(theThis.options.mapInfo.url).done($.proxy(function(results){
+						this.options.load(results);
+					}, theThis));
 					return false;
 				}).
-				attr('title','delete the map from both local and remote').
-				appendTo(mapDiv);
+				appendTo(this.element).
+				button({'text':false,'icons':{'primary':'ui-icon-arrowthick-1-s'}});
+		},
 
-			$(mapDiv).append(mapItem.name);
+		_makeLocalLoadButton: function(){
+			var theThis = this;
+			return $('<button>' + this.options.mapInfo.name + '</button>').
+				addClass('ui-battlemapLocker-localload').
+				click(function(){
+					if(theThis.options.suppressLocal){
+						return false;
+					}
+					var mapObj = BattleMap.loadLocal(thisThis.options.mapInfo.name);
+					theThis.options.load(mapObj);
+				}).
+				appendTo(this.element).
+				button();
+		},
+
+		_makeDeleteButton: function(){
+			var theThis = this;
+			return $('<button>&nbsp</button>').
+				addClass('ui-battlemapLocker-delete').
+				click(function(){
+					if(theThis.options.mapInfo.url){
+						BattleMap.deleteRemote(theThis.options.mapInfo.url).done($.proxy(function(){
+							BattleMap.deleteLocal(this.options.mapInfo.name);
+						}, theThis));
+						return false;
+					}
+					BattleMap.deleteLocal(theThis.options.mapInfo.name);
+					return false;
+				}).
+				appendTo(this.element).
+				button({'text':false,'icons':{'primary':'ui-icon-closethick'}});
+		},
+
+		remove: function(){
+			$(this.element).children.remove();
 		}
 	});
 })(jQuery);
@@ -138,7 +207,7 @@
 
 		remove: function(){
 			$(this.element).children.remove();
-		},
+		}
 	});
 
 })(jQuery);
