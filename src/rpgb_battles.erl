@@ -114,7 +114,7 @@ allow_missing_post(ReqData, Ctx) ->
 	{false, ReqData, Ctx}.
 
 delete_resource(ReqData, {battle, MapId, Session} = Ctx) ->
-	case boss_db:delete(MapId) of
+	case boss_db:delete(MapId:id()) of
 		ok -> {true, ReqData, Ctx};
 		{error, Err} ->
 			?warning("Could not delete ~s due to ~p", [MapId, Err]),
