@@ -28,7 +28,7 @@
 						return true;
 					}
 
-					this._addMapItem(mapInfo, true);
+					theThis._addMapItem(mapInfo, true);
 					return true;
 				});
 				var localDivs = $('div[mapName]', theThis.element);
@@ -156,10 +156,12 @@
 					if(theThis.options.mapInfo.url){
 						BattleMap.deleteRemote(theThis.options.mapInfo.url).done($.proxy(function(){
 							BattleMap.deleteLocal(this.options.mapInfo.name);
+							theThis.remove();
 						}, theThis));
 						return false;
 					}
 					BattleMap.deleteLocal(theThis.options.mapInfo.name);
+					theThis.remove();
 					return false;
 				}).
 				appendTo(this.element).
@@ -167,7 +169,9 @@
 		},
 
 		remove: function(){
-			$(this.element).children.remove();
+			this._remoteLoadButton.remove();
+			this._localLoadButton.remove();
+			this._deleteButton.remove();
 		}
 	});
 })(jQuery);
