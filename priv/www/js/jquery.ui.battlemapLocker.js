@@ -14,13 +14,31 @@
 
 		_create: function(){
 			var theThis = this;
-			theThis._ulElement = $('<div></div>').addClass("ui-widget ui-battlemapLocker").appendTo(theThis.element);
+			var topDiv = $('<div></div>').addClass("ui-widget ui-battlemapLocker").appendTo(theThis.element);
+			theThis._ulElement = topDiv;
 			var localList = BattleMap.listLocal();
 			localList.map(function(mapData){
 				theThis._addMapItem(mapData);
 			});
 			BattleMap.listRemote().done($.proxy(function(results){
-				console.log('hi', theThis);
+				results.map(function(remMapInfo){
+					$('div[mapName="' + remMapInfo.name + '"]', theThis._ulElement, topDiv).each(function(ind, elem){
+						if($(elem).attr('mapUrl')){
+							return true;
+						}
+						$(elem).attr('mapUrl',remMapInfo.url);
+						$('<span></span>').
+							addClass('ui-battlemapLocker-pull ui-icon ui-icon-arrowthick-1-s').
+							click(function(){
+								BattleMap.loadRemote(remMapInfo.url).done($.proxy(function(){
+									theThis.options.load.apply(theThis, arguments);
+								}));
+								return false;
+							}).
+							attr('title', 'Load the map using the remote data rather than local data').
+							prependTo($(elem));
+					});
+				});
 			}, theThis));
 		},
 
@@ -46,7 +64,8 @@
 
 			var mapDiv = $('<div></div>').attr({
 				'mapUrl':mapItem.url,
-				'mapEtag':mapItem.etag
+				'mapEtag':mapItem.etag,
+				'mapName':mapItem.name
 			}).appendTo(this._ulElement);
 
 			if(mapItem.url){
