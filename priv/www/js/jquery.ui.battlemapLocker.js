@@ -65,7 +65,8 @@
 
 			$(mapDiv).battlemapLoadButton({
 				'mapInfo': mapItem,
-				'supressLocalLoad': supressLocalLoad
+				'supressLocalLoad': supressLocalLoad,
+				'load': this.options.load
 			});
 		}
 	});
