@@ -42,7 +42,7 @@
 		},
 
 		refresh: function(){
-			$(this._ulElement).children.remove();
+			$(this._ulElement).children().remove();
 			var localList = BattleMap.listLocal();
 			var theThis = this;
 			localList.map(function(mapData){
@@ -184,6 +184,9 @@
 
 		options: {
 			battlemap: false,
+			save: function(){
+				console.log('save complete', this);
+			}
 		},
 
 		_create: function(){
@@ -193,7 +196,9 @@
 				click(function(){
 					if(theThis.options.battlemap){
 						theThis.options.battlemap.name = theThis._nameEditor.attr('value');;
-						theThis.options.battlemap.saveRemote();
+						theThis.options.battlemap.saveRemote().done(function(){
+							theThis.options.save();
+						});
 					}
 					return false;
 				}).
@@ -212,6 +217,7 @@
 					if(theThis.options.battlemap){
 						theThis.options.battlemap.name = theThis._nameEditor.attr('value');;
 						theThis.options.battlemap.saveLocal();
+						theThis.options.save();
 					}
 					return false;
 				}).

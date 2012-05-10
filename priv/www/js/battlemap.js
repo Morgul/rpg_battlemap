@@ -37,7 +37,7 @@ function BattleMap(actionElem, opts){
 	//this._gridElem = '#' + gridElem;
 	//this._gridCtx = $(this._gridElem)[0].getContext('2d');
 
-	this._svgPaper = Raphael(this.actionElem, '100%', '100%');
+	this._svgPaper = Raphael(this._actionElem, '100%', '100%');
 
 	this._zoom = 1; // as long as it's above 0, we're okay.
 	this._translateX = 0; // translate as in motion on a 2d plane

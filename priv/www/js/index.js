@@ -186,9 +186,19 @@ $().ready(function(){
 		}
 	});
 
-	$('#savedMapsList').battlemapLocker();
+	$('#savedMapsList').battlemapLocker({
+		'load':function(mapData){
+			window.battlemap = new BattleMap('#drawingBoard', mapData);
+			$('#saveButton').battlemapSaveButton('options', 'battlemap', window.battlemap);
+		}
+	});
 
-	$('#saveButton').battlemapSaveButton({'battlemap':battleMap});
+	$('#saveButton').battlemapSaveButton({
+		'battlemap':battleMap,
+		'save':function(){
+			$('#savedMapsList').battlemapLocker('refresh');
+		}
+	});
 
 	$('#combatantTrashcan').droppable({
 		accept:'#combatantList li[combatantIndex]',
