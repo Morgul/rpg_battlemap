@@ -187,26 +187,49 @@
 
 		_create: function(){
 			var theThis = this;
-			$(this.element).
+				
+			this._remoteSaveButton = $(this.element).
 				click(function(){
 					if(theThis.options.battlemap){
-						theThis.options.battlemap.saveLocal();
-					}
-					return false;
-				}).
-				addClass('ui-battlemap-savebutton-local').
-				button();
-
-			$('<button>&nbsp;</button>').
-				click(function(){
-					if(theThis.options.battlemap){
+						theThis.options.battlemap.name = theThis._nameEditor.attr('value');;
 						theThis.options.battlemap.saveRemote();
 					}
 					return false;
 				}).
 				addClass('ui-battlemap-savebutton-remote').
-				insertAfter(this.element).
-				button({'text':false,'icons':{'primary':'ui-icon-arrowthick-1-n'}})
+				button({'text':false,'icons':{'primary':'ui-icon-arrowthick-1-n'}});
+
+			this._nameEditor = $('<input class="ui-battlemap-savebutton-name" />').
+				insertAfter(this.element);
+
+			if(this.options.battlemap){
+				this._nameEditor.attr('value', this.options.battlemap.name);
+			}
+
+			this._localSaveButton = $('<button>&nbsp;</button>').
+				click(function(){
+					if(theThis.options.battlemap){
+						theThis.options.battlemap.name = theThis._nameEditor.attr('value');;
+						theThis.options.battlemap.saveLocal();
+					}
+					return false;
+				}).
+				addClass('ui-battlemap-savebutton-local').
+				insertAfter(this._nameEditor).
+				button({'text':false,'icons':{'primary':'ui-icon-disk'}});
+		},
+
+		_setOption: function(option, value){
+			$.Widget.prototype._setOption.apply(this, arguments);
+			switch(option){
+				case "battlemap":
+					if(value){
+						this._nameEditor.attr('value', value.name);
+					} else {
+						this._nameEditor.attr('value', '');
+					}
+					break;
+			}
 		},
 
 		remove: function(){

@@ -17,14 +17,19 @@
 }
 .ui-battlemapLocker-delete {
 	border-radius: 0px 4px 4px 0px;
-	margin-left: 0px;
+	margin-right: 0px;
 }
 
 /* for the save local/remote button(s) */
 .ui-battlemap-savebutton-local {
+	border-radius: 0px 4px 4px 0px;
+	margin-left: 0px;
+}
+.ui-battlemap-savebutton-remote {
 	border-radius: 4px 0px 0px 4px;
 	margin-right: 0px;
 }
-.ui-battlemap-savebutton-remote {
-	border-radius: 0px 4px 4px 0px;
+.ui-battlemap-savebutton-name {
+	width: 108px;
+	height: 18px;
 }
