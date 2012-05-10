@@ -26,23 +26,6 @@ function stringToCells(string, cellCoordDelim){
 	return pairs;
 }
 
-function populateMapList(selector){
-	var mapNameLi;
-	var localmap;
-	for(var i = 0; i < localStorage.length; i++){
-		localmap = localStorage.key(i);
-		mapNameLi = document.createElement('li');
-		mapNameLi.innerHTML = localmap;
-		/*mapNameLi.onclick = function(){
-			loadBattleMapLocal(localmap);
-		};*/
-		$(selector).append(mapNameLi);
-	}
-	$(selector + ' li').click(function(){
-		loadBattleMapLocal(this.innerHTML);
-	});
-}
-
 function addColorPicker(pickerSelector, inputName)
 {
 	$(pickerSelector).ColorPicker({
