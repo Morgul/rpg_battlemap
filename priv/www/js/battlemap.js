@@ -108,12 +108,23 @@ function BattleMap(actionElem, opts){
 	for(i in opts){
 		this[i] = opts[i]
 	}
-	for(i in tmpCombatants){
-		this.addCombatant(tmpCombatants[i]);
+	var thisRef = this;
+	if(! tmpCombatants){
+		tmpCombatants = [];
 	}
-	for(i in tmpZones){
-		this.addZone(tmpZones[i]);
+	if(! tmpZones){
+		tmpZones = [];
 	}
+	tmpCombatants.map(function(combatantOpts){
+		combatantOpts.suppressAdd = true;
+		var combatant = new Combatant(thisRef, combatantOpts);
+		thisRef.addCombatant(combatant);
+	});
+	tmpZones.map(function(zoneOpts){
+		zoneOpts.suppressAdd = true;
+		var zone = new Zone(thisRef, zoneOpts);
+		thisRef.addZone(zone);
+	});
 
 	var dragData = {
 		mapRef: this
@@ -731,20 +742,6 @@ function Combatant(battlemap, opts){
  	this.updateTransform();
 }
 
-Combatant.prototype.toJsonable = function(){
-	return {
-		name: this.name,
-		zIndex: this.zIndex,
-		color: this.color,
-		cellX: this.cellX,
-		cellY: this.cellY,
-		size: this.size,
-		hp: this.hp,
-		initiative: this.initiative,
-		conditions: this.conditions
-	};
-}
-
 Combatant.prototype = {
 	get layer(){
 		return "action";
@@ -814,7 +811,21 @@ Combatant.prototype = {
 		}
 	}
 }
-		
+
+Combatant.prototype.toJsonable = function(){
+	return {
+		name: this.name,
+		zIndex: this.zIndex,
+		color: this.color,
+		cellX: this.cellX,
+		cellY: this.cellY,
+		size: this.size,
+		hp: this.hp,
+		initiative: this.initiative,
+		conditions: this.conditions
+	};
+}
+
 Combatant.prototype.updateTransform = function(){
 	var basex = this._cellX * this.battlemap.gridSpacing;
 	var basey = this._cellY * this.battlemap.gridSpacing;
