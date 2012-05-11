@@ -49,11 +49,20 @@
 				theThis._addMapItem(mapData);
 			});
 			BattleMap.listRemote().done($.proxy(function(results){
-				console.log('hi', theThis);
+				results.map(function(mapInfo){
+					var localDiv = $('div[mapName="' + mapInfo.name + '"]');
+					if(localDiv.length){
+						localDiv.battlemapLoadButton("option","mapInfo",mapInfo);
+						return true;
+					}
+
+					theThis._addMapItem(mapInfo, true);
+					return true;
+				});
 			}, theThis));
 		},
 
-		_addMapItem: function(mapItem, supressLocalLoad){
+		_addMapItem: function(mapItem, suppressLocalLoad){
 			var theThis = this;
 			console.log(mapItem, this, this._ulElement, this.element, self);
 
@@ -65,7 +74,7 @@
 
 			$(mapDiv).battlemapLoadButton({
 				'mapInfo': mapItem,
-				'supressLocalLoad': supressLocalLoad,
+				'suppressLocalLoad': suppressLocalLoad,
 				'load': this.options.load
 			});
 		}
@@ -107,7 +116,7 @@
 						this._remoteLoadButotn.attr('disabled', 'disabled');
 					}
 					break;
-				case "supressLocalLoad":
+				case "suppressLocalLoad":
 					if(value){
 						this._localLoadButton.attr('disabled','disabled');
 					} else {
