@@ -1,4 +1,4 @@
-#leftColumnItems input
+/*#leftColumnItems input
 {
 	border: 2px solid #ddd;
 	border-radius: 4px;
@@ -13,14 +13,18 @@
 #leftColumnItems input[type="number"]
 {
 	width: 48px;
+}*/
+
+#leftColumnItems input[type="color"] {
+	width: 105px;
 }
 
-
+/*
 div.colorSelector {
 	margin-right: 5px;
 	position: relative;
 	top: 5px;
-}
+}*/
 
 fieldset
 {
