@@ -160,7 +160,7 @@ $().ready(function(){
 
 	$('#zoneEditor form').submit(function(){
 		var index = parseInt(this.zoneIndex.value);
-		var zone = zoneList[index];
+		var zone = window.battleMap.zones[index];
 		zone.start = [sanatizeInt(this.cellX.value),sanatizeInt(this.cellY.value)];
 		zone.color = this.color.value;
 		zone.layer = this.layer.value;
