@@ -598,6 +598,15 @@ $().ready(function(){
 		}
 	});
 
+	$('#savedMapsList').battlemapLocker({
+		'load':function(mapData){
+			console.log('data loaded', mapData);
+			window.battleMap = new BattleMap('#drawingBoard', mapData);
+			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
+			rebuildZoneList();
+		}
+	});
+
 	// make the left column a better accordian than accordian.
 	$('#leftColumnItems').multiAccordion({
 		autoHeight:false,
