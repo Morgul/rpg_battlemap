@@ -190,6 +190,7 @@ $().ready(function(){
 			console.log('data loaded', mapData);
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
+			rebuildZoneList();
 		}
 	});
 
