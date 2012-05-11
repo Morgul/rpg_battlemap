@@ -231,8 +231,10 @@
 			switch(option){
 				case "battlemap":
 					if(value){
+						console.log('setting battlemap', value);
 						this._nameEditor.attr('value', value.name);
 					} else {
+						console.log('battlemap cleared', value);
 						this._nameEditor.attr('value', '');
 					}
 					break;

@@ -188,14 +188,16 @@ $().ready(function(){
 
 	$('#savedMapsList').battlemapLocker({
 		'load':function(mapData){
-			window.battlemap = new BattleMap('#drawingBoard', mapData);
-			$('#saveButton').battlemapSaveButton('options', 'battlemap', window.battlemap);
+			console.log('data loaded', mapData);
+			window.battleMap = new BattleMap('#drawingBoard', mapData);
+			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 		}
 	});
 
 	$('#saveButton').battlemapSaveButton({
-		'battlemap':battleMap,
+		'battlemap':window.battleMap,
 		'save':function(){
+			console.log('save done', this, arguments);
 			$('#savedMapsList').battlemapLocker('refresh');
 		}
 	});
