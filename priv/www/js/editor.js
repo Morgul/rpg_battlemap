@@ -589,15 +589,30 @@ $().ready(function(){
 		}
 	});
 
+	// set up the save/load controls
+	$('#saveButton').battlemapSaveButton({
+		'battlemap':window.battleMap,
+		'save':function(){
+			console.log('save done', this, arguments);
+			$('#savedMapsList').battlemapLocker('refresh');
+		}
+	});
+
+	// make the left column a better accordian than accordian.
+	$('#leftColumnItems').multiAccordion({
+		autoHeight:false,
+		active:[0,1,2,3]
+	});
+
 	// ------------------------------------------------------------------------
 
 	// Window resize handler
 	var zoneList = $('#zones');
-	$(window).resize(function(){
+	/*$(window).resize(function(){
 		zoneList.height($(window).height() - zoneList.offset().top - 2);
 	});
 	// Don't ask about the extra 14 pixels. I have no clue. But, this works.
-	zoneList.height($(window).height() - zoneList.offset().top - 16);
+	zoneList.height($(window).height() - zoneList.offset().top - 16);*/
 });
 
 

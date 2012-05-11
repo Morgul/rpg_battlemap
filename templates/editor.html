@@ -2,17 +2,18 @@
 
 {% block page_scripts %}
 	<link type="text/css" href="/css/editor.css" rel="stylesheet" />
+	<script type="text/javascript" src="/contrib/jquery.multi-accordion.js"></script>
 	<script type="text/javascript" src="/js/editor.js"></script>
 {% endblock %}
 
 {% block left_column_items %}
-	<fieldset class="ui-corner-all">
-		<legend>Tools</legend>
+	<h3><a href="#">Tools</a></h3>
+	<div>
 		<p>TODO: Add tool buttons.</p>
-	</fieldset>
+	</div>
 
-	<fieldset class="ui-corner-all">
-		<legend>Grid Properties</legend>
+	<h3><a href="#">Grid Properties</a></h3>
+	<div>
 		<p>
 			<div class="colorSelector grid"><div style="background-color: #0000ff"></div></div>
 			<label for="grid_color">Grid Color</label>
@@ -31,10 +32,10 @@
 			<label for="map_color">Map Color</label>
 			<input id="map_color" name="map_color" type="text" />
 		</p>
-	</fieldset>
+	</div>
 
-	<fieldset class="ui-corner-all">
-		<legend>Zone Properties</legend>
+	<h3><a href="#">Zone Properties</a></h3>
+	<div>
 		<p>
 			<label for="zone_name">Zone Name</label>
 			<input id="zone_name" name="zone_name" type="text" />
@@ -57,12 +58,12 @@
 			<label for="fill_color">Fill Color</label>
 			<input id="fill_color" name="fill_color" type="text" />
 		</p>
-	</fieldset>
+	</div>
 
-	<fieldset id="zones" class="ui-corner-all">
-		<legend>Zones</legend>
+	<h3><a href="#">Zones</a></h3>
+	<div>
 		<p>TODO: Add zones.</p>
-	</fieldset>
+	</div>
 {% endblock %}
 
 {# -*- vim: set ft=htmldjango: -- vim modeline -*- #}
