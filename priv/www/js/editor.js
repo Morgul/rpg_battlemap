@@ -77,8 +77,8 @@ Editor.prototype.mousedownHandler = function(ev){
 
 	setTimeout($.proxy(function() {
 		if (this.dragging == false && this.dblclick == false){
-			if(this.currentZone == null){
-				this.currentZone = new EditZone(this.battlemap, this);
+			if(this._currentZone == null){
+				this._currentZone = new EditZone(this.battlemap, this);
 			}
 
 			var zone = this.currentZone;
@@ -138,23 +138,25 @@ function EditZone(battlemap, editor, inZone){
 	this.finishPrefix = "L";
 
 	this.updateProperties();
-	this._highlightPoints();
+	this.select();
 }
 
 EditZone.prototype.unselect = function(){
 	this.points.map(function(point){
-		point.svgElement.remove();
+		point.remove();
 	});
+	this.points = [];
 }
 
-EditZone.prototype._highlightPoints = function(){
+EditZone.prototype.select = function(){
 	this.unselect();
 	var pathStr = this.zone.path;
 	var segments = Raphael.parsePathString(pathStr);
 	var thisRef = this;
-	segments.map(function(segment){
+	this.points = segments.map(function(segment){
 		var last = segment.length - 1;
-		thisRef.addPoint(segment[last - 1], segment[last]);
+		var point = new Point(thisRef.battlemap, segment[last - 1], segment[last]);
+		return point;
 	});
 }
 
@@ -470,6 +472,15 @@ Point.prototype = {
 	}
 }
 
+Point.prototype.remove = function(){
+	try{
+		this.svgElement.remove();
+	} catch(err){
+		return false;
+	}
+	$(this.battlemap).unbind("viewChanged", $.proxy(this.viewChangeHandler, this));
+}
+
 Point.prototype.viewChangeHandler = function(){
 	var trans = this.battlemap.getTransformString();
 	this.svgElement.transform(trans);
@@ -653,6 +664,9 @@ $().ready(function(){
 	$('.zone div').css('background-color', '#000000');
 	$('.fill div').css('background-color', '#777777');
 
+	var zoneChangedRef = {
+		zoneCount: 0
+	};
 	$(editor).bind('zone-changed', function(){
 		if(editor.currentZone != null){
 			var zone = editor.currentZone;
