@@ -123,11 +123,15 @@ Class EditZone
 
 A class for managing the editor.
 ******************************************************************************/
-function EditZone(battlemap, editor){
+function EditZone(battlemap, editor, inZone){
 	this.battlemap = battlemap;
 	this.editor = editor;
 	this.points = new Array();
-	this.zone = new CombatZone(this.battlemap, {path: "Mz"});
+	if(! inZone){
+		this.zone = new CombatZone(this.battlemap, {path: "Mz"});
+	} else {
+		this.zone = inZone;
+	}
 	this.finishPrefix = "L";
 
 	this.updateProperties();
@@ -458,6 +462,45 @@ Point.prototype.moveHandler = function(ev){
 	});
 }
 
+/******************************************************************************
+Utility function to easily rebuild the list of zones
+*/
+	// zone list updating
+function updateZoneList(){
+	$('#zoneList').empty();
+	battleMap.zones.map(function(zone, index){
+		var lielem = $('<li></li>')
+		.appendTo('#zoneList');
+
+		$('<button>' + zone.name + '</button>')
+		.css('boxShadow', 'inset 0 0 10px 2px ' + zone.color)
+		.css('width', '80%')
+		.attr('zoneIndex', index)
+		.click(function(){
+			var zoneListInd = this.getAttribute('zoneIndex');
+			var zone = battleMap.zones[zoneListInd];
+			editor.currentZone = new EditZone(battleMap, editor, zone);
+		})
+		.button()
+		.appendTo(lielem);
+
+		$('<button>X</button>')
+		.appendTo(lielem)
+		.button({'text':false,'icons':{'primary':'ui-icon-closethick'}})
+		.attr('zoneIndex', index)
+		.click(function(){
+			var zoneListInd = this.getAttribute('zoneIndex');
+			var zone = battleMap.zones[zoneListInd];
+			if(editor.currentZone){
+				if(editor.currentZone.zone == zone){
+					editor.currentZone = null;
+				}
+			}
+			zone.remove();
+			updateZoneList();
+		});
+	});
+}
 
 // ----------------------------------------------------------------------------
 
@@ -612,6 +655,7 @@ $().ready(function(){
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			window.editor.battlemap = window.battleMap;
+			updateZoneList();
 		}
 	});
 
@@ -624,7 +668,7 @@ $().ready(function(){
 	// ------------------------------------------------------------------------
 
 	// Window resize handler
-	var zoneList = $('#zones');
+	//var zoneList = $('#zones');
 	/*$(window).resize(function(){
 		zoneList.height($(window).height() - zoneList.offset().top - 2);
 	});
