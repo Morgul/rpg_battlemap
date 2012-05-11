@@ -122,7 +122,7 @@ function BattleMap(actionElem, opts){
 	});
 	tmpZones.map(function(zoneOpts){
 		zoneOpts.suppressAdd = true;
-		var zone = new Zone(thisRef, zoneOpts);
+		var zone = new CombatZone(thisRef, zoneOpts);
 		thisRef.addZone(zone);
 	});
 
