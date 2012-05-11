@@ -151,10 +151,9 @@ $().ready(function(){
 		}
 		creationObj.cells = cells;
 		newZone = new CombatZone(battleMap, creationObj);
-		zoneList.push(newZone);
 
 		var liElem = createZoneListItem(newZone);
-		liElem.setAttribute('zoneIndex', zoneList.length - 1);
+		liElem.setAttribute('zoneIndex', window.battleMap.zones.length - 1);
 		$('#zoneList').append(liElem);
 		return false;
 	});
