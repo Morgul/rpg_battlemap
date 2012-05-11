@@ -4,10 +4,10 @@ Class Editor
 A class for managing the editor.
 ******************************************************************************/
 function Editor(battlemap){
-	this.battlemap = battlemap;
+	this._battlemap = battlemap;
 	this.zones = [];
 	this._currentZone = null;
-	this.pointer = new Pointer(this.battlemap, 4, "#09f", "#05d");
+	this.pointer = new Pointer(this._battlemap, 4, "#09f", "#05d");
 	this.bindEvents();
 
 	// Mouse handling
@@ -39,6 +39,14 @@ Editor.prototype = {
 	set currentZone(val){
 		this._currentZone = val;
 		this.zoneChanged();
+	},
+
+	get battlemap(){
+		return this._battlemap;
+	},
+	set battlemap(map){
+		this._battlemap = map;
+		this.pointer = new Pointer(this._battlemap, 4, "#09f", "#05d");
 	}
 }
 
@@ -603,14 +611,14 @@ $().ready(function(){
 			console.log('data loaded', mapData);
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
-			rebuildZoneList();
+			window.editor.battlemap = window.battleMap;
 		}
 	});
 
 	// make the left column a better accordian than accordian.
 	$('#leftColumnItems').multiAccordion({
 		autoHeight:false,
-		active:[0,1,2,3]
+		active:[0,1,2,3, 4]
 	});
 
 	// ------------------------------------------------------------------------
