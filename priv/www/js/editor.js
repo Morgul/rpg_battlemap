@@ -79,6 +79,7 @@ Editor.prototype.mousedownHandler = function(ev){
 		if (this.dragging == false && this.dblclick == false){
 			if(this._currentZone == null){
 				this._currentZone = new EditZone(this.battlemap, this);
+				this.zoneChanged();
 			}
 
 			var zone = this.currentZone;
@@ -679,6 +680,9 @@ $().ready(function(){
 
 			$('#zone_color').change();
 			$('#fill_color').change();
+		}
+		if(zoneChangedRef.zoneCount != battleMap.zones.length){
+			updateZoneList();
 		}
 	});
 
