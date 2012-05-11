@@ -425,6 +425,7 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 	this.pointType = "L" // "L", "M", "c"
 
 	$(this.battlemap).bind("viewChanged", $.proxy(this.viewChangeHandler, this));
+	this.viewChangeHandler();
 }
 
 Point.prototype = {
