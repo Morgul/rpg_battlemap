@@ -251,8 +251,8 @@ BattleMap.prototype = {
 		return this._gridlineColor;
 	},
 	set gridlineColor(val){
-		this._gridlineColor;
-		this._gridRect.attr('stroke',this._gridlineColor);
+		this._gridlineColor = val;
+		this._patternRect.setAttribute('stroke',this._gridlineColor);
 	},
 
 	get gridStroke(){
