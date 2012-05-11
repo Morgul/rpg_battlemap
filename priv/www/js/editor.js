@@ -37,6 +37,9 @@ Editor.prototype = {
 		return this._currentZone;
 	},
 	set currentZone(val){
+		if(this._currentZone){
+			this._currentZone.unselect();
+		}
 		this._currentZone = val;
 		this.zoneChanged();
 	},
@@ -135,6 +138,24 @@ function EditZone(battlemap, editor, inZone){
 	this.finishPrefix = "L";
 
 	this.updateProperties();
+	this._highlightPoints();
+}
+
+EditZone.prototype.unselect = function(){
+	this.points.map(function(point){
+		point.svgElement.remove();
+	});
+}
+
+EditZone.prototype._highlightPoints = function(){
+	this.unselect();
+	var pathStr = this.zone.path;
+	var segments = Raphael.parsePathString(pathStr);
+	var thisRef = this;
+	segments.map(function(segment){
+		var last = segment.length - 1;
+		thisRef.addPoint(segment[last - 1], segment[last]);
+	});
 }
 
 EditZone.prototype.updateProperties = function(){
@@ -479,6 +500,12 @@ function updateZoneList(){
 		.click(function(){
 			var zoneListInd = this.getAttribute('zoneIndex');
 			var zone = battleMap.zones[zoneListInd];
+			if(editor.currentZone){
+				if(editor.currentZone.zone == zone){
+					editor.currentZone = null;
+					return false;
+				}
+			}
 			editor.currentZone = new EditZone(battleMap, editor, zone);
 		})
 		.button()
