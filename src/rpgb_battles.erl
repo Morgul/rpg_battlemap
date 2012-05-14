@@ -72,7 +72,7 @@ is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 		Name ->
 			{false, ReqData, Ctx};
 		OtherName ->
-			case boss_db:find(rpgb_battlemap, [{name, equals, OtherName}, {owner_id, equals, BattleMap:owner_id()}]) of
+			case boss_db:find(rpgb_battlemap, [{name, equals, Name}, {owner_id, equals, BattleMap:owner_id()}]) of
 				[] ->
 					{false, ReqData, Ctx};
 				_ ->
