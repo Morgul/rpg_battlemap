@@ -859,19 +859,13 @@ Combatant.prototype.moveTo = function(newX, newY){
 
 Combatant.prototype.startPulsating = function(){
 	this.stopPulsating();
+	var offset = this.battlemap.gridSpacing / 2;
 	var theSvg = this.svgObject;
-	var regXY = 0;
-	var regHW = this.size * this.battlemap.gridSpacing;
-	var pulseSize = this.battlemap.gridSpacing / 10;
-	var xy = pulseSize * -1;
-	var hw = regHW + (pulseSize * 2);
-	var bigAttr = {'x':xy,'y':xy,'width':hw,'height':hw};
-	var regAttr = {'x':-xy,'y':-xy,'width':regHW - pulseSize * 2, 'height':regHW - pulseSize * 2};
 	var pulseGrow = function(){
-		theSvg.animate(bigAttr,1000,pulseShrink);
-	};
+		theSvg.animate({'transform': 'S1.2'}, 1000, pulseShrink);
+	}
 	var pulseShrink = function(){
-		theSvg.animate(regAttr,1000,pulseGrow);
+		theSvg.animate({'transform': 'S0.8'}, 1000, pulseGrow);
 	}
 	pulseGrow();
 	this.pulsating = true;
@@ -879,8 +873,7 @@ Combatant.prototype.startPulsating = function(){
 
 Combatant.prototype.stopPulsating = function(){
 	this.svgObject.stop();
-	this.svgObject.attr({'x':0,'y':0});
-	this.size = this._size;
+	this.svgObject.transform('');
 	this.pulsating = false;
 }
 
