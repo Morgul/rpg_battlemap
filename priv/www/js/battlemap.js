@@ -322,37 +322,48 @@ BattleMap.prototype.addCombatant = function(combatant){
 		return combatant;
 	}
 
-	var sorted = this._combatants.sort(function(ca, cb){
+	var sortFunc = function(ca, cb){
 		return cb.initiative - ca.initiative;
+	}
+
+	var higherInit = this._combatants.filter(function(c){
+		return c.initiative > combatant.initiative;
 	});
-	
-	// Eventually we'll use a binary search.
-	// for now, just brute force it.
-	for(var i = 0; i < sorted.length; i++){
-		if(sorted[i].initiative > combatant.intiative){
-			if(i == 0){
-				this._combatants.unshift(combatant);
-				break;
-			} else if(sorted[i - 1].initiative != combatant.initiative){
-				this._combatants.splice(i, 0, combatant);
-			} else {
-				if((this._combatants[i].intiative - this._combatants[i-1].initiative) > 1){
-					combatant.initiative = this._combatants[i - 1].initiative + 1;
-				} else {
-					var newInit = (this._combatants[i].initiative + this._combatants[i - 1].initiative) / 2;
-					combatant.initiative = newInit;
-				}
-				this._combatants.splice(i, 0, combatant);
-			}
-			this.setPaintOrder();
-			return combatant;
-		}
+
+	if(higherInit.length == 0){
+		this._combatants.unshift(combatant);
+		this._triggerTransformListeners();
+		this.setPaintOrder();
+		return combatant;
 	}
-	i = sorted.length - 1;
-	if(sorted[i].initiative == combatant.initiative){
-		combatant.initiative = sorted[i].initiative + 1;
+
+	if(higherInit.length == this._combatants.length){
+		this._combatants.push(combatant);
+		this._triggerTransformListeners();
+		this.setPaintOrder();
+		return combatant;
 	}
-	this._combatants.push(combatant);
+
+	var bestGuessInd = higherInit.length;
+	if(this._combatants[bestGuessInd].initiative < combatant.initiative){
+		this._combatants.splice(bestGuessInd, 0, combatant);
+		this._triggerTransformListeners();
+		this.setPaintOrder();
+		return combatant;
+	}
+
+	if(higherInit[bestGuessInd - 1].initiative - this._combatants[bestGuessInd].initiative > 1){
+		combatant.intitiative += 1;
+		this._combatants.splice(bestGuessInd, 0, combatant);
+		this._triggerTransformListeners();
+		this.setPaintOrder();
+		return combatant;
+	}
+
+	var avg = (higherInit[bestGuessInd - 1].initiative + this._combatants[bestGuessInd].initiative) / 2;
+	combatant.initiative = avg;
+	this._combatants.splice(bestGuessInd, 0, combatant);
+	this._triggerTransformListeners();
 	this.setPaintOrder();
 	return combatant;
 }
