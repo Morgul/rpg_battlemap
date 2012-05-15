@@ -368,6 +368,46 @@ BattleMap.prototype.addCombatant = function(combatant){
 	return combatant;
 }
 
+BattleMap.prototype.reorderCombatant = function(combatant, newIndex){
+	var oldIndex = this._combatants.indexOf(combatant);
+	if(oldIndex < 0){
+		return false;
+	}
+
+	if(newIndex >= this._combatants.length){
+		return false;
+	}
+
+	if(newIndex == oldIndex){
+		return true;
+	}
+
+	if(newIndex == 0){
+		var newInit = this._combatants[0].initiative + 1;
+		this._combatants[oldIndex].initiative = newInit;
+	} else if(newIndex == this._combatants.length - 1){
+		var len = this._combatants.length - 1;
+		var newInit = this._combatants[len].initiative - 1;
+		this._combatants[oldIndex].initiative = newInit;
+	} else {
+		var atIndInit = this._combatants[newIndex].initiative;
+		var nextIndInit = this._combatants[newIndex + 1].initiative;
+		if(atIndInit - nextIndInit > 1){
+			this._combatants[oldIndex].initiative = atIndInit - 1;
+		} else {
+			var avg = (atIndInit + nextIndInit) / 2;
+			this._combatants[oldIndex].initiative = avg;
+		}
+	}
+
+	var sort = function(ca, cb){
+		return cb.initiative - ca.initiative;
+	}
+
+	this._combatants.sort(sort);
+	return true;
+}
+
 BattleMap.prototype.removeCombatant = function(combatant){
 	this._combatants = this._combatants.filter(function(elem){
 		if(elem != combatant){
