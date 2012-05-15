@@ -378,6 +378,10 @@ BattleMap.prototype.reorderCombatant = function(combatant, newIndex){
 		return false;
 	}
 
+	if(newIndex < 0){
+		return false;
+	}
+
 	if(newIndex == oldIndex){
 		return true;
 	}
