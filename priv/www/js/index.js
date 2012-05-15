@@ -1,8 +1,8 @@
 function insertCombatant(combatant) {
 	var combatantList = $('#combatantList li');
 	battleMap.addCombatant(combatant);
-
-	var listItem = generateInitListItem(battleMap.combatants.length - 1, combatant);
+	syncCombatantList();
+	/*var listItem = generateInitListItem(battleMap.combatants.length - 1, combatant);
 
 	//TODO: This would be faster as a binary search
 	var max = combatantList.length - 1;
@@ -22,7 +22,7 @@ function insertCombatant(combatant) {
 		}
 	}
 
-	$(combatantList[0]).before(listItem);
+	$(combatantList[0]).before(listItem);*/
 }
 
 function sanatizeInt(given, defVal){
@@ -67,38 +67,34 @@ function rebuildZoneList(){
 	});
 }
 
+function syncCombatantList(){
+	var countCombatants = battleMap.combatants.length;
+	var combatantUl = $('#combatantList');
+	while(combatantUl.children().length < countCombatants){
+		combatantUl.append('<li>Name Here</li>');
+	}
+	while(combatantUl.children().length > countCombatants){
+		combatantUl.children().first().remove();
+	}
+	battleMap.combatants.map(function(combatant, index){
+		var li = combatantUl.children()[index];
+		$(li)
+		.attr('combatantIndex', index)
+		.addClass('combatant')
+		.css('box-shadow', 'inset 0 0 10px 2px ' + combatant.color)
+		.html(combatant.name);
+		return true;
+	});
+}
+
 $().ready(function(){
 	$('#combatantList').sortable({
 		update: function(event, ui) {
 			var combatantInd = parseInt(ui.item[0].getAttribute('combatantIndex'));
-			var combatantListIndexes = [];
-			$('#combatantList li').map(function(_ind,item){
-				combatantListIndexes.push(parseInt(item.getAttribute('combatantIndex')));
-				return true;
-			});
-			var combatant = combatants[combatantInd];
-			var lastInd = combatantListIndexes.length - 1;
-
-			if(combatantListIndexes.length == 1){
-				return;
-			}
-
-			if(combatantInd == combatantListIndexes[0]){
-				combatant.initiative = combatants[combatantListIndexes[1]].initiative + 1;
-			} else if(combatantInd == (combatantListIndexes[lastInd])){
-				combatant.initiative = combatants[combatantListIndexes[lastInd - 1]].initiative - 1;
-			} else {
-				var indexOf = combatantListIndexes.indexOf(combatantInd);
-				if(indexOf == -1){
-					return;
-				}
-				var higherInd = combatantListIndexes[indexOf - 1];
-				var lowerInd = combatantListIndexes[indexOf + 1];
-				var higher = combatants[higherInd].initiative;
-				var lower = combatants[lowerInd].initiative;
-
-				combatant.initiative = lower + ((higher - lower) / 2);
-			}
+			var combatant = battleMap.combatants[combatantInd];
+			var newInd = $('#combatantList li').index(ui.item);
+			battleMap.reorderCombatant(combatant, newInd);
+			syncCombatantList();
 		}
 	});
 
@@ -191,6 +187,7 @@ $().ready(function(){
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			rebuildZoneList();
+			syncCombatantList();
 		}
 	});
 
@@ -221,7 +218,7 @@ $().ready(function(){
 
 	$('#combatantList').click(function(ev){
 		var combatantInd = parseInt(ev.target.getAttribute('combatantIndex'));
-		combatants.map(function(combatant, ind){
+		window.battleMap.combatants.map(function(combatant, ind){
 			if(combatantInd == ind){
 				if(combatant.pulsating){
 					combatant.stopPulsating();
@@ -233,6 +230,7 @@ $().ready(function(){
 			combatant.stopPulsating();
 			return false;
 		});
+		return false;
 	});
 
 	$('#zoneTrashcan').click(function(ev){
