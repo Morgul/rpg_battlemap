@@ -396,7 +396,7 @@ BattleMap.prototype.reorderCombatant = function(combatant, newIndex){
 			this._combatants[oldIndex].initiative = prevIndInit - 1;
 		} else {
 			var avg = (atIndInit + prevIndInit) / 2;
-			this._combatants[oldIndex].initiative = atIndInit + avg;
+			this._combatants[oldIndex].initiative = avg;
 		}
 	}
 
