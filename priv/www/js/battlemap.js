@@ -50,33 +50,40 @@ function BattleMap(actionElem, opts){
 	this._gridStroke = 1;
 
 	var attr;
+	var thisRef = this;
 	this._gridPattern = document.createElementNS(this._svgPaper.canvas.namespaceURI, 'pattern');
 	var patternAttr = {
 		'x':'0',
 		'y':'0',
-		'width':'32',
-		'height':'32',
+		'width': (32 * 16),
+		'height': (32 * 16),
 		'id':'gridPattern',
 		'patternUnits':'userSpaceOnUse'
 	};
 	for(attr in patternAttr){
 		this._gridPattern.setAttribute(attr, patternAttr[attr]);
 	}
-
-	this._patternRect = document.createElementNS(this._svgPaper.canvas.namespaceURI, 'rect');
-	var patternRectAttr = {
-		'x':'0',
-		'y':'0',
-		'width':'100%',
-		'height':'100%',
-		'stroke':this._gridlineColor,
-		'stroke-width':this._gridStroke,
-		'stroke-opacity':1,
-		'fill-opacity':0
-	};
-	for(attr in patternRectAttr){
-		this._patternRect.setAttribute(attr, patternRectAttr[attr]);
-	}
+	var cols = BattleMap._seq(16);
+	cols.map(function(coln, colIndex){
+		var rows = BattleMap._seq(16);
+		rows.map(function(rown, rowIndex){
+			var patternRectAttr = {
+				'x':rowIndex * 32,
+				'y':colIndex * 32,
+				'width':'32',
+				'height':'32',
+				'stroke':thisRef._gridlineColor,
+				'stroke-width':thisRef._gridStroke,
+				'stroke-opacity':1,
+				'fill-opacity':0
+			};
+			var patternRect = document.createElementNS(thisRef._svgPaper.canvas.namespaceURI, 'rect');
+			for(attr in patternRectAttr){
+				patternRect.setAttribute(attr, patternRectAttr[attr]);
+			}
+			thisRef._gridPattern.appendChild(patternRect);
+		});
+	});
 
 	$('defs', this._svgPaper.node).append(this._gridPattern);
 	$(this._gridPattern).append(this._patternRect);
@@ -108,7 +115,6 @@ function BattleMap(actionElem, opts){
 	for(i in opts){
 		this[i] = opts[i]
 	}
-	var thisRef = this;
 	if(! tmpCombatants){
 		tmpCombatants = [];
 	}
@@ -254,7 +260,7 @@ BattleMap.prototype = {
 	},
 	set gridlineColor(val){
 		this._gridlineColor = val;
-		this._patternRect.setAttribute('stroke',this._gridlineColor);
+		$('rect', this._gridPattern).attr('stroke', this._gridlineColor);
 		$(this).trigger('propertyChanged', 'gridlineColor');
 	},
 
@@ -263,7 +269,7 @@ BattleMap.prototype = {
 	},
 	set gridStroke(val){
 		this._gridStroke = val;
-		this._gridRect.attr('stroke-width',this._gridStroke);
+		$('rect', this._gridPattern).attr('stroke-width', this._gridStroke);
 		$(this).trigger('propertyChanged', 'gridStroke');
 	},
 
