@@ -226,7 +226,7 @@ BattleMap.prototype = {
 	get translation(){
 		return [this._translateX, this._translateY];
 	},
-	set translateion(val){
+	set translation(val){
 		this._translateX = val[0];
 		this._translateY = val[1];
 		this._triggerTransformListeners();
@@ -237,6 +237,7 @@ BattleMap.prototype = {
 	},
 	set gridSpacing(val){
 		this._gridSpacing = val;
+		this._triggerTransformListeners();
 	},
 
 	get backgroundColor() {
@@ -245,6 +246,7 @@ BattleMap.prototype = {
 	set backgroundColor(val) {
 		this._backgroundColor = val;
 		$(this.actionElem).css('background-color', val);
+		$(this).trigger('propertyChanged', 'backgroundColor');
 	},
 
 	get gridlineColor(){
@@ -253,6 +255,7 @@ BattleMap.prototype = {
 	set gridlineColor(val){
 		this._gridlineColor = val;
 		this._patternRect.setAttribute('stroke',this._gridlineColor);
+		$(this).trigger('propertyChanged', 'gridlineColor');
 	},
 
 	get gridStroke(){
@@ -261,6 +264,7 @@ BattleMap.prototype = {
 	set gridStroke(val){
 		this._gridStroke = val;
 		this._gridRect.attr('stroke-width',this._gridStroke);
+		$(this).trigger('propertyChanged', 'gridStroke');
 	},
 
 	get combatants(){
@@ -591,6 +595,7 @@ BattleMap.loadLocal = function(name, actionElem){
 
 BattleMap.prototype.deleteLocal = function(){
 	BattleMap.deleteLocal(this.name);
+	$(this).trigger('localDelete');
 }
 
 BattleMap.deleteLocal = function(name){
@@ -598,7 +603,10 @@ BattleMap.deleteLocal = function(name){
 }
 
 BattleMap.prototype.deleteRemote = function(){
-	return BattleMap.deleteRemote(this.url);
+	var thisRef = this;
+	return BattleMap.deleteRemote(this.url).done(function(){
+		$(thisRef).trigger('remoteDelete');
+	});
 }
 
 BattleMap.deleteRemote = function(url){
@@ -810,6 +818,7 @@ Combatant.prototype = {
 	set color(val){
 		this._color = val;
 		this.svgData.colorRect.attr({fill:val});
+		$(this).trigger('propertyChanged', 'color');
 	},
 
 	get size(){
@@ -825,6 +834,7 @@ Combatant.prototype = {
 			var imageSize = (cellSize * this._size) - (padding * 2);
 			this.svgData.image.attr({width:imageSize,height:imageSize});
 		}
+		$(this).trigger('propertyChanged', 'size');
 	},
 
 	get cellX(){
@@ -833,6 +843,7 @@ Combatant.prototype = {
 	set cellX(val){
 		this._cellX = val;
 		this.updateTransform();
+		$(this).trigger('propertyChanged', 'cellX');
 	},
 
 	get cellY(){
@@ -841,6 +852,7 @@ Combatant.prototype = {
 	set cellY(val){
 		this._cellY = val;
 		this.updateTransform();
+		$(this).trigger('propertyChanged', 'cellY');
 	},
 
 	get cell(){
@@ -850,6 +862,7 @@ Combatant.prototype = {
 		this._cellX = xy[0];
 		this._cellY = xy[1];
 		this.updateTransform();
+		$(this).trigger('propertyChanged', 'cell');
 	},
 
 	get image(){
@@ -866,6 +879,7 @@ Combatant.prototype = {
 			this._image = val;
 			this.updateTransform();
 		}
+		$(this).trigger('propertyChanged', 'image');
 	}
 }
 
@@ -924,12 +938,14 @@ Combatant.prototype.startPulsating = function(){
 	}
 	pulseGrow();
 	this.pulsating = true;
+	$(this).trigger('propertyChanged', 'pulsating');
 }
 
 Combatant.prototype.stopPulsating = function(){
 	this.svgObject.stop();
 	this.svgObject.transform('');
 	this.pulsating = false;
+	$(this).trigger('propertyChanged', 'pulsating');
 }
 
 Combatant.sortByInitiative = function(combater1, combater2){
@@ -1013,6 +1029,7 @@ CombatZone.prototype = {
 	set strokeColor(val){
 		this._strokeColor = val;
 		this.walls.attr({'stroke': val});
+		$(this).trigger('propertyChanged', 'strokeColor');
 	},
 
 	get strokeOpacity(){
@@ -1021,6 +1038,7 @@ CombatZone.prototype = {
 	set strokeOpacity(val){
 		this._strokeOpacity= val;
 		this.walls.attr({'stroke-opacity': val});
+		$(this).trigger('propertyChanged', 'strokeOpacity');
 	},
 
 	get strokeWidth(){
@@ -1029,6 +1047,7 @@ CombatZone.prototype = {
 	set strokeWidth(val){
 		this._strokeWidth= val;
 		this.walls.attr({'stroke-width': val});
+		$(this).trigger('propertyChanged', 'strokeWidth');
 	},
 
 	get color(){
@@ -1037,6 +1056,7 @@ CombatZone.prototype = {
 	set color(val){
 		this._color = val;
 		this.floor.attr({'fill': val});
+		$(this).trigger('propertyChanged', 'color');
 	},
 
 	get startCell(){
@@ -1046,6 +1066,7 @@ CombatZone.prototype = {
 		this._startCell = xyArr;
 		this.updateTransform();
 		this.updatePath();
+		$(this).trigger('propertyChanged', 'startCell');
 	},
 
 	get rotation(){
@@ -1054,6 +1075,7 @@ CombatZone.prototype = {
 	set rotation(val){
 		this._rotation = val;
 		this.updateTransform();
+		$(this).trigger('propertyChanged', 'rotation');
 	},
 
 	get layer(){
@@ -1072,6 +1094,7 @@ CombatZone.prototype = {
 			'fill-opacity':opacity
 		});
 		this.battlemap.setPaintOrder();
+		$(this).trigger('propertyChanged', 'layer');
 	},
 
 	get path(){
@@ -1088,6 +1111,7 @@ CombatZone.prototype = {
 	set zIndex(val){
 		this._zIndex = val;
 		this.battlemap.setPaintOrder();
+		$(this).trigger('propertyChanged', 'zIndex');
 	},
 
 	get fillRule(){
@@ -1096,6 +1120,7 @@ CombatZone.prototype = {
 	set fillRule(val){
 		this._fillRule = val;
 		this.floor.node.setAttribute('fill-rule', val);
+		$(this).trigger('propertyChanged', 'fillRule');
 	}
 }
 
@@ -1120,6 +1145,7 @@ CombatZone.prototype.updateTransform = function(){
 			rotate = this._rotation;
 	}
 	this.svgObject.transform(transformStr + rotate + startCellPart);
+	$(this).trigger('transformUpdated', this);
 }
 
 CombatZone.prototype.toGrid = function(xory){
