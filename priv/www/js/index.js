@@ -192,7 +192,6 @@ $().ready(function(){
 
 	$('#savedMapsList').battlemapLocker({
 		'load':function(mapData){
-			console.log('data loaded', mapData);
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			rebuildZoneList();
@@ -206,7 +205,6 @@ $().ready(function(){
 	$('#saveButton').battlemapSaveButton({
 		'battlemap':window.battleMap,
 		'save':function(){
-			console.log('save done', this, arguments);
 			$('#savedMapsList').battlemapLocker('refresh');
 		}
 	});
