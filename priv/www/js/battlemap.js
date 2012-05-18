@@ -976,7 +976,7 @@ function CombatZone(battlemap, opts){
 	//this.cells = CombatZone.square;
 	this._startCell = [0,0];
 	//this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
-	this.name = 'CombatZone of Doom';
+	this._name = 'CombatZone of Doom';
 	this._color = 'darkgreen';
 	this._layer = "ground";
 	this._zIndex = 1;
@@ -1031,6 +1031,14 @@ function CombatZone(battlemap, opts){
 }
 
 CombatZone.prototype = {
+	get name(){
+		return this._name;
+	},
+	set name(val){
+		this._name = val;
+		$(this).trigger('propertyChanged', 'name');
+	},
+
 	get strokeColor(){
 		return this._strokeColor;
 	},
