@@ -1,5 +1,15 @@
+function combatantChangedHandler(combatant, property){
+	console.log('bing!');
+	var syncables = ['name', 'color', 'initiative', 'pulsating'];
+	if(syncables.indexOf(property) < 0){
+		return;
+	}
+	syncCombatantList();
+}
+
 function insertCombatant(combatant) {
 	var combatantList = $('#combatantList li');
+	$(combatant).bind('propertyChanged', combatantChangedHandler);
 	battleMap.addCombatant(combatant);
 	syncCombatantList();
 	/*var listItem = generateInitListItem(battleMap.combatants.length - 1, combatant);
@@ -187,6 +197,9 @@ $().ready(function(){
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			rebuildZoneList();
+			battleMap.combatants.map(function(c){
+				return $(c).bind('propertyChanged', combatantChangedHandler);
+			});
 			syncCombatantList();
 		}
 	});
