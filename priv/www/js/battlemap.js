@@ -734,7 +734,7 @@ function was called, this is triggered.
 function Combatant(battlemap, opts){
 	this.battlemap = battlemap;
 	// opts should override most of these.
-	this.name = "Jethro";
+	this._name = "Jethro";
 	this._color = "green";
 	this._cellX = 0;
 	this._cellY = 0;
@@ -810,6 +810,14 @@ function Combatant(battlemap, opts){
 Combatant.prototype = {
 	get layer(){
 		return "action";
+	},
+
+	get name(){
+		return this._name;
+	},
+	set name(val){
+		this._name = val;
+		$(this).trigger('propertyChanged', 'name');
 	},
 
 	get color(){

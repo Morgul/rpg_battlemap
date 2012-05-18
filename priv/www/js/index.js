@@ -1,5 +1,4 @@
 function combatantChangedHandler(combatant, property){
-	console.log('bing!');
 	var syncables = ['name', 'color', 'initiative', 'pulsating'];
 	if(syncables.indexOf(property) < 0){
 		return;
