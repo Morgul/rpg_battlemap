@@ -166,12 +166,48 @@ EditZone.prototype.select = function(){
 	var pathStr = this.zone.path;
 	var segments = Raphael.parsePathString(pathStr);
 	var thisRef = this;
-	this.points = segments.map(function(segment){
-		var last = segment.length - 1;
-		var point = new Point(thisRef.battlemap, segment[last - 1], segment[last]);
-		return point;
+	var pointsBuilding = [new Point(this.battlemap, this.zone.startCell[0], this.zone.startCell[1])];
+	segments.map(function(segment){
+		var lastpoint = pointsBuilding[pointsBuilding.length - 1];
+		var x = 0;
+		var y = 0;
+		switch(segment[0]){
+			case "z":
+			case "Z":
+				x = pointsBuilding[0].x;
+				y = pointsBuilding[0].y;
+				break;
+			case "h":
+			case "H":
+				y = lastpoint.y;
+				x = segement[1];
+				if(segment[0] == "h"){
+					x = segment[1] + lastpoint.x;
+				}
+				break;
+			case "v":
+			case "V":
+				x = lastpoint.x;
+				y = segment[1];
+				if(segment[0] == "v"){
+					y = segment[1] + lastpoint.y;
+				}
+				break;
+			default:
+				var last = segment.length - 1;
+				var x = segment[last - 1];
+				var y = segment[last];
+				if(segment[0].toLowerCase() == segment[0]){
+					x += lastpoint.x;
+					y += lastpoint.y;
+				}
+				break;
+		}
+		var newPoint = new Point(thisRef.battlemap, x, y);
+		pointsBuilding.push(newPoint);
+		return newPoint;
 	});
-	this.points.unshift(new Point(this.battlemap, this.zone.startCell[0], this.zone.startCell[1]));
+	this.points = pointsBuilding;
 }
 
 EditZone.prototype.updateProperties = function(){
@@ -435,7 +471,11 @@ function Point(battlemap, posX, posY, size, fill, stroke) {
 	this._strokeColor = stroke;
 
 	if ((typeof posX !== 'undefined') && (typeof posY !== 'undefined')){
-		this.position = {x: posX, y: posY};
+		if(isNaN(posX) || isNaN(posY)){
+			console.warn('not setting position due to nans', posX, posY);
+		} else {
+			this.position = {x: posX, y: posY};
+		}
 	}
 
 	this.pointType = "L" // "L", "M", "c"
@@ -456,6 +496,20 @@ Point.prototype = {
 			cx:this._position.x * this.battlemap.gridSpacing,
 			cy:this._position.y * this.battlemap.gridSpacing
 		});
+	},
+
+	get x(){
+		return this._position.x;
+	},
+	set x(val){
+		this.position({'x':val,'y':this.y});
+	},
+
+	get y(){
+		return this._position.y;
+	},
+	set y(val){
+		this.position({'x':this.x,'y':val});
 	},
 
 	get size(){
