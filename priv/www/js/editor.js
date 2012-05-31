@@ -77,17 +77,20 @@ Editor.prototype.mousedownHandler = function(ev){
 
 	setTimeout($.proxy(function() {
 		if (this.dragging == false && this.dblclick == false){
+			var currentPos = this.pointer.position;
 			if(this._currentZone == null){
-				this._currentZone = new EditZone(this.battlemap, this);
+				var z = new CombatZone(this.battlemap, {startCell: [currentPos.x, currentPos.y], path:'z'});
+				this._currentZone = new EditZone(this.battlemap, this, z);
+				this._currentZone.zone.startCell = [currentPos.x, currentPos.y];
 				this.zoneChanged();
+				return;
 			}
 
-			var zone = this.currentZone;
+			/*var zone = this.currentZone;
 			var startPos = null;
 			if (this.currentZone.points.length > 0){
 				var startPos = this.currentZone.points[0].position;
-			}
-			var currentPos = this.pointer.position;
+			}*/
 
 			var point = this.currentZone.addPoint(currentPos.x, currentPos.y);
 			if (this.rightClick){
@@ -96,11 +99,15 @@ Editor.prototype.mousedownHandler = function(ev){
 				this.rightClick = false;
 			}
 
-			if (startPos != null && startPos.x == currentPos.x &&
+			var zoneStart = this.currentZone.zone.startCell;
+			if(zoneStart[0] == currentPos.x && zoneStart[1] == currentPos.y){
+				this.currentZone.finishZone();
+			}
+			/*if (startPos != null && startPos.x == currentPos.x &&
 				startPos.y == currentPos.y) {
 				// Clicking on the first point closes the zone.
 				this.currentZone.finishZone();
-			}
+			}*/
 		} else {
 			this.dblclick = false;
 		}
@@ -131,14 +138,19 @@ function EditZone(battlemap, editor, inZone){
 	this.battlemap = battlemap;
 	this.editor = editor;
 	this.points = new Array();
+	this.finishPrefix = "L";
 	if(! inZone){
 		this.zone = new CombatZone(this.battlemap, {path: "Mz"});
+		this.updateProperties();
 	} else {
 		this.zone = inZone;
+		$('#zone_name').val(this.zone.name);
+		$('#zone_color').val(this.zone.strokeColor);
+		$('#zone_alpha').val(this.zone.strokeOpacity);
+		$('#zone_stroke').val(this.zone.strokeWidth);
+		$('#fill_color').val(this.zone.color);
 	}
-	this.finishPrefix = "L";
 
-	this.updateProperties();
 	this.select();
 }
 
@@ -159,6 +171,7 @@ EditZone.prototype.select = function(){
 		var point = new Point(thisRef.battlemap, segment[last - 1], segment[last]);
 		return point;
 	});
+	this.points.unshift(new Point(this.battlemap, this.zone.startCell[0], this.zone.startCell[1]));
 }
 
 EditZone.prototype.updateProperties = function(){
@@ -218,11 +231,12 @@ EditZone.prototype.updateZone = function(){
 	var pathArray = new Array();
 	var totalPoints = this.points.length;
 	var finishPrefix = this.finishPrefix;
+	//var start = [0,0];
 	$(this.points).each(function(index, point){
 		if (index == 0)
 		{
 			// We're the starting point.
-			pathArray.push("M" + point.position.x + "," + point.position.y);
+			start = [point.position.x, point.position.y];
 		} else if (index == totalPoints - 1){
 			// We're the last point.
 			pathArray.push(finishPrefix + point.position.x + "," + point.position.y);
@@ -231,7 +245,8 @@ EditZone.prototype.updateZone = function(){
 		}
 	});
 
-	this.zone.path = "M " + pathArray.join(" ") + " z";
+	this.zone.startCell = start;
+	this.zone.path = pathArray.join(" ") + " z";
 }
 
 EditZone.prototype.finishZone = function(moveTo){
