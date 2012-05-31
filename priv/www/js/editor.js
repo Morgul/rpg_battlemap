@@ -587,6 +587,7 @@ function updateZoneList(){
 					editor.currentZone = null;
 					return false;
 				}
+				editor.currentZone.unselect();
 			}
 			editor.currentZone = new EditZone(battleMap, editor, zone);
 		})
