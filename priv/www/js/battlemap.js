@@ -975,6 +975,10 @@ Class for holding freeform shaped areas.  Use cases are:
 To support this, a combat zone is basically a path that can float above
 the combatants or below, be filled or not, be closed or not, and be
 transparent or not.
+
+Path can take either a string or an array.  Which ever is easier to use
+depends on if you are editing the path using a text editor or
+programatically.
 ***********************************************************************/
 
 function CombatZone(battlemap, opts){
@@ -992,6 +996,7 @@ function CombatZone(battlemap, opts){
 	this._strokeColor = "black";
 	this._strokeWidth = 5;
 	this._fillRule = 'evenodd';
+	this._gappy = true;
 
 	//var svgPathString = this.makeSvgPathString();
 	var pap = this.battlemap.svgPaper;
@@ -1085,7 +1090,8 @@ CombatZone.prototype = {
 		return this._startCell;
 	},
 	set startCell(xyArr){
-		this._startCell = xyArr;
+		var thisRef = this;
+		this._startCell = xyArr.map(function(n){ return thisRef.toGrid(n); });
 		this.updateTransform();
 		this.updatePath();
 		$(this).trigger('propertyChanged', 'startCell');
@@ -1143,6 +1149,14 @@ CombatZone.prototype = {
 		this._fillRule = val;
 		this.floor.node.setAttribute('fill-rule', val);
 		$(this).trigger('propertyChanged', 'fillRule');
+	},
+
+	get gappy(){
+		return this._gappy;
+	},
+	set gappy(val){
+		this._gappy = val;
+		this.updatePath();
 	}
 }
 
@@ -1267,6 +1281,58 @@ CombatZone.prototype.makeSvgPathString = function(){
 	return firstMove + " " + outPath;
 }
 
+CombatZone.prototype.gridilize = function(pathArr){
+	var cellSize = this.battlemap.gridSpacing;
+	var toGrid = function(xory){
+		return xory * cellSize;
+	};
+	var arg = pathArr.shift();
+	pathArr = pathArr.map(function(parts){
+		var subarg = parts.shift();
+		switch(subarg){
+			case "M":
+			case "L":
+			case "T":
+			case "m":
+			case "l":
+			case "t":
+				parts = parts.map(toGrid);
+				break;
+			case "H":
+			case "V":
+			case "h":
+			case "v":
+				parts = parts.map(toGrid);
+				break;
+			case "S":
+			case "Q":
+			case "R":
+			case "s":
+			case "q":
+			case "r":
+				parts = parts.map(toGrid);
+				break;
+			case "C":
+			case "c":
+				parts = parts.map(toGrid);
+				break;
+			case "A":
+			case "a":
+				parts = parts.map(function(elem, ind){
+					if(ind < 3 || 5 < ind){
+						return(toGrid(elem));
+					}
+					return elem;
+				});
+				break;
+		}
+		parts.unshift(subarg);
+		return parts;
+	});
+	pathArr.unshift(arg);
+	return pathArr;
+}
+
 CombatZone.prototype.toJsonable = function(){
 	return {
 		startCell: this.startCell,
@@ -1277,7 +1343,8 @@ CombatZone.prototype.toJsonable = function(){
 		rotation: this.rotation,
 		path: this.path,
 		strokeOpacity: this.strokeOpacity,
-		strokeColor: this.strokeColor
+		strokeColor: this.strokeColor,
+		gappy: this.gappy
 	};
 }
 
@@ -1321,11 +1388,31 @@ CombatZone.prototype.safeCell = function(xy){
 }*/
 
 CombatZone.prototype.updatePath = function(){
-	var pathStr = this.makeSvgPathString();
-	var floorPath = pathStr.replace("m","l").replace("M","L");
-	floorPath =  pathStr[0] + floorPath.substr(1);
-	this.floor.attr({'path':floorPath});
-	this.walls.attr({'path':pathStr});
+	var pathArray = Raphael.pathToRelative(this._path);
+	if(pathArray.length > 0){
+		if(pathArray[0][0] == "M"){
+			pathArray[0][0] = "m";
+		}
+	}
+	var gs = this.battlemap.gridSpacing;
+	var xy = this._startCell;
+	var firstMove = ["M", xy[0], xy[1]];
+	var floorArray = JSON.parse(JSON.stringify(pathArray));
+	if(this._gappy){
+		floorArray = floorArray.map(function(arr){
+			if(arr[0] == "M"){
+				arr[0] = "L";
+			}
+			if(arr[0] == "m"){
+				arr[0] = "l";
+			}
+			return arr;
+		});
+	}
+	floorArray.unshift(firstMove);
+	pathArray.unshift(firstMove);
+	this.walls.attr('path', this.gridilize(pathArray));
+	this.floor.attr('path', this.gridilize(floorArray));
 	this.updateTransform();
 }
 
