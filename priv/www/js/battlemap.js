@@ -46,7 +46,8 @@ function BattleMap(actionElem, opts){
 
 	// look and feel
 	this._backgroundColor = "#e0e0e0";
-	this._gridlineColor = "rgba(0,0,0,.5)";
+	this._gridlineColor = "rgba(0,0,0)";
+	this._gridOpacity = 1;
 	this._gridStroke = 1;
 
 	var attr;
@@ -74,7 +75,7 @@ function BattleMap(actionElem, opts){
 				'height':'32',
 				'stroke':thisRef._gridlineColor,
 				'stroke-width':thisRef._gridStroke,
-				'stroke-opacity':1,
+				'stroke-opacity':this._gridOpacity,
 				'fill-opacity':0
 			};
 			var patternRect = document.createElementNS(thisRef._svgPaper.canvas.namespaceURI, 'rect');
@@ -271,6 +272,15 @@ BattleMap.prototype = {
 		this._gridStroke = val;
 		$('rect', this._gridPattern).attr('stroke-width', this._gridStroke);
 		$(this).trigger('propertyChanged', 'gridStroke');
+	},
+
+	get gridOpacity(){
+		return this._gridOpacity;
+	},
+	set gridOpacity(val){
+		this._gridOpacity = val;
+		$('rect', this._gridPattern).attr('stroke-opacity', val);
+		$(this).trigger('propertyChanged', 'gridOpacity');
 	},
 
 	get combatants(){

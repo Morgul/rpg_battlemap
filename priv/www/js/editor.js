@@ -622,27 +622,25 @@ $().ready(function(){
 	addColorPicker('.zone', 'zone_color');
 	addColorPicker('.fill', 'fill_color');
 
-	// Grid Line Color editor
-	$('#grid_color').val(rgb2Hex(battleMap.gridlineColor));
-	$('#grid_alpha').val(getAlphaFromRGBA(battleMap.gridlineColor));
-	$('#grid_stroke').val(battleMap.gridStroke);
-	$('#grid_color').change(function(){
+	datadump(battleMap, '#editGridProperties');
+
+	$('#editGridProperties input[object-property]').change(function(ev){
+		var property = ev.target.getAttribute('object-property');
+		var val = ev.target.value;
+		console.log('changing', property, battleMap[property], val);
+		battleMap[property] = val;
+	});
+	
+	/*$('#grid_color').blur(function(){
 		var color = color2Hex($('#grid_color').val());
 		var alpha = $('#grid_alpha').val();
 		var stroke = $('#grid_stroke').val();
 		battleMap.gridlineColor = hex2rgb(color, alpha);
 		battleMap.gridStroke = stroke;
-	});
-	$('#grid_color').blur(function(){
-		var color = color2Hex($('#grid_color').val());
-		var alpha = $('#grid_alpha').val();
-		var stroke = $('#grid_stroke').val();
-		battleMap.gridlineColor = hex2rgb(color, alpha);
-		battleMap.gridStroke = stroke;
-	});
+	});*/
 
 	// Grid Line alpha change handlers
-	$('#grid_alpha').change(function(){
+	/*$('#grid_alpha').change(function(){
 		$('#grid_color').change();
 	});
 	$('#grid_alpha').bind('input', function(){
@@ -670,7 +668,7 @@ $().ready(function(){
 		var color = color2Hex($('#map_color').val());
 		battleMap.backgroundColor = color;
 	});
-	$('#map_color').change();
+	$('#map_color').change();*/
 
 	// ------------------------------------------------------------------------
 
@@ -771,6 +769,10 @@ $().ready(function(){
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			window.editor.battlemap = window.battleMap;
+			window.editor.pointer.viewChangeHandler();
+			datadump(battleMap, '#editGridProperties');
+			$('.grid div').css('background-color', color2Hex(battleMap.gridlineColor));
+			$('.map div').css('background-color', color2Hex(battleMap.backgroundColor));
 			updateZoneList();
 		}
 	});

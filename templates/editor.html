@@ -17,24 +17,24 @@
 	</div>
 
 	<h3><a href="#">Grid Properties</a></h3>
-	<div><form action="javascript:void(0);">
+	<div><form action="javascript:void(0);" id="editGridProperties">
 		<p>
 			<div class="colorSelector grid"><div style="background-color: #0000ff"></div></div>
 			<label for="grid_color">Grid Color</label>
-			<input id="grid_color" name="grid_color" type="color" />
+			<input id="grid_color" name="grid_color" type="color" object-property="gridlineColor" display-attr="value" />
 		</p>
 
 		<p>
 			<label for="grid_alpha">Alpha</label>
-			<input type="number" step="0.1" min="0.0" max="1.0" id="grid_alpha" name="grid_alpha" />
+			<input type="number" step="0.1" min="0.0" max="1.0" id="grid_alpha" name="grid_alpha" object-property="gridOpacity" display-attr="value" />
 			<label for="grid_stroke">Stroke</label>
-			<input type="number" step="0.1" min="0.0" id="grid_stroke" name="grid_stroke" />
+			<input type="number" step="0.1" min="0.0" id="grid_stroke" name="grid_stroke" object-property="gridStroke" display-attr="value" />
 		</p>
 
 		<p>
 			<div class="colorSelector map"><div style="background-color: #0000ff"></div></div>
 			<label for="map_color">Map Color</label>
-			<input id="map_color" name="map_color" type="color" />
+			<input id="map_color" name="map_color" type="color" object-property="backgroundColor" display-attr="value" />
 		</p>
 	</form></div>
 
