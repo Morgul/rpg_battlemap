@@ -144,6 +144,7 @@ function EditZone(battlemap, editor, inZone){
 		this.updateProperties();
 	} else {
 		this.zone = inZone;
+		this.zone.path = Raphael.parsePathString(this.zone.path);
 		$('#zone_name').val(this.zone.name);
 		$('#zone_color').val(this.zone.strokeColor);
 		$('#zone_alpha').val(this.zone.strokeOpacity);
@@ -161,57 +162,61 @@ EditZone.prototype.unselect = function(){
 	this.points = [];
 }
 
+EditZone.pathToAbsolute = function(path, lastPos){
+	path = Raphael.parsePathString(path);
+	var absPath = path.map(function(segment){
+		switch(segment[0]){
+			case "z":
+			case "Z":
+				return segment;
+				break;
+			case "h":
+				segment[1] += lastPos[0];
+				lastPos[0] = segment[1];
+				return ["H", segment[1]];
+				break;
+			case "v":
+				segment[1] += lastPos[1];
+				lastPos[1] = segment[1];
+				return ["H", segment[1]];
+				break;
+			default:
+				var last = segment.length - 1;
+				if(segment[0].toUpperCase() == segment[0]){
+					lastPos[0] = segment[last - 1];
+					lastPos[1] = segment[last];
+					return segment;
+				}
+				segment[last - 1] += lastPos[0];
+				segment[last] += lastPos[1];
+				segment[0] = segment[0].toUpperCase();
+				lastPos = [segment[last - 1], segment[last]];
+				return segment;
+		}
+	});
+	return absPath;
+}
+
 EditZone.prototype.select = function(){
 	this.unselect();
 	var pathStr = this.zone.path;
-	var segments = Raphael.parsePathString(pathStr);
+	var absPath = EditZone.pathToAbsolute(pathStr, this.zone.startCell);
 	var thisRef = this;
 	var pointsBuilding = [new Point(this.zone, {
 		'x': this.zone.startCell[0],
 		'y': this.zone.startCell[1],
 		'index':'startCell'
 	})];
-	segments.map(function(segment, ind){
-		var lastpoint = pointsBuilding[pointsBuilding.length - 1];
-		var x = 0;
-		var y = 0;
-		switch(segment[0]){
-			case "z":
-			case "Z":
-				x = pointsBuilding[0].x;
-				y = pointsBuilding[0].y;
-				break;
-			case "h":
-			case "H":
-				y = lastpoint.y;
-				x = segement[1];
-				if(segment[0] == "h"){
-					x = segment[1] + lastpoint.x;
-				}
-				break;
-			case "v":
-			case "V":
-				x = lastpoint.x;
-				y = segment[1];
-				if(segment[0] == "v"){
-					y = segment[1] + lastpoint.y;
-				}
-				break;
-			default:
-				var last = segment.length - 1;
-				var x = segment[last - 1];
-				var y = segment[last];
-				if(segment[0].toLowerCase() == segment[0]){
-					x += lastpoint.x;
-					y += lastpoint.y;
-				}
-				break;
-		}
+	absPath.map(function(segment, ind){
+		var last = segment.length - 1;
 		var newPoint = new Point(thisRef.zone, {
-			'x':x, 'y':y, 'index':ind
+			'x': segment[last - 1],
+			'y': segment[last],
+			'index': ind,
+			'pointType': segment[0]
 		});
 		pointsBuilding.push(newPoint);
-		return newPoint;
+		return newPoint
 	});
 	this.points = pointsBuilding;
 }
@@ -462,17 +467,51 @@ Properties
 function Point(zone, options){
 	this.battlemap = zone.battlemap;
 	this.zone = zone;
+	this._ready = false;
 	this._index = 0;
 	this._position = {x:0, y:0};
 	this._size = 3;
 	this._fillColor = "#777";
 	this._strokeColor = "#777";
-	this.pointType = "L" // "L", "M", "c"
+	this._pointType = "L" // "L", "M", "c"
 	this.svgElement = this.battlemap.svgPaper.circle(0, 0, this._size);
+	this.svgElement.attr({
+		'fill':this._fillColor,
+		'stroke':this._strokeColor
+	});
 	for(var i in options){
 		this[i] = options[i];
 	}
 
+	this.svgElement.drag(
+		// onmove
+		function(dx, dy, px, py, ev){
+			// determine some data used for drag actions
+			var boundingRect = $(this.battlemap.actionElem)[0].getBoundingClientRect();
+			this.deltaX = boundingRect.left;
+			this.deltaY = boundingRect['top'];
+			this.lastCell = [this.cellX, this.cellY];
+			var x = px - this.deltaX;
+			var y = py - this.deltaY;
+			var cell = this.battlemap.getNearestCell(x,y);
+			this.position = {'x':cell[0], 'y':cell[1]};
+			console.log('move', cell, arguments);
+			ev.stopPropagation();
+			return false;
+		},
+		// onstart
+		function(x,y,ev){
+			console.log('start', arguments);
+			ev.stopPropagation();
+			return false;
+		},
+		// onend
+		function(x,y,ev){
+			console.log('end', arguments);
+			return false;
+		}, this, this, this
+	);
+	this._ready = true;
 	$(this.battlemap).bind("viewChanged", $.proxy(this.viewChangeHandler, this));
 	this.viewChangeHandler();
 }
@@ -489,6 +528,8 @@ Point.prototype = {
 			cx:this._position.x * this.battlemap.gridSpacing,
 			cy:this._position.y * this.battlemap.gridSpacing
 		});
+
+		this.setZone();
 	},
 
 	get x(){
@@ -540,6 +581,14 @@ Point.prototype = {
 	},
 	set index(val){
 		this._index = val;
+	},
+
+	get pointType(){
+		return this._pointType;
+	},
+	set pointType(val){
+		this._pointType = val;
+		this.setZone();
 	}
 }
 
@@ -564,6 +613,37 @@ Point.prototype.moveHandler = function(ev){
 		cy:context.position.y * context.battlemap.gridSpacing
 	});
 }
+
+Point.prototype.setZone = function(){
+	if(! this._ready){
+		return;
+	}
+	if(this.index == "startCell"){
+		this.zone.startCell = [this.x,this.y];
+		return;
+	}
+	var fullPath = this.zone.path;
+	var pathInfo = fullPath[this.index];
+	if(pathInfo.length == 1){
+		return;
+	}
+	if(pathInfo.length == 2){
+		if(pathInfo[0].toLowerCase == "h"){
+			pathInfo[1] = this.x;
+		} else {
+			pathInfo[1] = this.y;
+		}
+	} else {
+		var last = pathInfo.length - 1;
+		pathInfo[last - 1] = this.x;
+		pathInfo[last] = this.y;
+	}
+	pathInfo[0] = this.pointType;
+	fullPath[this.index] = pathInfo;
+	this.zone.path = fullPath;
+}
+
+
 
 /******************************************************************************
 Utility function to easily rebuild the list of zones
