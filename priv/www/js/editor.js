@@ -166,7 +166,10 @@ EditZone.prototype.select = function(){
 	var pathStr = this.zone.path;
 	var segments = Raphael.parsePathString(pathStr);
 	var thisRef = this;
-	var pointsBuilding = [new Point(this.battlemap, this.zone.startCell[0], this.zone.startCell[1])];
+	var pointsBuilding = [new Point(this.battlemap, {
+		'x': this.zone.startCell[0],
+		'y': this.zone.startCell[1]
+	})];
 	segments.map(function(segment){
 		var lastpoint = pointsBuilding[pointsBuilding.length - 1];
 		var x = 0;
@@ -203,7 +206,7 @@ EditZone.prototype.select = function(){
 				}
 				break;
 		}
-		var newPoint = new Point(thisRef.battlemap, x, y);
+		var newPoint = new Point(thisRef.battlemap, {'x':x, 'y':y});
 		pointsBuilding.push(newPoint);
 		return newPoint;
 	});
@@ -243,7 +246,7 @@ EditZone.prototype.p2s = function(x, y){
 }
 
 EditZone.prototype.addPoint = function(x, y){
-	var point = new Point(this.battlemap, x, y);
+	var point = new Point(this.battlemap, {'x':x, 'y':y});
 	this.points.push(point);
 
 	this.updateZone();
@@ -292,7 +295,10 @@ EditZone.prototype.finishZone = function(moveTo){
 	}
 
 	// Finish the path with a line/moveto back to the starting point.
-	var point = new Point(this.battlemap, this.points[0].position.x, this.points[0].position.y);
+	var point = new Point(this.battlemap, {
+		'x': this.points[0].position.x,
+		'y': this.points[0].position.y
+	});
 	this.points.push(point);
 
 	this.updateZone();
@@ -449,36 +455,18 @@ Properties
 
  * svgElement :: Object() - The underlying svg element
 ******************************************************************************/
-function Point(battlemap, posX, posY, size, fill, stroke) {
+
+function Point(battlemap, options){
 	this.battlemap = battlemap;
-	this._position = {x: 0, y:0};
-
-	// Build svg element
-	if (typeof size == 'undefined'){
-		size = 3;
-	}
-	this._size = size;
-	this.svgElement = this.battlemap.svgPaper.circle(0, 0, size);
-
-	if (typeof fill == 'undefined'){
-		fill = "#777";
-	}
-	this._fillColor = fill;
-
-	if (typeof stroke == 'undefined'){
-		stroke = "#777";
-	}
-	this._strokeColor = stroke;
-
-	if ((typeof posX !== 'undefined') && (typeof posY !== 'undefined')){
-		if(isNaN(posX) || isNaN(posY)){
-			console.warn('not setting position due to nans', posX, posY);
-		} else {
-			this.position = {x: posX, y: posY};
-		}
-	}
-
+	this._position = {x:0, y:0};
+	this._size = 3;
+	this._fillColor = "#777";
+	this._strokeColor = "#777";
 	this.pointType = "L" // "L", "M", "c"
+	this.svgElement = this.battlemap.svgPaper.circle(0, 0, this._size);
+	for(var i in options){
+		this[i] = options[i];
+	}
 
 	$(this.battlemap).bind("viewChanged", $.proxy(this.viewChangeHandler, this));
 	this.viewChangeHandler();
@@ -502,14 +490,14 @@ Point.prototype = {
 		return this._position.x;
 	},
 	set x(val){
-		this.position({'x':val,'y':this.y});
+		this.position = {'x':val,'y':this.y};
 	},
 
 	get y(){
 		return this._position.y;
 	},
 	set y(val){
-		this.position({'x':this.x,'y':val});
+		this.position = {'x':this.x,'y':val};
 	},
 
 	get size(){
@@ -738,7 +726,7 @@ $().ready(function(){
 	// make the left column a better accordian than accordian.
 	$('#leftColumnItems').multiAccordion({
 		autoHeight:false,
-		active:[0,1,2,3, 4]
+		active:[0,1,2,4]
 	});
 
 	// ------------------------------------------------------------------------
