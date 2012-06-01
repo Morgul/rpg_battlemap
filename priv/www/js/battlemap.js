@@ -1467,6 +1467,15 @@ function datadump(dataHolder, topNode){
 			return;
 		}
 
+		if(displayAttr == "checked"){
+			if(displayValue){
+				elem.setAttribute("checked", "checked");
+				return;
+			}
+			elem.removeAttribute("checked");
+			return;
+		}
+
 		var notAttrs = ["innerHTML", "innerText"];
 		if(notAttrs.indexOf(displayAttr) > -1){
 			elem[displayAttr] = displayValue;
