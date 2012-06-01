@@ -166,11 +166,12 @@ EditZone.prototype.select = function(){
 	var pathStr = this.zone.path;
 	var segments = Raphael.parsePathString(pathStr);
 	var thisRef = this;
-	var pointsBuilding = [new Point(this.battlemap, {
+	var pointsBuilding = [new Point(this.zone, {
 		'x': this.zone.startCell[0],
-		'y': this.zone.startCell[1]
+		'y': this.zone.startCell[1],
+		'index':'startCell'
 	})];
-	segments.map(function(segment){
+	segments.map(function(segment, ind){
 		var lastpoint = pointsBuilding[pointsBuilding.length - 1];
 		var x = 0;
 		var y = 0;
@@ -206,7 +207,9 @@ EditZone.prototype.select = function(){
 				}
 				break;
 		}
-		var newPoint = new Point(thisRef.battlemap, {'x':x, 'y':y});
+		var newPoint = new Point(thisRef.zone, {
+			'x':x, 'y':y, 'index':ind
+		});
 		pointsBuilding.push(newPoint);
 		return newPoint;
 	});
@@ -246,7 +249,7 @@ EditZone.prototype.p2s = function(x, y){
 }
 
 EditZone.prototype.addPoint = function(x, y){
-	var point = new Point(this.battlemap, {'x':x, 'y':y});
+	var point = new Point(this.zone, {'x':x, 'y':y});
 	this.points.push(point);
 
 	this.updateZone();
@@ -295,7 +298,7 @@ EditZone.prototype.finishZone = function(moveTo){
 	}
 
 	// Finish the path with a line/moveto back to the starting point.
-	var point = new Point(this.battlemap, {
+	var point = new Point(this.zone, {
 		'x': this.points[0].position.x,
 		'y': this.points[0].position.y
 	});
@@ -456,8 +459,10 @@ Properties
  * svgElement :: Object() - The underlying svg element
 ******************************************************************************/
 
-function Point(battlemap, options){
-	this.battlemap = battlemap;
+function Point(zone, options){
+	this.battlemap = zone.battlemap;
+	this.zone = zone;
+	this._index = 0;
 	this._position = {x:0, y:0};
 	this._size = 3;
 	this._fillColor = "#777";
@@ -528,6 +533,13 @@ Point.prototype = {
 			this._fillColor = val;
 			this.svgElement.attr("fill", val);
 		}
+	},
+
+	get index(){
+		return this._index;
+	},
+	set index(val){
+		this._index = val;
 	}
 }
 
