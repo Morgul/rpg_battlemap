@@ -1476,6 +1476,12 @@ function datadump(dataHolder, topNode){
 			return;
 		}
 
+		if(displayAttr == "property"){
+			var displayProp = elem.getAttribute("display-property");
+			elem[displayProp] = displayValue;
+			return;
+		}
+
 		var notAttrs = ["innerHTML", "innerText"];
 		if(notAttrs.indexOf(displayAttr) > -1){
 			elem[displayAttr] = displayValue;
