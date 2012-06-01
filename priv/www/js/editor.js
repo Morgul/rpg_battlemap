@@ -631,45 +631,6 @@ $().ready(function(){
 		battleMap[property] = val;
 	});
 	
-	/*$('#grid_color').blur(function(){
-		var color = color2Hex($('#grid_color').val());
-		var alpha = $('#grid_alpha').val();
-		var stroke = $('#grid_stroke').val();
-		battleMap.gridlineColor = hex2rgb(color, alpha);
-		battleMap.gridStroke = stroke;
-	});*/
-
-	// Grid Line alpha change handlers
-	/*$('#grid_alpha').change(function(){
-		$('#grid_color').change();
-	});
-	$('#grid_alpha').bind('input', function(){
-		$('#grid_color').change();
-	});
-
-	// Grid Line stroke change handlers
-	$('#grid_stroke').change(function(){
-		$('#grid_color').change();
-	});
-	$('#grid_stroke').bind('input', function(){
-		$('#grid_color').change();
-	});
-
-	// Fire the change event
-	$('#grid_color').change();
-
-	// Background Color editor
-	$('#map_color').val(rgb2Hex(battleMap.backgroundColor));
-	$('#map_color').change(function(){
-		var color = color2Hex($('#map_color').val());
-		battleMap.backgroundColor = color;
-	});
-	$('#map_color').blur(function(){
-		var color = color2Hex($('#map_color').val());
-		battleMap.backgroundColor = color;
-	});
-	$('#map_color').change();*/
-
 	// ------------------------------------------------------------------------
 
 	// Create an editor
@@ -739,15 +700,12 @@ $().ready(function(){
 	};
 	$(editor).bind('zone-changed', function(){
 		if(editor.currentZone != null){
-			var zone = editor.currentZone;
-			$('#zone_name').val(zone.zone.name);
-			$('#zone_color').val(zone.zone.strokeColor);
-			$('#zone_alpha').val(zone.zone.strokeOpacity);
-			$('#zone_stroke').val(zone.zone.strokeWidth);
-			$('#fill_color').val(zone.zone.color);
-
-			$('#zone_color').change();
-			$('#fill_color').change();
+			var zone = editor.currentZone.zone;
+			datadump(zone, 'form#zoneEditor');
+			var zoneColorHex = color2Hex($('#zone_color').val());
+			var fillColorHex = color2Hex($('#fill_color').val());
+			$('.zone div').css('background-color', zoneColorHex);
+			$('.fill div').css('background-color', fillColorHex);
 		}
 		if(zoneChangedRef.zoneCount != battleMap.zones.length){
 			updateZoneList();
