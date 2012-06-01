@@ -1097,7 +1097,8 @@ CombatZone.prototype = {
 	},
 
 	get startCell(){
-		return this._startCell;
+		var thisRef = this;
+		return this._startCell.map(function(n){ return n / thisRef.battlemap.gridSpacing; });
 	},
 	set startCell(xyArr){
 		var thisRef = this;
