@@ -1025,9 +1025,7 @@ programatically.
 
 function CombatZone(battlemap, opts){
 	this.battlemap = battlemap;
-	//this.cells = CombatZone.square;
 	this._startCell = [0,0];
-	//this.closed = (this.cells[0] == this.cells[this.cells.length - 1]);
 	this._name = 'CombatZone of Doom';
 	this._color = 'darkgreen';
 	this._layer = "ground";
@@ -1040,7 +1038,6 @@ function CombatZone(battlemap, opts){
 	this._fillRule = 'evenodd';
 	this._gappy = true;
 
-	//var svgPathString = this.makeSvgPathString();
 	var pap = this.battlemap.svgPaper;
 	this.svgObject = pap.set();
 	this.floor = pap.path();
@@ -1129,12 +1126,10 @@ CombatZone.prototype = {
 	},
 
 	get startCell(){
-		var thisRef = this;
-		return this._startCell.map(function(n){ return n / thisRef.battlemap.gridSpacing; });
+		return this._startCell;
 	},
 	set startCell(xyArr){
-		var thisRef = this;
-		this._startCell = xyArr.map(function(n){ return thisRef.toGrid(n); });
+		this._startCell = xyArr;
 		this.updateTransform();
 		this.updatePath();
 		$(this).trigger('propertyChanged', 'startCell');
@@ -1227,109 +1222,15 @@ CombatZone.prototype.updateTransform = function(){
 	$(this).trigger('transformUpdated', this);
 }
 
-CombatZone.prototype.toGrid = function(xory){
-	return xory * this.battlemap.gridSpacing;
-}
-
-CombatZone.prototype.alterXY = function(modFunc){
-	var pathArray = Raphael.parsePathString(this._path);
-	var newPathArr = pathArray.map(function(parts){
-		switch(parts[0]){
-			case "M":
-			case "L":
-			case "T":
-			case "m":
-			case "l":
-			case "t":
-				return [parts[0], modFunc(parts[1]), modFunc(parts[2])];
-				break;
-			case "H":
-			case "V":
-			case "h":
-			case "v":
-				return [parts[0], modFunc(parts[1])];
-				break;
-			case "S":
-			case "Q":
-			case "R":
-			case "s":
-			case "q":
-			case "r":
-				return [parts[0], modFunc(parts[1]), modFunc(parts[2]), modFunc(parts[3]), modFunc(parts[4])];
-				break;
-			case "C":
-			case "c":
-				var modded = [parts[1], parts[2], parts[3], parts[4], parts[5], parts[6]].map(modFunc);
-				modded.unshift(parts[0]);
-				return modded;
-				break;
-			case "A":
-			case "a":
-				return [parts[0], modFunc(parts[1]), modFunc(parts[2]), parts[3],
-					parts[4], parts[5], modFunc(parts[6]), modFunc(parts[7])];
-				break;
-			default:
-				return parts;
-		}
-	});
-	return newPathArr.map(function(parts){
-		return parts.join(" ");
-	}).join(" ");
-}
-
-CombatZone.prototype.makeSvgPathString = function(){
-	var cellSize = this.battlemap.gridSpacing;
-	var pathArray = Raphael.parsePathString(this._path);
-	var toGrid = function(xory){
-		return xory * cellSize;
-	};
-	var outPath = "";
-	pathArray.map(function(parts){
-		switch(parts[0]){
-			case "M":
-			case "L":
-			case "T":
-			case "m":
-			case "l":
-			case "t":
-				outPath += parts[0] + [parts[1], parts[2]].map(toGrid).join(" ");
-				break;
-			case "H":
-			case "V":
-			case "h":
-			case "v":
-				outPath += parts[0] + [parts[1]].map(toGrid).join(" ");
-				break;
-			case "S":
-			case "Q":
-			case "R":
-			case "s":
-			case "q":
-			case "r":
-				outPath += parts[0] + [parts[1], parts[2], parts[3], parts[4]].map(toGrid).join(" ");
-				break;
-			case "C":
-			case "c":
-				outPath += parts[0] + [parts[1], parts[2], parts[3], parts[4], parts[5], parts[6]].map(toGrid).join(" ");
-				break;
-			case "A":
-			case "a":
-				outPath += [parts[0], parts[1] * cellSize, parts[2] * cellSize,
-					parts[3], parts[4], parts[5], parts[6] * cellSize,
-					parts[7] * cellSize].join(" ");
-				break;
-		}
-	});
-	var firstMove = "M " + this._startCell[0] * this.battlemap.gridSpacing + " " + this._startCell[1] * this.battlemap.gridSpacing;
-	return firstMove + " " + outPath;
+CombatZone.prototype.toGridFun = function(){
+	var gs = this.battlemap.gridSpacing;
+	return function(xory){
+		return xory * gs;
+	}
 }
 
 CombatZone.prototype.gridilize = function(pathArr){
-	var cellSize = this.battlemap.gridSpacing;
-	var toGrid = function(xory){
-		return xory * cellSize;
-	};
-	var arg = pathArr.shift();
+	var toGrid = this.toGridFun();
 	pathArr = pathArr.map(function(parts){
 		var subarg = parts.shift();
 		switch(subarg){
@@ -1372,7 +1273,6 @@ CombatZone.prototype.gridilize = function(pathArr){
 		parts.unshift(subarg);
 		return parts;
 	});
-	pathArr.unshift(arg);
 	return pathArr;
 }
 
@@ -1391,64 +1291,24 @@ CombatZone.prototype.toJsonable = function(){
 	};
 }
 
-/*CombatZone.prototype.addCell = function(xy, pos){
-	if(pos == undefined){
-		this.cells.push(pos);
-	} else {
-		this.cells.splice(pos, 0, xy);
-	}
-	this.updatePath();
-}
-
-CombatZone.prototype.removeCell = function(cellref){
-	if(cellref instanceof Array){
-		var ind = this.cells.indexOf(cellref);
-		if(ind > -1){
-			this.cells.splice(ind, 1);
-		}
-	} else {
-		this.cells.splice(cellref, 1);
-	}
-	this.updatePath();
-}
-
-// true:  anywhere
-// false:  nowhere
-// append:  last cell to close the path
-// prepend:  first cell to close the path
-CombatZone.prototype.safeCell = function(xy){
-	var ind = this.cells.indexOf(xy);
-	if(ind < 0){
-		return true;
-	}
-	if(xy == this.cells[0] && xy != this.cells[this.cells.length - 1]){
-		return "append";
-	}
-	if(xy != this.cells[0] && xy == this.cells[this.cells.length - 1]){
-		return "prepend";
-	}
-	return false;
-}*/
-
 CombatZone.prototype.updatePath = function(){
 	var gs = this.battlemap.gridSpacing;
 	var xy = this._startCell;
+	var toGrid = this.toGridFun();
 	var firstMove = ["M", xy[0], xy[1]];
 
-	var pathArray = JSON.parse(JSON.stringify(this._path));
-	pathArray = Raphael.parsePathString(this._path);
+	var tmppathArray = JSON.parse(JSON.stringify(this._path));
+	tmppathArray = Raphael.parsePathString(tmppathArray);
+	var pathArray = JSON.parse(JSON.stringify(tmppathArray));
 	pathArray.unshift(firstMove);
 	pathArray = Raphael.pathToRelative(pathArray);
-	pathArray.shift();
 	
-	if(pathArray.length > 0){
-		if(pathArray[0][0] == "M"){
-			pathArray[0][0] = "m";
-		}
-	}
 	var floorArray = JSON.parse(JSON.stringify(pathArray));
 	if(this._gappy){
-		floorArray = floorArray.map(function(arr){
+		floorArray = floorArray.map(function(arr, ind){
+			if(ind == 0){
+				return arr;
+			}
 			if(arr[0] == "M"){
 				arr[0] = "L";
 			}
@@ -1458,8 +1318,8 @@ CombatZone.prototype.updatePath = function(){
 			return arr;
 		});
 	}
-	floorArray.unshift(firstMove);
-	pathArray.unshift(firstMove);
+	//floorArray.unshift(firstMove);
+	//pathArray.unshift(firstMove);
 	this.walls.attr('path', this.gridilize(pathArray));
 	this.floor.attr('path', this.gridilize(floorArray));
 	this.updateTransform();

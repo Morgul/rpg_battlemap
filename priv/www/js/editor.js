@@ -517,13 +517,13 @@ function Point(zone, options){
 		},
 		// onstart
 		function(x,y,ev){
-			console.log('start', arguments);
+			console.log('start', this.index, arguments);
 			ev.stopPropagation();
 			return false;
 		},
 		// onend
 		function(x,y,ev){
-			console.log('end', arguments);
+			console.log('end', this.index, arguments);
 			return false;
 		}, this, this, this
 	);
