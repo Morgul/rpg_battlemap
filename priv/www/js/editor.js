@@ -7,6 +7,7 @@ function Editor(battlemap){
 	this._battlemap = battlemap;
 	this.zones = [];
 	this._currentZone = null;
+	this._mode = "addPoint";
 	this.pointer = new Pointer(this._battlemap, 4, "#09f", "#05d");
 	this.bindEvents();
 
@@ -50,6 +51,13 @@ Editor.prototype = {
 	set battlemap(map){
 		this._battlemap = map;
 		this.pointer = new Pointer(this._battlemap, 4, "#09f", "#05d");
+	},
+
+	get mode(){
+		return this._mode;
+	},
+	set mode(val){
+		this._mode = val;
 	}
 }
 
@@ -218,7 +226,8 @@ EditZone.prototype.select = function(){
 	var pointsBuilding = [new Point(this.zone, {
 		'x': this.zone.startCell[0],
 		'y': this.zone.startCell[1],
-		'index':'startCell'
+		'index':'startCell',
+		'editor':this
 	})];
 	absPath.map(function(segment, ind){
 		if(segment[0].toLowerCase() == "z"){
@@ -229,13 +238,32 @@ EditZone.prototype.select = function(){
 			'x': segment[last - 1],
 			'y': segment[last],
 			'index': ind,
-			'pointType': segment[0]
+			'pointType': segment[0],
+			'editor':thisRef
 		});
 		pointsBuilding.push(newPoint);
 		return newPoint
 	});
 	//this.zone.path = absPath;
 	this.points = pointsBuilding;
+	this.points.map(function(p){
+		$(p).bind('click', function(ev){
+			console.log(this, thisRef, arguments);
+			switch(thisRef.mode){
+				case "setMovePoint":
+					this.pointType = "M";
+					break;
+				case "setLinePoint":
+					this.pointType = "L";
+					break;
+				case "setClosePoint":
+					this.pointType = "Z";
+					break;
+				}
+				ev.stopPropagation();
+				return false;
+		});
+	});
 }
 
 EditZone.prototype.updateProperties = function(){
@@ -271,7 +299,7 @@ EditZone.prototype.p2s = function(x, y){
 }
 
 EditZone.prototype.addPoint = function(x, y){
-	var point = new Point(this.zone, {'x':x, 'y':y});
+	var point = new Point(this.zone, {'x':x, 'y':y,'editor':this});
 	this.points.push(point);
 
 	this.updateZone();
@@ -499,6 +527,10 @@ function Point(zone, options){
 	for(var i in options){
 		this[i] = options[i];
 	}
+
+	this.svgElement.click(function(){
+		$(this).trigger('click', arguments);
+	}, this);
 
 	this.svgElement.drag(
 		// onmove
