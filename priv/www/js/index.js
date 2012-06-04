@@ -231,13 +231,13 @@ $().ready(function(){
 		window.battleMap.combatants.map(function(combatant, ind){
 			if(combatantInd == ind){
 				if(combatant.pulsating){
-					combatant.stopPulsating();
+					combatant.pulsating = false;
 					return true;
 				}
-				combatant.startPulsating();
+				combatant.pulsating = true;
 				return true;
 			}
-			combatant.stopPulsating();
+			combatant.pulsating = false;
 			return false;
 		});
 		return false;

@@ -755,6 +755,7 @@ function Combatant(battlemap, opts){
 	this._cellX = 0;
 	this._cellY = 0;
 	this._size = 1;
+	this._pulsating = false;
 	this.hp = 5;
 	this.initiative = 10;
 	this.conditions = [];
@@ -904,6 +905,21 @@ Combatant.prototype = {
 			this.updateTransform();
 		}
 		$(this).trigger('propertyChanged', 'image');
+	},
+
+	get pulsating(){
+		return this._pulsating;
+	},
+	set pulsating(val){
+		if(val){
+			this._startPulsating();
+			$(this).trigger('propertyChanged', 'pulsating');
+			return;
+		}
+		this._pulsating = false;
+		this._stopPulsating();
+		this.updateTransform();
+		($this).trigger('propertyChanged', 'pulsating');
 	}
 }
 
@@ -922,6 +938,7 @@ Combatant.prototype.toJsonable = function(){
 }
 
 Combatant.prototype.updateTransform = function(){
+	this._stopPulsating();
 	var basex = this._cellX * this.battlemap.gridSpacing;
 	var basey = this._cellY * this.battlemap.gridSpacing;
 	this.svgData.colorRect.attr({ x:basex, y:basey});
@@ -934,6 +951,9 @@ Combatant.prototype.updateTransform = function(){
 	}
 	var transformStr = this.battlemap.getTransformString(this.cellX, this.cellY);
 	this.svgObject.transform(transformStr);
+	if(this._pulsating){
+		this._startPulsating();
+	}
 	$(this).trigger("transformUpdated", this);
 }
 
@@ -950,25 +970,37 @@ Combatant.prototype.moveTo = function(newX, newY){
 	this.updateTransform();
 }
 
-Combatant.prototype.startPulsating = function(){
-	this.stopPulsating();
-	var offset = this.battlemap.gridSpacing / 2;
+Combatant.prototype.togglePulsating = function(){
+	if(this._pulsating){
+		this.pulsating = false;
+		return;
+	}
+	this.pulsating = true;
+}
+
+Combatant.prototype._startPulsating = function(){
+	this._stopPulsating();
+	var baseMatrix = this.svgData.colorRect.matrix;
+	var bigMatrix = baseMatrix.clone();
+	bigMatrix.scale(1.2);
+	var smallMatrix = baseMatrix.clone();
+	smallMatrix.scale(0.8);
 	var theSvg = this.svgObject;
 	var pulseGrow = function(){
-		theSvg.animate({'transform': 'S1.2'}, 1000, pulseShrink);
+		theSvg.animate({'transform': bigMatrix.toTransformString()}, 1000, pulseShrink);
 	}
 	var pulseShrink = function(){
-		theSvg.animate({'transform': 'S0.8'}, 1000, pulseGrow);
+		theSvg.animate({'transform': smallMatrix.toTransformString()}, 1000, pulseGrow);
 	}
 	pulseGrow();
-	this.pulsating = true;
+	this._pulsating = true;
 	$(this).trigger('propertyChanged', 'pulsating');
 }
 
-Combatant.prototype.stopPulsating = function(){
+Combatant.prototype._stopPulsating = function(){
 	this.svgObject.stop();
-	this.svgObject.transform('');
-	this.pulsating = false;
+	//this.svgObject.transform('');
+	//this.updateTransform();
 	$(this).trigger('propertyChanged', 'pulsating');
 }
 
@@ -1399,15 +1431,21 @@ CombatZone.prototype.safeCell = function(xy){
 }*/
 
 CombatZone.prototype.updatePath = function(){
-	var pathArray = Raphael.pathToRelative(this._path);
+	var gs = this.battlemap.gridSpacing;
+	var xy = this._startCell;
+	var firstMove = ["M", xy[0], xy[1]];
+
+	var pathArray = JSON.parse(JSON.stringify(this._path));
+	pathArray = Raphael.parsePathString(this._path);
+	pathArray.unshift(firstMove);
+	pathArray = Raphael.pathToRelative(pathArray);
+	pathArray.shift();
+	
 	if(pathArray.length > 0){
 		if(pathArray[0][0] == "M"){
 			pathArray[0][0] = "m";
 		}
 	}
-	var gs = this.battlemap.gridSpacing;
-	var xy = this._startCell;
-	var firstMove = ["M", xy[0], xy[1]];
 	var floorArray = JSON.parse(JSON.stringify(pathArray));
 	if(this._gappy){
 		floorArray = floorArray.map(function(arr){

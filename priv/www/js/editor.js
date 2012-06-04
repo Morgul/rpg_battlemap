@@ -144,7 +144,13 @@ function EditZone(battlemap, editor, inZone){
 		this.updateProperties();
 	} else {
 		this.zone = inZone;
-		this.zone.path = Raphael.parsePathString(this.zone.path);
+		if(this.zone.path.toString() === this.zone.path){
+			var midPath = "M " + this.zone.startCell[0] + " " + this.zone.startCell[1] + this.zone.path;
+			midPath = Raphael.parsePathString(midPath);
+			midPath.shift();
+			this.zone.path = midPath;
+		}
+		//this.zone.path = Raphael.parsePathString(this.zone.path);
 		$('#zone_name').val(this.zone.name);
 		$('#zone_color').val(this.zone.strokeColor);
 		$('#zone_alpha').val(this.zone.strokeOpacity);
@@ -163,11 +169,15 @@ EditZone.prototype.unselect = function(){
 }
 
 EditZone.pathToAbsolute = function(path, lastPos){
-	path = Raphael.parsePathString(path);
+	if(path.toString() === path){
+		path = Raphael.parsePathString(path);
+	}
+	var subPathStart = lastPos;
 	var absPath = path.map(function(segment){
 		switch(segment[0]){
 			case "z":
 			case "Z":
+				lastPos = subPathStart;
 				return segment;
 				break;
 			case "h":
@@ -185,12 +195,15 @@ EditZone.pathToAbsolute = function(path, lastPos){
 				if(segment[0].toUpperCase() == segment[0]){
 					lastPos[0] = segment[last - 1];
 					lastPos[1] = segment[last];
-					return segment;
+				} else {
+					segment[last - 1] += lastPos[0];
+					segment[last] += lastPos[1];
+					segment[0] = segment[0].toUpperCase();
+					lastPos = [segment[last - 1], segment[last]];
 				}
-				segment[last - 1] += lastPos[0];
-				segment[last] += lastPos[1];
-				segment[0] = segment[0].toUpperCase();
-				lastPos = [segment[last - 1], segment[last]];
+				if(segment[0] == "M"){
+					subPathStart = [segment[1], segment[2]];
+				}
 				return segment;
 		}
 	});
@@ -208,6 +221,9 @@ EditZone.prototype.select = function(){
 		'index':'startCell'
 	})];
 	absPath.map(function(segment, ind){
+		if(segment[0].toLowerCase() == "z"){
+			return false;
+		}
 		var last = segment.length - 1;
 		var newPoint = new Point(thisRef.zone, {
 			'x': segment[last - 1],
@@ -218,6 +234,7 @@ EditZone.prototype.select = function(){
 		pointsBuilding.push(newPoint);
 		return newPoint
 	});
+	//this.zone.path = absPath;
 	this.points = pointsBuilding;
 }
 
@@ -495,7 +512,6 @@ function Point(zone, options){
 			var y = py - this.deltaY;
 			var cell = this.battlemap.getNearestCell(x,y);
 			this.position = {'x':cell[0], 'y':cell[1]};
-			console.log('move', cell, arguments);
 			ev.stopPropagation();
 			return false;
 		},
@@ -523,10 +539,13 @@ Point.prototype = {
 	set position(val){
 		this._position.x = val.x;
 		this._position.y = val.y;
-
+		var xy = [
+			this._position.x * this.battlemap.gridSpacing,
+			this._position.y * this.battlemap.gridSpacing
+		];
 		this.svgElement.attr({
-			cx:this._position.x * this.battlemap.gridSpacing,
-			cy:this._position.y * this.battlemap.gridSpacing
+			cx:xy[0],
+			cy:xy[1]
 		});
 
 		this.setZone();
