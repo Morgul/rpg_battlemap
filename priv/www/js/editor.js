@@ -769,8 +769,22 @@ $().ready(function(){
 
 	// ------------------------------------------------------------------------
 
+	$('#zoneEditor [object-property]').change(function(ev){
+		if(editor.currentZone == null){
+			return;
+		}
+		var property = ev.target.getAttribute('object-property');
+		var val = ev.target.value;
+		var zone = editor.currentZone.zone;
+		if(ev.target.type == 'checkbox'){
+			val = ev.target.checked;
+		}
+		console.log('zone changing', property, zone[property], val, ev.target);
+		zone[property] = val;
+	});
+
 	// Zone Color editor
-	$('#zone_color').change(function(){
+	/*$('#zone_color').change(function(){
 		if(editor.currentZone != null){
 			var zone = editor.currentZone.zone;
 			var color = color2Hex($('#zone_color').val());
@@ -795,9 +809,9 @@ $().ready(function(){
 			zone.strokeWidth = stroke;
 			zone.color = fill;
 		}
-	});
+	});*/
 	// Zone alpha change handlers
-	$('#zone_alpha').change(function(){
+	/*$('#zone_alpha').change(function(){
 		$('#zone_color').change();
 	});
 	$('#zone_alpha').bind('input', function(){
@@ -815,7 +829,7 @@ $().ready(function(){
 	// Zone fill color change handler
 	$('#fill_color').change(function(){
 		$('#zone_color').change();
-	});
+	});*/
 
 	$('#zone_name').val("New Zone");
 	$('#zone_color').val("black");

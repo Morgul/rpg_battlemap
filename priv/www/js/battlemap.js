@@ -1193,7 +1193,7 @@ CombatZone.prototype = {
 		return this._gappy;
 	},
 	set gappy(val){
-		this._gappy = val;
+		this._gappy = !!val;
 		this.updatePath();
 	}
 }
