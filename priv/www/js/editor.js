@@ -87,35 +87,25 @@ Editor.prototype.mousedownHandler = function(ev){
 		if (this.dragging == false && this.dblclick == false){
 			var currentPos = this.pointer.position;
 			if(this._currentZone == null){
-				var z = new CombatZone(this.battlemap, {startCell: [currentPos.x, currentPos.y], path:'z'});
+				var z = new CombatZone(this.battlemap, {
+					'path':[["M", currentPos.x, currentPos.y]]
+				});
 				this._currentZone = new EditZone(this.battlemap, this, z);
-				this._currentZone.zone.startCell = [currentPos.x, currentPos.y];
 				this.zoneChanged();
 				return;
 			}
 
-			/*var zone = this.currentZone;
-			var startPos = null;
-			if (this.currentZone.points.length > 0){
-				var startPos = this.currentZone.points[0].position;
-			}*/
-
-			var point = this.currentZone.addPoint(currentPos.x, currentPos.y);
-			if (this.rightClick){
-				point.pointType = "M";
-				this.currentZone.updateZone();
+			var zone = this._currentZone.zone;
+			var last = zone.path.length;
+			if(this.rightClick){
+				zone.path.splice(last, 0, ["M", currentPos.x, currentPos.y]);	
 				this.rightClick = false;
+			} else {
+				zone.path.splice(last, 0, ["L", currentPos.x, currentPos.y]);
 			}
+			zone.updatePath();
+			this._currentZone.select();
 
-			var zoneStart = this.currentZone.zone.startCell;
-			if(zoneStart[0] == currentPos.x && zoneStart[1] == currentPos.y){
-				this.currentZone.finishZone();
-			}
-			/*if (startPos != null && startPos.x == currentPos.x &&
-				startPos.y == currentPos.y) {
-				// Clicking on the first point closes the zone.
-				this.currentZone.finishZone();
-			}*/
 		} else {
 			this.dblclick = false;
 		}
@@ -126,9 +116,8 @@ Editor.prototype.dblclickHandler = function(ev){
 	this.dblclick = true;
 
 	if(this.currentZone != null){
-		// Doubleclicking finished the zone with a moveTo.
-		this.currentZone.addPoint(this.pointer.position.x, this.pointer.position.y);
-		this.currentZone.finishZone(true);
+		this.currentZone.zone.path.push(["z"]);
+		this.currentZone.zone.updatePath();
 	}
 }
 
