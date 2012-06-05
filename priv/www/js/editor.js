@@ -170,68 +170,19 @@ function EditZone(battlemap, editor, inZone){
 }
 
 EditZone.prototype.unselect = function(){
-	this.points.map(function(point){
+	this.points.forEach(function(point){
 		point.remove();
 	});
 	this.points = [];
 }
 
-EditZone.pathToAbsolute = function(path, lastPos){
-	if(path.toString() === path){
-		path = Raphael.parsePathString(path);
-	}
-	var subPathStart = lastPos;
-	var absPath = path.map(function(segment){
-		switch(segment[0]){
-			case "z":
-			case "Z":
-				lastPos = subPathStart;
-				return segment;
-				break;
-			case "h":
-				segment[1] += lastPos[0];
-				lastPos[0] = segment[1];
-				return ["H", segment[1]];
-				break;
-			case "v":
-				segment[1] += lastPos[1];
-				lastPos[1] = segment[1];
-				return ["H", segment[1]];
-				break;
-			default:
-				var last = segment.length - 1;
-				if(segment[0].toUpperCase() == segment[0]){
-					lastPos[0] = segment[last - 1];
-					lastPos[1] = segment[last];
-				} else {
-					segment[last - 1] += lastPos[0];
-					segment[last] += lastPos[1];
-					segment[0] = segment[0].toUpperCase();
-					lastPos = [segment[last - 1], segment[last]];
-				}
-				if(segment[0] == "M"){
-					subPathStart = [segment[1], segment[2]];
-				}
-				return segment;
-		}
-	});
-	return absPath;
-}
-
 EditZone.prototype.select = function(){
 	this.unselect();
-	var pathStr = this.zone.path;
-	var absPath = EditZone.pathToAbsolute(pathStr, this.zone.startCell);
+	var pointsBuilding = [];
 	var thisRef = this;
-	var pointsBuilding = [new Point(this.zone, {
-		'x': this.zone.startCell[0],
-		'y': this.zone.startCell[1],
-		'index':'startCell',
-		'editor':this
-	})];
-	absPath.map(function(segment, ind){
+	this.zone.path.forEach(function(segment, ind){
 		if(segment[0].toLowerCase() == "z"){
-			return false;
+			return;
 		}
 		var last = segment.length - 1;
 		var newPoint = new Point(thisRef.zone, {
@@ -239,16 +190,15 @@ EditZone.prototype.select = function(){
 			'y': segment[last],
 			'index': ind,
 			'pointType': segment[0],
-			'editor':thisRef
+			'editor': thisRef,
+			'zone': thisRef.zone
 		});
 		pointsBuilding.push(newPoint);
-		return newPoint
 	});
-	//this.zone.path = absPath;
 	this.points = pointsBuilding;
 	this.points.map(function(p){
 		$(p).bind('click', function(ev){
-			console.log(this, thisRef, arguments);
+			console.log(this, thisRef.mode, arguments);
 			switch(thisRef.mode){
 				case "setMovePoint":
 					this.pointType = "M";
@@ -261,7 +211,7 @@ EditZone.prototype.select = function(){
 					break;
 				}
 				ev.stopPropagation();
-				return false;
+			this.setZone();
 		});
 	});
 }
