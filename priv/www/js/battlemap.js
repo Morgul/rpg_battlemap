@@ -655,6 +655,7 @@ BattleMap.prototype.toJsonable = function(){
 		gridSpacing: this.gridSpacing,
 		backgroundColor: this.backgroundColor,
 		gridlineColor: this.gridlineColor,
+		gridOpacity: this.gridOpacity,
 		combatants: [],
 		zones: []
 	};
