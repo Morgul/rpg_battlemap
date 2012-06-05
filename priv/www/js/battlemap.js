@@ -1025,7 +1025,7 @@ programatically.
 
 function CombatZone(battlemap, opts){
 	this.battlemap = battlemap;
-	this._startCell = [0,0];
+	//this._startCell = [0,0];
 	this._name = 'CombatZone of Doom';
 	this._color = 'darkgreen';
 	this._layer = "ground";
@@ -1199,9 +1199,10 @@ CombatZone.prototype = {
 }
 
 CombatZone.prototype.updateTransform = function(){
-	var transformStr = this.battlemap.getTransformString(this._startCell[0], this._startCell[1]);
+	var startCell = [this._path[0][1], this._path[0][2]];
+	var transformStr = this.battlemap.getTransformString(startCell[0], startCell[1]);
 	var rotate = "0";
-	var startCellPart = " " + (this._startCell[0] * this.battlemap.gridSpacing) + " " + (this._startCell[1] * this.battlemap.gridSpacing) + " ";
+	var startCellPart = " " + (startCell[0] * this.battlemap.gridSpacing) + " " + (startCell[1] * this.battlemap.gridSpacing) + " ";
 	switch(this._rotation){
 		case "ccw":
 			rotate = "r-90";
@@ -1216,7 +1217,7 @@ CombatZone.prototype.updateTransform = function(){
 			rotate = "r0";
 			break;
 		default:
-			rotate = this._rotation;
+			rotate = "r" + this._rotation;
 	}
 	this.svgObject.transform(transformStr + rotate + startCellPart);
 	$(this).trigger('transformUpdated', this);
@@ -1227,6 +1228,75 @@ CombatZone.prototype.toGridFun = function(){
 	return function(xory){
 		return xory * gs;
 	}
+}
+
+CombatZone.pathToAbsolute = function(pathArr){
+	var subpathStart = [0,0];
+	var lastPos = [0,0];
+	var absPath = pathArr.map(function(segment){
+		switch(segment[0]){
+			case "z":
+			case "Z":
+				lastPos = subpathStart;
+				return segment;
+				break;
+			case "h":
+				segment[1] += lastPos[0];
+				lastPos[0] = segment[1];
+				segment[0] = "H";
+				return segment;
+				break;
+			case "v":
+				segment[1] += lastPos[1];
+				lastPos[1] = segment[1];
+				segment[0] = "V";
+				return segment;
+				break;
+			default:
+				var last = segment.length - 1;
+				if(segment[0].toUpperCase() == segment[0]){
+					lastPos[0] = segment[last - 1];
+					lastPos[1] = segment[last];
+				} else {
+					segment[last - 1] += lastPos[0];
+					segment[last] += lastPos[1];
+					segment[0] = segment[0].toUpperCase();
+					lastPost = [segment[last - 1], segment[last]];
+				}
+				if(segment[0] == "M"){
+					subpathState = [segment[1], segment[2]];
+				}
+				return segment;
+		}
+	});
+	return absPath;
+}
+
+// best if the path is made absolute first
+CombatZone.wallsToFloor = function(inwallsPath){
+	var wallsPath = JSON.parse(JSON.stringify(inwallsPath));
+	var floorPath = [];
+	var subpathStart = [wallsPath[0][1], wallsPath[0][2]];
+	wallsPath.forEach(function(segment, ind){
+		if(ind == 0){
+			floorPath.push(segment);
+			return;
+		}
+		switch(segment[0]){
+			case "M":
+			case "m":
+				subpathStart = [segment[1],segment[2]];
+				floorPath.push(["L", segment[1],segment[2]]);
+				break;
+			case "z":
+			case "Z":
+				floorPath.push(["L",subpathStart[0],subpathStart[1]]);
+				break;
+			default:
+				floorPath.push(segment);
+		}
+	});
+	return floorPath;
 }
 
 CombatZone.prototype.gridilize = function(pathArr){
@@ -1278,7 +1348,7 @@ CombatZone.prototype.gridilize = function(pathArr){
 
 CombatZone.prototype.toJsonable = function(){
 	return {
-		startCell: this.startCell,
+		//startCell: this.startCell,
 		name: this.name,
 		color: this.color,
 		layer: this.layer,
@@ -1292,36 +1362,24 @@ CombatZone.prototype.toJsonable = function(){
 }
 
 CombatZone.prototype.updatePath = function(){
-	var gs = this.battlemap.gridSpacing;
-	var xy = this._startCell;
+	//var xy = this._startCell;
 	var toGrid = this.toGridFun();
-	var firstMove = ["M", xy[0], xy[1]];
+	//var firstMove = ["M", xy[0], xy[1]];
 
-	var tmppathArray = JSON.parse(JSON.stringify(this._path));
-	tmppathArray = Raphael.parsePathString(tmppathArray);
-	var pathArray = JSON.parse(JSON.stringify(tmppathArray));
-	pathArray.unshift(firstMove);
-	pathArray = Raphael.pathToRelative(pathArray);
+	var pathArray = JSON.parse(JSON.stringify(this._path));
+	//pathArray = Raphael.pathToRelative(pathArray);
+	pathArray = CombatZone.pathToAbsolute(pathArray);
+	pathArray = this.gridilize(pathArray);
 	
-	var floorArray = JSON.parse(JSON.stringify(pathArray));
 	if(this._gappy){
-		floorArray = floorArray.map(function(arr, ind){
-			if(ind == 0){
-				return arr;
-			}
-			if(arr[0] == "M"){
-				arr[0] = "L";
-			}
-			if(arr[0] == "m"){
-				arr[0] = "l";
-			}
-			return arr;
-		});
+		var floorArray = CombatZone.wallsToFloor(pathArray);
+	} else {
+		var floorArray = JSON.parse(JSON.stringify(pathArray));
 	}
 	//floorArray.unshift(firstMove);
 	//pathArray.unshift(firstMove);
-	this.walls.attr('path', this.gridilize(pathArray));
-	this.floor.attr('path', this.gridilize(floorArray));
+	this.walls.attr('path', pathArray);
+	this.floor.attr('path', floorArray);
 	this.updateTransform();
 }
 
@@ -1331,13 +1389,24 @@ CombatZone.prototype.remove = function(){
 	this.battlemap.removeZone(this);
 }
 
-CombatZone.makeSquare = function(size){
-	return Raphael.format("l {0} 0 l 0 {0} l -{0} 0 l 0 -{0} z", size);
+CombatZone.makeSquare = function(size, x, y){
+	if(typeof x == "undefined"){
+		x = 0;
+	}
+	if(typeof y == "undefined"){
+		y = 0;
+	}
+	return Raphael.format("M {1} {2} h {0} v {0} h -{0} z", size, x, y);
 }
 
-CombatZone.makeOctogon = function(size){
-	return Raphael.format("m {0} 0 l {0} 0 l {0} {0} l 0 {0} l -{0} {0} l -{0} 0 l -{0} -{0} l 0 -{0} l {0} -{0} z", size);
-	//return Raphael.format("M{0} 0L{1} 0L{2} {0}L{2} {1}L{1} {2}L{0} {2}L0 {1}L0 {0}L{0} 0Z", size, size * 2, size * 3);
+CombatZone.makeOctogon = function(size, x, y){
+	if(typeof x == "undefined"){
+		x = 0;
+	}
+	if(typeof y == "undefined"){
+		y = 0;
+	}
+	return Raphael.format("M {1} {2} m {0} 0 h {0} l {0} {0} v {0} l -{0} {0} h -{0} l -{0} -{0} v -{0} z", size, x, y);
 }
 
 // CombatZone basic shapes
