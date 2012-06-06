@@ -268,7 +268,7 @@ EditZone.prototype.togglePointsPathClose = function(){
 		}
 		selectedList.unshift(true);
 		var index = this.points[last].index;
-		if(index >= this.zone.path.length){
+		if((index + 1) >= this.zone.path.length){
 			this.zone.path.push(["z"]);
 			continue;
 		}
