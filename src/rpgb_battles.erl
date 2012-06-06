@@ -86,7 +86,10 @@ content_types_accepted(ReqData, Ctx) ->
 	{Types, ReqData, Ctx}.
 
 content_types_provided(ReqData, Ctx) ->
-	Types = [{"application/json",to_json}],
+	Types = [
+		{"application/json",to_json},
+		{"text/html", to_html}
+	],
 	{Types, ReqData, Ctx}.
 
 resource_exists(ReqData, {search_battles, _} = Ctx) ->
@@ -182,6 +185,10 @@ from_json(ReqData, {create_battle, Session} = Ctx) ->
 	% so just act cool.
 	{true, ReqData, Ctx};
 
+from_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
+	BattleMap = boss_db:find(MapId),
+	from_json(ReqData, {battle, BattleMap, Session});
+
 from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
@@ -228,3 +235,18 @@ encode_map(BattleMap) ->
 	{struct, MapStruct} = mochijson2:decode(BattleMap:json()),
 	Url = rpgb:get_url(["battles",BattleMap:id(),"slug"]),
 	{struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]}.
+
+to_html(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
+	BattleMap = boss_db:find(MapId),
+	to_html(ReqData, {battle, BattleMap, Session});
+
+to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
+	Json = encode_map(BattleMap),
+	Templatevars = [
+		{"session", rpgb_session:to_dict(Session)},
+		{"battlemap", [
+			{"json", mochijson2:encode(Json)}
+		]}
+	],
+	{ok, Out} = battlemap_dtl:render(Templatevars),
+	{Out, ReqData, Ctx}.
