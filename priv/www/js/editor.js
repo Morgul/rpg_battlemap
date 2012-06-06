@@ -187,7 +187,7 @@ EditZone.prototype.select = function(){
 	this.points = pointsBuilding;
 	this.points.map(function(p){
 		$(p).bind('click', function(fev, ev){
-			console.log(this, thisRef.mode, arguments);
+			//console.log(this, thisRef.mode, arguments);
 			var wasSelected = this.selected;
 			if(!ev.shiftKey){
 				thisRef.points.forEach(function(apoint){
@@ -195,20 +195,28 @@ EditZone.prototype.select = function(){
 				});
 			}
 			this.selected = ! wasSelected;
-			/*switch(thisRef.mode){
-				case "setMovePoint":
-					this.pointType = "M";
-					break;
-				case "setLinePoint":
-					this.pointType = "L";
-					break;
-				case "setClosePoint":
-					this.pointType = "Z";
-					break;
-				}*/
 			this.setZone();
 			ev.stopPropagation();
 			return false;
+		});
+		$(p).bind('positionUpdate', function(ev, deltas){
+			var deltax = deltas[0];
+			var deltay = deltas[1];
+			var pointRef = this;
+			thisRef.points.forEach(function(apoint){
+				if(apoint === pointRef){
+					return;
+				}
+				if(! apoint.selected){
+					return;
+				}
+				var oldPos = apoint.position;
+				var newPos = {'x':oldPos.x + deltax,'y':oldPos.y + deltay};
+				apoint._position = newPos;
+				apoint._setSvgElement();
+				apoint.setZone();
+			});
+			//console.log('posup', this, thisRef, arguments);
 		});
 	});
 }
@@ -566,13 +574,13 @@ function Point(zone, options){
 		},
 		// onstart
 		function(x,y,ev){
-			console.log('start', this.index, arguments);
+			//console.log('start', this.index, arguments);
 			ev.stopPropagation();
 			return false;
 		},
 		// onend
 		function(x,y,ev){
-			console.log('end', this.index, arguments);
+			//console.log('end', this.index, arguments);
 			return false;
 		}, this, this, this
 	);
@@ -586,17 +594,15 @@ Point.prototype = {
 		return this._position;
 	},
 	set position(val){
+		var deltax = val.x - this._position.x;
+		var deltay = val.y - this._position.y;
+		if( (deltax == 0) && (deltay == 0) ){
+			return;
+		}
 		this._position.x = val.x;
 		this._position.y = val.y;
-		var xy = [
-			this._position.x * this.battlemap.gridSpacing,
-			this._position.y * this.battlemap.gridSpacing
-		];
-		this.svgElement.attr({
-			cx:xy[0],
-			cy:xy[1]
-		});
-
+		this._setSvgElement();
+		$(this).trigger('positionUpdate', [[deltax,deltay],this.position]);
 		this.setZone();
 	},
 
@@ -682,6 +688,14 @@ Point.prototype = {
 		this.strokeColor = this.strokeColor;
 		this.fillColor = this.fillColor;
 	}
+}
+
+Point.prototype._setSvgElement = function(){
+	// TODO fill out more.
+	this.svgElement.attr({
+		cx:this._position.x * this.battlemap.gridSpacing,
+		cy:this._position.y * this.battlemap.gridSpacing
+	});
 }
 
 Point.prototype.remove = function(){
@@ -790,7 +804,7 @@ $().ready(function(){
 	$('#editGridProperties input[object-property]').change(function(ev){
 		var property = ev.target.getAttribute('object-property');
 		var val = ev.target.value;
-		console.log('changing', property, battleMap[property], val);
+		//console.log('changing', property, battleMap[property], val);
 		battleMap[property] = val;
 	});
 	
@@ -811,7 +825,7 @@ $().ready(function(){
 		if(ev.target.type == 'checkbox'){
 			val = ev.target.checked;
 		}
-		console.log('zone changing', property, zone[property], val, ev.target);
+		//console.log('zone changing', property, zone[property], val, ev.target);
 		zone[property] = val;
 	});
 
@@ -845,14 +859,14 @@ $().ready(function(){
 	$('#saveButton').battlemapSaveButton({
 		'battlemap':window.battleMap,
 		'save':function(){
-			console.log('save done', this, arguments);
+			//console.log('save done', this, arguments);
 			$('#savedMapsList').battlemapLocker('refresh');
 		}
 	});
 
 	$('#savedMapsList').battlemapLocker({
 		'load':function(mapData){
-			console.log('data loaded', mapData);
+			//console.log('data loaded', mapData);
 			window.battleMap = new BattleMap('#drawingBoard', mapData);
 			$('#saveButton').battlemapSaveButton('option', 'battlemap', window.battleMap);
 			window.editor.battlemap = window.battleMap;
