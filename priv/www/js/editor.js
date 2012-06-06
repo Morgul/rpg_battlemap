@@ -250,6 +250,42 @@ EditZone.prototype.addPoints = function(){
 	});
 }
 
+EditZone.prototype.setPointsType = function(type){
+	this.points.forEach(function(p){
+		if(p.selected){
+			p.pointType = type;
+		}
+	});
+}
+
+EditZone.prototype.togglePointsPathClose = function(){
+	var last = this.points.length - 1;
+	var selectedList = [];
+	for(last; last >= 0; last--){
+		if(! this.points[last].selected){
+			selectedList.unshift(false);
+			continue;
+		}
+		selectedList.unshift(true);
+		var index = this.points[last].index;
+		if(index >= this.zone.path.length){
+			this.zone.path.push(["z"]);
+			continue;
+		}
+		if(this.zone.path[index + 1][0].toLowerCase() == "z"){
+			this.zone.path.splice(index + 1, 1);
+			continue;
+		}
+		this.zone.path.splice(index + 1, 0, ["z"]);
+	}
+	this.zone.updatePath();
+	this.select();
+	var thisRef = this;
+	selectedList.forEach(function(selBool, ind){
+		thisRef.points[ind].selected = selBool;
+	});
+}
+
 EditZone.prototype.updateProperties = function(){
 	var name = $('#zone_name').val();
 	var strokeColor = $('#zone_color').val();
@@ -674,25 +710,20 @@ Point.prototype.setZone = function(){
 	if(! this._ready){
 		return;
 	}
-	var fullPath = this.zone.path;
-	var pathInfo = fullPath[this.index];
-	if(pathInfo.length == 1){
+	var datalength = this.zone.path[this.index].length;
+	if(datalength == 1){
 		return;
 	}
-	if(pathInfo.length == 2){
-		if(pathInfo[0].toLowerCase() == "h"){
-			pathInfo[1] = this.x;
-		} else {
-			pathInfo[1] = this.y;
-		}
-	} else {
-		var last = pathInfo.length - 1;
-		pathInfo[last - 1] = this.x;
-		pathInfo[last] = this.y;
+	if(datalength == 2){
+		// TODO add h and v support
+		return;
 	}
-	pathInfo[0] = this.pointType;
-	fullPath[this.index] = pathInfo;
-	this.zone.path = fullPath;
+	if(datalength == 3){
+		this.zone.path[this.index] = [this.pointType, this.x, this.y];
+		this.zone.updatePath();
+		return;
+	}
+	// TODO add support for more line types.
 }
 
 
@@ -843,6 +874,21 @@ $().ready(function(){
 	$('#splitPoints').click(function(){
 		if(editor.currentZone){
 			editor.currentZone.addPoints();
+		}
+	});
+	$('#makeLinePoint').click(function(){
+		if(editor.currentZone){
+			editor.currentZone.setPointsType("L");
+		}
+	});
+	$('#makeMovePoint').click(function(){
+		if(editor.currentZone){
+			editor.currentZone.setPointsType("M");
+		}
+	});
+	$('#makeClosePoint').click(function(){
+		if(editor.currentZone){
+			editor.currentZone.togglePointsPathClose();
 		}
 	});
 
