@@ -186,9 +186,16 @@ EditZone.prototype.select = function(){
 	});
 	this.points = pointsBuilding;
 	this.points.map(function(p){
-		$(p).bind('click', function(ev){
+		$(p).bind('click', function(fev, ev){
 			console.log(this, thisRef.mode, arguments);
-			switch(thisRef.mode){
+			var wasSelected = this.selected;
+			if(!ev.shiftKey){
+				thisRef.points.forEach(function(apoint){
+					apoint.selected = false;
+				});
+			}
+			this.selected = ! wasSelected;
+			/*switch(thisRef.mode){
 				case "setMovePoint":
 					this.pointType = "M";
 					break;
@@ -198,10 +205,48 @@ EditZone.prototype.select = function(){
 				case "setClosePoint":
 					this.pointType = "Z";
 					break;
-				}
-				ev.stopPropagation();
+				}*/
 			this.setZone();
+			ev.stopPropagation();
+			return false;
 		});
+	});
+}
+
+EditZone.prototype.removePoints = function(){
+	var last = this.points.length - 1;
+	for(last; last >= 0; last--){
+		if(this.points[last].selected){
+			this.zone.path.splice(this.points[last].index, 1);
+		}
+	}
+	this.zone.updatePath();
+	this.select();
+}
+
+EditZone.prototype.addPoints = function(){
+	var last = this.points.length - 1;
+	var selectedList = [];
+	for(last; last > 0; last--){
+		if(this.points[last].selected && this.points[last - 1].selected){
+			var p1 = this.points[last - 1].position;
+			var p2 = this.points[last].position;
+			avgx = (p1.x + p2.x) / 2;
+			avgy = (p1.y + p2.y) / 2;
+			var ind = this.points[last].index;
+			this.zone.path.splice(ind, 0, ["L",avgx,avgy]);
+			selectedList.unshift(true);
+			selectedList.unshift(true);
+		} else {
+			selectedList.unshift(this.points[last].selected);
+		}
+	}
+	selectedList.unshift(this.points[0].selected);
+	this.zone.updatePath();
+	this.select();
+	var thisRef = this;
+	selectedList.map(function(selected, selInd){
+		thisRef.points[selInd].selected = selected;
 	});
 }
 
@@ -264,11 +309,7 @@ EditZone.prototype.updateZone = function(){
 	var finishPrefix = this.finishPrefix;
 	//var start = [0,0];
 	$(this.points).each(function(index, point){
-		if (index == 0)
-		{
-			// We're the starting point.
-			start = [point.position.x, point.position.y];
-		} else if (index == totalPoints - 1){
+		if (index == totalPoints - 1){
 			// We're the last point.
 			pathArray.push(finishPrefix + point.position.x + "," + point.position.y);
 		} else {
@@ -458,6 +499,7 @@ function Point(zone, options){
 	this._fillColor = "#777";
 	this._strokeColor = "#777";
 	this._pointType = "L" // "L", "M", "c"
+	this._selected = false;
 	this.svgElement = this.battlemap.svgPaper.circle(0, 0, this._size);
 	this.svgElement.attr({
 		'fill':this._fillColor,
@@ -542,7 +584,13 @@ Point.prototype = {
 	set size(val){
 		if (typeof val !== 'undefined'){
 			this._size = val;
-			this.svgElement.attr('r',this._size);
+			var size;
+			if(this._selected){
+				size = this._size * 1.3;
+			} else {
+				size = this._size
+			}
+			this.svgElement.attr('r',size);
 		}
 	},
 
@@ -552,7 +600,11 @@ Point.prototype = {
 	set strokeColor(val){
 		if (typeof val !== 'undefined'){
 			this._strokeColor = val;
-			this.svgElement.attr("stroke", val);
+			if(this.selected){
+				this.svgElement.attr("stroke", "white");
+			} else {
+				this.svgElement.attr("stroke", val);
+			}
 		}
 	},
 
@@ -562,7 +614,11 @@ Point.prototype = {
 	set fillColor(val){
 		if (typeof val !== 'undefined'){
 			this._fillColor = val;
-			this.svgElement.attr("fill", val);
+			if(this.selected){
+				this.svgElement.attr("fill", "black");
+			} else {
+				this.svgElement.attr("fill", val);
+			}
 		}
 	},
 
@@ -579,6 +635,16 @@ Point.prototype = {
 	set pointType(val){
 		this._pointType = val;
 		this.setZone();
+	},
+
+	get selected(){
+		return this._selected;
+	},
+	set selected(val){
+		this._selected = !!val;
+		this.size = this.size;
+		this.strokeColor = this.strokeColor;
+		this.fillColor = this.fillColor;
 	}
 }
 
@@ -608,17 +674,13 @@ Point.prototype.setZone = function(){
 	if(! this._ready){
 		return;
 	}
-	if(this.index == "startCell"){
-		this.zone.startCell = [this.x,this.y];
-		return;
-	}
 	var fullPath = this.zone.path;
 	var pathInfo = fullPath[this.index];
 	if(pathInfo.length == 1){
 		return;
 	}
 	if(pathInfo.length == 2){
-		if(pathInfo[0].toLowerCase == "h"){
+		if(pathInfo[0].toLowerCase() == "h"){
 			pathInfo[1] = this.x;
 		} else {
 			pathInfo[1] = this.y;
@@ -722,54 +784,6 @@ $().ready(function(){
 		zone[property] = val;
 	});
 
-	// Zone Color editor
-	/*$('#zone_color').change(function(){
-		if(editor.currentZone != null){
-			var zone = editor.currentZone.zone;
-			var color = color2Hex($('#zone_color').val());
-			var fill = color2Hex($('#fill_color').val());
-			var alpha = $('#zone_alpha').val();
-			var stroke = $('#zone_stroke').val();
-			zone.strokeColor = hex2rgb(color);
-			zone.strokeOpacity = alpha;
-			zone.strokeWidth = stroke;
-			zone.color = fill;
-		}
-	});
-	$('#zone_color').blur(function(){
-		if(editor.currentZone != null){
-			var zone = editor.currentZone.zone;
-			var color = color2Hex($('#zone_color').val());
-			var fill = color2Hex($('#fill_color').val());
-			var alpha = $('#zone_alpha').val();
-			var stroke = $('#zone_stroke').val();
-			zone.strokeColor = hex2rgb(color);
-			zone.strokeOpacity = alpha;
-			zone.strokeWidth = stroke;
-			zone.color = fill;
-		}
-	});*/
-	// Zone alpha change handlers
-	/*$('#zone_alpha').change(function(){
-		$('#zone_color').change();
-	});
-	$('#zone_alpha').bind('input', function(){
-		$('#zone_color').change();
-	});
-
-	// Zone stroke change handlers
-	$('#zone_stroke').change(function(){
-		$('#zone_color').change();
-	});
-	$('#zone_stroke').bind('input', function(){
-		$('#zone_color').change();
-	});
-
-	// Zone fill color change handler
-	$('#fill_color').change(function(){
-		$('#zone_color').change();
-	});*/
-
 	$('#zone_name').val("New Zone");
 	$('#zone_color').val("black");
 	$('#zone_alpha').val(".7");
@@ -816,6 +830,19 @@ $().ready(function(){
 			$('.grid div').css('background-color', color2Hex(battleMap.gridlineColor));
 			$('.map div').css('background-color', color2Hex(battleMap.backgroundColor));
 			updateZoneList();
+		}
+	});
+
+	// set up the toolbox
+	$('#delPoints').click(function(){
+		if(editor.currentZone){
+			editor.currentZone.removePoints();
+		}
+		return false;
+	});
+	$('#splitPoints').click(function(){
+		if(editor.currentZone){
+			editor.currentZone.addPoints();
 		}
 	});
 
