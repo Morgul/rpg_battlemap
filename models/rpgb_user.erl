@@ -1,4 +1,4 @@
--module(rpgb_user, [Id, Name::binary(), OpenID::binary(), RpgbGroupId, CreatedTime::timestamp(), UpdatedTime::timestamp()]).
+-module(rpgb_user, [Id, Name::binary(), OpenID::binary(), RpgbGroupId, MaxMaps :: integer(), CreatedTime::timestamp(), UpdatedTime::timestamp()]).
 -has({permissions, many, [{module, rpgb_permission}]}).
 -belongs_to(rpgb_group).
 -compile([export_all]).
@@ -10,7 +10,8 @@ before_create() ->
 	end || X <- [Name, OpenID]],
 	io:format("bing"),
 	This0 = THIS:set([{name, Name0}, {open_id, OpenID0},
-		{created_time, erlang:now()}, {updated_time, erlang:now()}
+		{created_time, erlang:now()}, {updated_time, erlang:now()},
+		{max_maps, case THIS:max_maps() of undefined -> -1; E -> E end}
 	]),
 	{ok, This0}.
 
