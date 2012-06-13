@@ -244,9 +244,8 @@ to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Json = encode_map(BattleMap),
 	Templatevars = [
 		{"session", rpgb_session:to_dict(Session)},
-		{"battlemap", [
-			{"json", mochijson2:encode(Json)}
-		]}
+		{"json", mochijson2:encode(Json)},
+		{"battlemap", BattleMap}
 	],
 	{ok, Out} = battlemap_dtl:render(Templatevars),
 	{Out, ReqData, Ctx}.

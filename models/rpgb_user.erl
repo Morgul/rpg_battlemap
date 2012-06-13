@@ -9,7 +9,10 @@ before_create() ->
 		true -> X
 	end || X <- [Name, OpenID]],
 	io:format("bing"),
-	{ok, ?MODULE:new(Id, Name0, OpenID0, RpgbGroupId, erlang:now(), erlang:now())}.
+	This0 = THIS:set([{name, Name0}, {open_id, OpenID0},
+		{created_time, erlang:now()}, {updated_time, erlang:now()}
+	]),
+	{ok, This0}.
 
 before_update() ->
 	[Name0, OpenID0] = [if
@@ -17,4 +20,7 @@ before_update() ->
 		true -> X
 	end || X <- [Name, OpenID]],
 	io:format("bang"),
-	{ok, ?MODULE:new(Id, Name0, OpenID0, RpgbGroupId, CreatedTime, erlang:now())}.
+	This0 = THIS:set([{name, Name0}, {open_id, OpenID0},
+		{updated_time, erlang:now()}
+	]),
+	{ok, This0}.
