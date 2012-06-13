@@ -1,3 +1,0 @@
--module(rpgb_participant, [Id, BattleId :: atom(), UserId :: atom()]).
--belongs_to(user).
--belongs_to(battle).
