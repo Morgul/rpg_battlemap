@@ -64,6 +64,25 @@ get_db_opts([[$- | OptName] | Tail], Acc) ->
 			{Tail, Acc}
 	end.
 
+get_model_data() ->
+	code:add_paths(["ebin"]),
+	ModelFiles = filelib:wildcard("./models/*.erl"),
+	ModelNames = [filename:rootname(Name) || "./models/" ++ Name <- ModelFiles],
+	get_model_data(ModelNames).
+
+get_model_data(Names) ->
+	get_model_data(Names, []).
+
+get_model_data([], Acc) ->
+	Acc;
+
+get_model_data([Name | Tail], Acc) ->
+	Name0 = list_to_atom(Name),
+	Rec = boss_record:new(Name0, []),
+	Attrs = Rec:attribute_names(),
+	Head = {Name0, Attrs},
+	get_model_data(Tail, [Head | Acc]).
+	
 build_db(Opts) ->
 	NodeName = list_to_atom(proplists:get_value(nodename, Opts, "rpg_battlemap_dev")),
 	case node() of
@@ -80,49 +99,77 @@ build_db(Opts) ->
 		Else ->
 			Else
 	end,
+
+	% get the model data
+	ModelData = get_model_data(),
+
 	mnesia:create_schema([node()]),
 	io:format("Schema created\n"),
 	mnesia:start(),
 	% yeah hard coded stuff!
-	TableData = [
+	TableProto = [{'_ids_', [key,val]} | ModelData],
+	Tnames = [N || {N, _} <- TableProto],
+	mnesia:wait_for_tables(Tnames, 10000),
+	create_tables(TableProto).
 
-		% boss_db needs this to generate ids.
-		{'_ids_', [{disc_copies, [node()]}]},
+create_tables([]) ->
+	ok;
 
-		% prefixing rpgb_ on table names because module 'group' is used.
-		{rpgb_user, [
-			{attributes,
-				[id, name, open_id, rpgb_group_id, created_time, updated_time]},
-			{disc_copies, [node()]}
-		]},
-
-		{rpgb_group, [
-			{attributes, [id, name, created_time, updated_time]},
-			{disc_copies, [node()]}
-		]},
-
-		{rpgb_permission, [
-			{attributes, [id, tag, rpgb_user_id, rpgb_group_id]},
-			{disc_copies, [node()]}
-		]},
-
-		{rpgb_battlemap, [
-			{attributes, [id, name, owner_id, json, created_time, updated_time]},
-			{disc_copies, [node()]}
-		]},
-
-		{rpgb_participant, [
-			{attributes, [id, battle_id, user_id]},
-			{disc_copies, [node()]}
-		]},
-
-		{rpgb_zone, [
-			{attributes, [id, name, battle_id, start_cell_x, start_cell_y,
-				layer, z_index, rotation, stroke_opactiy, stroke_color, path,
-				created_time, updated_time]},
-			{disc_copies, [node()]}
-		]}
-
-	],
-	[io:format("Creating table ~s:  ~p\n", [Tname, mnesia:create_table(Tname,
-		Attr)]) || {Tname, Attr} <- TableData].
+create_tables([{TableName, Attrs} | Tail]) ->
+	case catch mnesia:table_info(TableName, attributes) of
+		{'EXIT', {aborted, {no_exists, TableName, attributes}}} ->
+			Cres = mnesia:create_table(TableName, [
+				{attributes, Attrs},
+				{disc_copies, [node()]}
+			]),
+			io:format("~s created from scratch:  ~p\n", [TableName, Cres]);
+		Attrs ->
+			io:format("~s already exists\n", [TableName]);
+		MnesiaAttrs ->
+			Ures = mnesia:transform_table(TableName, ignore, Attrs),
+			io:format("~s needs to be updated:  ~p\n", [TableName, Ures]),
+			io:format("    Old:  ~p\n    New:  ~p\n", [MnesiaAttrs, Attrs])
+	end,
+	create_tables(Tail).
+%	TableData = [
+%
+%		% boss_db needs this to generate ids.
+%		{'_ids_', [{disc_copies, [node()]}]},
+%
+%		% prefixing rpgb_ on table names because module 'group' is used.
+%		{rpgb_user, [
+%			{attributes,
+%				[id, name, open_id, rpgb_group_id, created_time, updated_time]},
+%			{disc_copies, [node()]}
+%		]},
+%
+%		{rpgb_group, [
+%			{attributes, [id, name, created_time, updated_time]},
+%			{disc_copies, [node()]}
+%		]},
+%
+%		{rpgb_permission, [
+%			{attributes, [id, tag, rpgb_user_id, rpgb_group_id]},
+%			{disc_copies, [node()]}
+%		]},
+%
+%		{rpgb_battlemap, [
+%			{attributes, [id, name, owner_id, json, created_time, updated_time]},
+%			{disc_copies, [node()]}
+%		]},
+%
+%		{rpgb_participant, [
+%			{attributes, [id, battle_id, user_id]},
+%			{disc_copies, [node()]}
+%		]},
+%
+%		{rpgb_zone, [
+%			{attributes, [id, name, battle_id, start_cell_x, start_cell_y,
+%				layer, z_index, rotation, stroke_opactiy, stroke_color, path,
+%				created_time, updated_time]},
+%			{disc_copies, [node()]}
+%		]}
+%
+%	],
+%	[io:format("Creating table ~s:  ~p\n", [Tname, mnesia:create_table(Tname,
+%		Attr)]) || {Tname, Attr} <- TableData].
