@@ -37,10 +37,13 @@ is_authorized(ReqData, {_Mode, Session} = Ctx) ->
 forbidden(ReqData, {search_battles, _} = Ctx) ->
 	{false, ReqData, Ctx};
 
-forbidden(ReqData, {create_battle, _} = Ctx) ->
+forbidden(ReqData, {create_battle, Session} = Ctx) ->
+	User = rpgb_session:get_user(Session),
+	?error("The user:  ~p", [User]),
 	{false, ReqData, Ctx};
 
 forbidden(ReqData, {battle, Session} = Ctx) ->
+	SessionUser = rpgb_session:get_user(Session),
 	case wrq:path_info(battle_id, ReqData) of
 		undefined ->
 			{false, ReqData, Ctx};
@@ -51,18 +54,47 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 					{false, ReqData, {battle, MapId, Session}};
 				undefined ->
 					?info("Didn't find the battlemap ~p", [MapId]),
-					{false, ReqData, {battle, MapId, Session}};
+					MaxMaps = proplists:get_value(max_maps, SessionUser),
+					UserId = proplists:get_value(id, SessionUser),
+					MapList = boss_db:find(rpgb_battlemap, [{owner_id, UserId}]),
+					MapListCount = length(MapList),
+					?info("List count:  ~p; max maps:  ~p", [MapListCount, MaxMaps]),
+					if
+						MaxMaps < 0 ->
+							{false, ReqData, {battle, MapId, Session}};
+						0 ->
+							{true, ReqData, {battle, MapId, Session}};
+						MapListCount < MaxMaps ->
+							{false, ReqData, {battle, MapId, Session}};
+						true ->
+							{true, ReqData, {battle, MapId, Session}}
+					end;
 				BattleMap ->
-					SessionUser = rpgb_session:get_user(Session),
 					Uid = proplists:get_value(id, SessionUser),
 					case BattleMap:owner_id() of
 						Uid ->
-							{false, ReqData, {battle, MapId, Session}};
+							{false, ReqData, {battle, BattleMap, Session}};
 						_ ->
-							{true, ReqData, {battle, MapId, Session}}
+							{true, ReqData, {battle, BattleMap, Session}}
 					end
 			end
 	end.
+
+moved_permanently(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
+	SessionUser = rpgb_session:get_user(Session),
+	UserId = proplists:get_value(id, SessionUser),
+	BattleMap = boss_record:new(rpgb_battlemap, [{owner_id, UserId}]),
+	{ok, BattleMap0} = BattleMap:save(),
+	Id = BattleMap0:id(),
+	Url = rpgb:get_url(["battles",Id,"slug"]),
+	{{true, binary_to_list(Url)}, ReqData, {battle, BattleMap0, Session}};
+
+moved_permanently(ReqData, Ctx) ->
+	{false, ReqData, Ctx}.
+	
+is_conflict(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
+	BattleMap = boss_db:find(MapId),
+	is_conflict(ReqData, {battle, BattleMap, Session});
 
 is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
