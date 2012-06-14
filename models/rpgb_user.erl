@@ -1,5 +1,8 @@
--module(rpgb_user, [Id, Name::binary(), OpenID::binary(), RpgbGroupId, MaxMaps :: integer(), CreatedTime::timestamp(), UpdatedTime::timestamp()]).
+-module(rpgb_user, [Id, Name::binary(), OpenID::binary(),
+	RpgbGroupId::string(), MaxMaps :: integer(), CreatedTime::timestamp(),
+	UpdatedTime::timestamp()]).
 -has({permissions, many, [{module, rpgb_permission}]}).
+-has({battlemaps, many, [{module, rpgb_battlemap}]}).
 -belongs_to(rpgb_group).
 -compile([export_all]).
 
