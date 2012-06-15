@@ -104,12 +104,22 @@ is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 		Name ->
 			{false, ReqData, Ctx};
 		OtherName ->
-			case boss_db:find(rpgb_battlemap, [{name, equals, Name}, {owner_id, equals, BattleMap:owner_id()}]) of
+			MapsFound = boss_db:find(rpgb_battlemap, [
+				{name, equals, Name},
+				{owner_id, equals, BattleMap:owner_id()},
+				{id, not_equals, BattleMap:id()}
+			]),
+			case MapsFound of
 				[] ->
 					{false, ReqData, Ctx};
 				_ ->
-					?info("A map named ~p already exists for the user ~p", [OtherName, BattleMap:owner_id()]),
-					{true, ReqData, Ctx}
+					?info("A map named ~p already exists for the user ~p", [Name, BattleMap:owner_id()]),
+					Urls = [rpgb:get_url(["battles", Map:id(), "slug"]) ||
+						Map <- MapsFound],
+					Urls0 = mochijson2:encode(Urls),
+					Urls1 = iolist_to_binary(Urls0),
+					ReqData0 = wrq:append_to_response_body(Urls1),
+					{true, ReqData0, Ctx}
 		end
 	end.
 
@@ -130,17 +140,20 @@ resource_exists(ReqData, {search_battles, _} = Ctx) ->
 resource_exists(ReqData, {create_battle, _} = Ctx) ->
 	{false, ReqData, Ctx};
 
-resource_exists(ReqData, {battle, MapId, Session} = Ctx) ->
+resource_exists(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
 	case boss_db:find(MapId) of
 		{error, Reason} ->
 			?info("Could not find map ~p", [MapId]),
-			{false, ReqData, Ctx};
+			{{halt, 404}, ReqData, Ctx};
 		undefined ->
-			{false, ReqData, Ctx};
+			{{halt, 404}, ReqData, Ctx};
 		BattleMap ->
 			Ctx0 = {battle, BattleMap, Session},
 			{true, ReqData, Ctx0}
-	end.
+	end;
+
+resource_exists(ReqData, {battle, _BattleMap, _Session} = Ctx) ->
+	{true, ReqData, Ctx}.
 
 allow_missing_post(ReqData, {create_battle, _} = Ctx) ->
 	{true, ReqData, Ctx};
@@ -180,7 +193,7 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	end.
 
 post_is_create(ReqData, {create_battle, Session} = Ctx) ->
-	{false, ReqData, Ctx}.
+	{true, ReqData, Ctx}.
 
 create_path(ReqData, {create_battle, Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
@@ -193,10 +206,15 @@ create_path(ReqData, {create_battle, Session} = Ctx) ->
 		{json, Body},
 		{owner_id, Userid}
 	]),
-	{ok, BattleMap0} = BattleMap:save(),
-	NameSlug = rpgb:sluggify(Name),
-	Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
-	{Uri, ReqData, Ctx}.
+	case is_conflict(ReqData, {battle, BattleMap, Session}) of
+		{false, _, _} ->
+			{ok, BattleMap0} = BattleMap:save(),
+			NameSlug = rpgb:sluggify(Name),
+			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
+			{Uri, ReqData, Ctx};
+		{true, ReqData0, Ctx} ->
+			{{halt, 409}, ReqData0, Ctx}
+	end.
 
 generate_etag(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	BattleMap = boss_db:find(MapId),
@@ -264,7 +282,7 @@ to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	{mochijson2:encode(Json), ReqData, Ctx}.
 
 encode_map(BattleMap) ->
-	{struct, MapStruct} = mochijson2:decode(BattleMap:json()),
+	{struct, MapStruct} = mochijson2:decode(BattleMap:to_json()),
 	Url = rpgb:get_url(["battles",BattleMap:id(),"slug"]),
 	{struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]}.
 
@@ -281,3 +299,13 @@ to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	],
 	{ok, Out} = battlemap_dtl:render(Templatevars),
 	{Out, ReqData, Ctx}.
+
+finish_request(ReqData, {battle, _, Session} = Ctx) ->
+	SessionUser = rpgb_session:get_user(Session),
+	UserId = proplists:get_value(id, SessionUser),
+	BadMaps = boss_db:find(rpgb_battlemap, [{name, equals, undefined}]),
+	[boss_db:delete(BadMap:id()) || BadMap <- BadMaps],
+	{true, ReqData, Ctx};
+
+finish_request(R, C) ->
+	{true, R, C}.

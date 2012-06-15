@@ -1,7 +1,7 @@
 -module(rpgb_battlemap, [Id, Name :: binary(), OwnerId :: string(),
 	Settings :: binary(), Url :: binary(), CreatedTime :: timestamp(),
 	UpdatedTime :: timestamp()]).
--has({rpgb_zone, many}).
+-has({rpgb_zone, many, [{module, rpgb_zone}]}).
 -has({rpgb_combatant, many}).
 -belongs_to(owner).
 -has({rpgb_participants, many}).
@@ -21,7 +21,7 @@ before_update() ->
 	{ok, This0}.
 
 to_json() ->
-	Zones = THIS:rpgb_zones(),
+	Zones = THIS:zones(),
 	Zones0 = [Z:to_json() || Z <- Zones],
 	Combatants = THIS:rpgb_combatants(),
 	Combatants0 = [C:to_json() || C <- Combatants],

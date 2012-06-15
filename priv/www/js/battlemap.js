@@ -547,13 +547,20 @@ BattleMap.prototype.saveRemote = function(force){
 	var mapObj = this.toJsonable();
 	var ajaxOpts = {};
 	var def = $.Deferred();
+	var thisRef = this;
 	if(this.url){
 		ajaxOpts = {
 			'url':this.url,
 			'contentType':'application/json',
 			'data':JSON.stringify(mapObj),
 			'type':'PUT',
-			'processData':false
+			'processData':false,
+			'statusCode':{
+				404:function(){
+					thisRef.url = '';
+					thisRef.saveRemote(force);
+				}
+			}
 		};
 	} else {
 		ajaxOpts = {
@@ -570,10 +577,10 @@ BattleMap.prototype.saveRemote = function(force){
 		}
 	}
 	$.ajax(ajaxOpts).success(function(obj,success,xhr){
-		if(! this.url){
-			this.url = obj;
+		if(! thisRef.url){
+			thisRef.url = xhr.getResponseHeader('Location');
 		} else {
-			this.etag = xhr.getResponseHeader('etag');
+			thisRef.etag = xhr.getResponseHeader('etag');
 		}
 		def.resolve(this);
 	}).fail(function(obj,fail,xhr){
