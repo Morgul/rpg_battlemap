@@ -1,5 +1,4 @@
 -module(rpgb_zone, [Id, Name :: binary(), BattleId :: atom(),
-	StartCellX :: pos_integer(), StartCellY :: pos_integer(),
 	Layer :: binary(), ZIndex :: pos_integer(), Rotation :: binary(),
 	StrokeOpactiy :: float(), StrokeColor :: binary(), Path :: binary(),
 	CreatedTime :: timestamp(), UpdatedTime :: timestamp()]).
@@ -7,11 +6,19 @@
 -compile([export_all]).
 
 before_create() ->
-	{ok, ?MODULE:new(Id, Name, BattleId, StartCellX, StartCellY,
-	Layer, ZIndex, Rotation, StrokeOpactiy, StrokeColor, Path, erlang:now(),
-	erlang:now())}.
+	Now = erlang:now(),
+	{ok, THIS:set([{created_time, Now}, {updated_time, Now}])}.
 
 before_update() ->
-	{ok, ?MODULE:new(Id, Name, BattleId, StartCellX, StartCellY,
-	Layer, ZIndex, Rotation, StrokeOpactiy, StrokeColor, Path, CreatedTime,
-	erlang:now())}.
+	{ok, THIS:set([{updated_time, erlang:now()}])}.
+
+json_enc_exclude() ->
+	[battle].
+
+json_dec_exclude() ->
+	[created_time, updated_time, id].
+
+json_prop_names() ->
+	[{battle_id, <<"battleId">>}, {z_index, <<"zIndex">>},
+	{stroke_opacity, <<"strokeOpacity">>}, {stroke_color, <<"strokeColor">>},
+	{created_time, <<"createdTime">>}, {updated_time, <<"updated_time">>}].

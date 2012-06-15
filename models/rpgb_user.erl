@@ -28,3 +28,9 @@ before_update() ->
 		{updated_time, erlang:now()}
 	]),
 	{ok, This0}.
+
+json_enc_exclude() ->
+	[permissions, battlemaps].
+
+json_dec_exclude() ->
+	[permissions, battlemaps, updated_time, created_time].
