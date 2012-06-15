@@ -821,6 +821,9 @@ $().ready(function(){
 		}
 		var property = ev.target.getAttribute('object-property');
 		var val = ev.target.value;
+		if(ev.target.getAttribute('type') == 'number'){
+			val = parseFloat(val);
+		}
 		var zone = editor.currentZone.zone;
 		if(ev.target.type == 'checkbox'){
 			val = ev.target.checked;

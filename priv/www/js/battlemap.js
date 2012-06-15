@@ -1368,6 +1368,7 @@ CombatZone.prototype.toJsonable = function(){
 		path: this.path,
 		strokeOpacity: this.strokeOpacity,
 		strokeColor: this.strokeColor,
+		strokeWidth: this.strokeWidth,
 		gappy: this.gappy
 	};
 }

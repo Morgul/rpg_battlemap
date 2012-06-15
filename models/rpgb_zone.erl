@@ -1,6 +1,6 @@
 -module(rpgb_zone, [Id, Name :: binary(), BattlemapId :: atom(),
 	Layer :: binary(), Url :: binary(), ZIndex :: integer(),
-	Rotation :: binary(),
+	Rotation :: binary(), StrokeWidth :: integer(),
 	StrokeOpacity :: float(), StrokeColor :: binary(),
 	Color :: binary(), Gappy :: boolean(), Path,
 	CreatedTime :: timestamp(), UpdatedTime :: timestamp()]).
@@ -35,4 +35,5 @@ json_dec_exclude() ->
 json_prop_names() ->
 	[{battle_id, <<"battleId">>}, {z_index, <<"zIndex">>},
 	{stroke_opacity, <<"strokeOpacity">>}, {stroke_color, <<"strokeColor">>},
+	{stroke_width, <<"strokeWidth">>},
 	{created_time, <<"createdTime">>}, {updated_time, <<"updated_time">>}].
