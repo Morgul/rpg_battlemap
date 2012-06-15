@@ -1,8 +1,10 @@
--module(rpgb_zone, [Id, Name :: binary(), BattleId :: atom(),
-	Layer :: binary(), ZIndex :: pos_integer(), Rotation :: binary(),
-	StrokeOpactiy :: float(), StrokeColor :: binary(), Path :: binary(),
+-module(rpgb_zone, [Id, Name :: binary(), BattlemapId :: atom(),
+	Layer :: binary(), Url :: binary(), ZIndex :: integer(),
+	Rotation :: binary(),
+	StrokeOpactiy :: float(), StrokeColor :: binary(),
+	Color :: binary(), Gappy :: boolean(), Path :: binary(),
 	CreatedTime :: timestamp(), UpdatedTime :: timestamp()]).
--belongs_to(battle).
+-belongs_to(battlemap).
 -compile([export_all]).
 
 before_create() ->

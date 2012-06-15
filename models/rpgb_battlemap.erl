@@ -39,10 +39,11 @@ json_dec_exlucde() ->
 	[created_time, update_time, url, id, owner].
 
 json_prop_names() ->
-	[{<<"zoom">>, zoom}, {<<"translateX">>, translate_x},
+	[{Val, Key} || {Key, Val} <- [{<<"zoom">>, zoom},
+	{<<"translateX">>, translate_x},
 	{<<"translateY">>, translate_y}, {<<"gridSpacing">>, grid_spacing},
 	{<<"backgroundColor">>, background_color},
-	{<<"gridlineColor">>, gridline_color}, {<<"gridOpacity">>, grid_opacity}].
+	{<<"gridlineColor">>, gridline_color}, {<<"gridOpacity">>, grid_opacity}]].
 
 %to_json() ->
 %	Zones = THIS:zones(),

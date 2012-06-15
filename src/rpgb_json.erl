@@ -55,11 +55,16 @@ to_json(BossRec, SkipRecs) ->
 	lists:append(Attr3, Hases).
 
 assign_hases(BossRec, SkipRecs) when is_list(SkipRecs) ->
-	Mod = boss_db:type(BossRec:id()),
-	ModAttr = Mod:module_info(attributes),
-	HasAttrs = lists:flatten(proplists:get_all_values(has, ModAttr)),
-	HasAttrs0 = filter_hases(HasAttrs, SkipRecs),
-	[{element(1, H), assign_hases(BossRec, element(1,H), SkipRecs)} || H <- HasAttrs0].
+	case boss_db:type(BossRec:id()) of
+		Err when Err == undefined; Err == error ->
+			?info("Skipping has ~p as module is err:  ~p", [BossRec:id(), Err]),
+			[];
+		Mod ->
+			ModAttr = Mod:module_info(attributes),
+			HasAttrs = lists:flatten(proplists:get_all_values(has, ModAttr)),
+			HasAttrs0 = filter_hases(HasAttrs, SkipRecs),
+			[{element(1, H), assign_hases(BossRec, element(1,H), SkipRecs)} || H <- HasAttrs0]
+	end.
 
 assign_hases(BossRec, HasName, SkipRecs) when is_atom(HasName) ->
 	Recs = BossRec:HasName(),
@@ -106,7 +111,7 @@ assign_belongs([Name | Tail], BossRec, SkipRecs, Acc) ->
 			?info("not encoding ~s due to ~p", [Name, Err]),
 			assign_belongs(Tail, BossRec, Acc);
 		Rec ->
-			Type = boss_db:type(Rec:id()),
+			Type = element(1, BossRec),
 			case lists:member(Type, SkipRecs) of
 				true ->
 					assign_belongs(Tail, BossRec, Acc);
@@ -143,31 +148,35 @@ correct_types([{Key, Val} = H | Tail], Types, Acc) ->
 		{_, boolean} when Val; not Val ->
 			correct_types(Tail, Types, [H | Acc]);
 		{_, DahType} ->
-			?info("Skipping ~p: ~p as type ~p didn't sync up", [Key, Val, DahType]),
+			?info("Skipping ~p: as value ~p isn't of type ~p.", [Key, Val, DahType]),
 			correct_types(Tail, Types, Acc)
 	end.
 
-from_json(Binary, RecType) when is_binary(Binary) ->
+from_json(Binary, BossRec) when is_binary(Binary) ->
 	case mochijson2:decode(Binary) of
 		{struct, _Props} = Json ->
-			from_json(Json, RecType);
+			from_json(Json, BossRec);
 		Else ->
 			{error, {badjson, Else}}
 	end;
 
-from_json({struct, Props}, RecType) when is_atom(RecType) ->
-	BossRec = boss_record:new(RecType, []),
+from_json(Json, RecType) when is_atom(RecType) ->
+	BossRec = boss_record:new(RecType, [{id, id}]),
+	from_json(Json, BossRec);
+
+from_json({struct, Props}, BossRec) ->
+	RecType = element(1, BossRec),
 	Lexxed = case erlang:function_exported(RecType, json_prop_names, 1) of
 		false -> [];
 		true -> BossRec:json_prop_names()
 	end,
 	Lexxed0 = [{Val, Key} || {Key, Val} <- Lexxed],
-	Props0 = proplists:substitue_aliases(Lexxed0, Props),
+	Props0 = proplists:substitute_aliases(Lexxed0, Props),
 	Attrs = BossRec:attribute_types(),
 	%BelongsNames = [{B, belongs_to} || B <- BossRec:belongs_to_names()],
 	HasTypes = extract_has_types(RecType),
 	Excluded = case erlang:function_exported(RecType, json_dec_exclude, 1) of
-		true -> BossRec:json_dec_exlude();
+		true -> BossRec:json_dec_exclude();
 		_ -> []
 	end,
 	AllNames = lists:append([Attrs, HasTypes]),
@@ -214,10 +223,28 @@ from_json({_PropName, PropValue}, {Name, boolean}, BossRec) when PropValue; not 
 	{ok, BossRec:set(Name, PropValue)};
 
 from_json({_PropName, PropValue}, {_Name, [RecType]}, BossRec) when is_list(PropValue) ->
-	[from_json(Json, RecType) || {struct, _Props} = Json <- PropValue],
 	% boss_db/boss_record does magic under the hood to make sure the
 	% BossRec:has_attr() gets the correct responses here.
 	% so long as the belongs_to attr is set correctly in each sub object
+	% so we'll do some checking to see if we can make them match.
+	ParentRecType = element(1, BossRec),
+	"rpgb_" ++ ParentRecStr = atom_to_list(ParentRecType),
+	ParentRecAttrStr = ParentRecStr ++ "_id",
+	BaseRec = boss_record:new(RecType, [{id, id}]),
+	Attrs = BaseRec:attribute_names(),
+	BaseRec0 = case [A || A <- Attrs, atom_to_list(A) =:= ParentRecAttrStr] of
+		[] ->
+			?info("Couldn't guess the belongs to assoc"),
+			BaseRec;
+		_ ->
+			BaseRec:set(list_to_atom(ParentRecAttrStr), BossRec:id())
+	end,
+	[case from_json(Json, BaseRec0) of
+		{ok, BaseRec1} ->
+			BaseRec1:save();
+		OhGod ->
+			?info("Couldn't save sub thing:  ~p", [OhGod])
+	end || {struct, _Props} = Json <- PropValue],
 	{ok, BossRec};
 
 from_json(PropData, NameData, _BossRec) ->
