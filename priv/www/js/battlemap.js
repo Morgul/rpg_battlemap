@@ -172,12 +172,15 @@ function BattleMap(actionElem, opts){
 		mapRef: this
 	};
 	$(this.actionElem).mousewheel(function(ev, delta){
-		var sensitivity = 10;
 		if(isNaN(delta)){
 			delta = ev.originalEvent.wheelDelta;
 		}
-		delta = delta * (sensitivity / 10)
-		wheelData.mapRef.zoom = (wheelData.mapRef.zoom + delta);
+		if(delta > 0){
+			delta = 0.1;
+		} else {
+			delta = -0.1;
+		}
+		wheelData.mapRef.zoom += delta;
 		return false;
 	});
 
