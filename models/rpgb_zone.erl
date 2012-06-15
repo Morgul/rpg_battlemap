@@ -1,18 +1,30 @@
 -module(rpgb_zone, [Id, Name :: binary(), BattlemapId :: atom(),
 	Layer :: binary(), Url :: binary(), ZIndex :: integer(),
 	Rotation :: binary(),
-	StrokeOpactiy :: float(), StrokeColor :: binary(),
-	Color :: binary(), Gappy :: boolean(), Path :: binary(),
+	StrokeOpacity :: float(), StrokeColor :: binary(),
+	Color :: binary(), Gappy :: boolean(), Path,
 	CreatedTime :: timestamp(), UpdatedTime :: timestamp()]).
 -belongs_to(battlemap).
 -compile([export_all]).
 
 before_create() ->
 	Now = erlang:now(),
-	{ok, THIS:set([{created_time, Now}, {updated_time, Now}])}.
+	FixedPath = case THIS:path() of
+		undefined ->
+			<<>>;
+		Path ->
+			iolist_to_binary(mochijson2:encode(Path))
+	end,
+	{ok, THIS:set([{path, FixedPath}, {created_time, Now}, {updated_time, Now}])}.
 
 before_update() ->
-	{ok, THIS:set([{updated_time, erlang:now()}])}.
+	FixedPath = case THIS:path() of
+		undefined ->
+			<<>>;
+		Path ->
+			iolist_to_binary(mochijson2:encode(Path))
+	end,
+	{ok, THIS:set([{path, FixedPath}, {updated_time, erlang:now()}])}.
 
 json_enc_exclude() ->
 	[battle].
