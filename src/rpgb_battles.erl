@@ -175,11 +175,9 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
 	Name = proplists:get_value(<<"name">>, Props),
-	BattleMap = boss_record:new(rpgb_battlemap, [
-		{name, Name},
-		{json, Body},
-		{owner_id, Userid}
-	]),
+	BattleMapNeg1 = boss_record:new(rpgb_battlemap, []),
+	BattleMap = BattleMapNeg1,
+	BattleMap:from_json(Body),
 	case boss_db:find(rpgb_battlemap, [{name, equals, Name},{owner_id,equals,Userid}]) of
 		[] ->
 			{ok, BattleMap0} = BattleMap:save(),
@@ -278,7 +276,7 @@ to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	to_json(ReqData, {battle, BattleMap, Session});
 
 to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
-	Json = encode_map(BattleMap),
+	Json = rpgb_json:to_json(BattleMap),
 	{mochijson2:encode(Json), ReqData, Ctx}.
 
 encode_map(BattleMap) ->
@@ -291,7 +289,7 @@ to_html(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	to_html(ReqData, {battle, BattleMap, Session});
 
 to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
-	Json = encode_map(BattleMap),
+	Json = rpgb_json:to_json(BattleMap),
 	Templatevars = [
 		{"session", rpgb_session:to_dict(Session)},
 		{"json", mochijson2:encode(Json)},
