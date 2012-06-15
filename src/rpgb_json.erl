@@ -27,10 +27,14 @@
 -include("log.hrl").
 
 to_json(BossRec) ->
+	to_json(BossRec, []).
+
+to_json(BossRec, SkipRecs) ->
 	Mod = boss_db:type(BossRec:id()),
+	SkipRecs0 = [Mod | SkipRecs],
 
 	Exclude = case erlang:function_exported(Mod, json_enc_exclude, 1) of
-		true -> BossRec:json_exclude();
+		true -> BossRec:json_enc_exclude();
 		_ -> []
 	end,
 	Attr = BossRec:attributes(),
@@ -45,39 +49,71 @@ to_json(BossRec) ->
 	end,
 	Attr2 = proplists:substitute_aliases(Lexxed, Attr1),
 
-	BelongsToAttrs = assign_belongs(BossRec),
+	BelongsToAttrs = assign_belongs(BossRec, SkipRecs0),
 	Attr3 = lists:append(Attr2, BelongsToAttrs),
-	Hases = assign_hases(BossRec),
+	Hases = assign_hases(BossRec, SkipRecs0),
 	lists:append(Attr3, Hases).
 
-assign_hases(BossRec) ->
+assign_hases(BossRec, SkipRecs) when is_list(SkipRecs) ->
 	Mod = boss_db:type(BossRec:id()),
 	ModAttr = Mod:module_info(attributes),
 	HasAttrs = lists:flatten(proplists:get_all_values(has, ModAttr)),
-	[{element(1, H), assign_hases(BossRec, element(1,H))} || H <- HasAttrs].
+	HasAttrs0 = filter_hases(HasAttrs, SkipRecs),
+	[{element(1, H), assign_hases(BossRec, element(1,H), SkipRecs)} || H <- HasAttrs0].
 
-assign_hases(BossRec, HasName) ->
+assign_hases(BossRec, HasName, SkipRecs) when is_atom(HasName) ->
 	Recs = BossRec:HasName(),
-	[to_json(Rec) || Rec <- Recs].
+	[to_json(Rec, SkipRecs) || Rec <- Recs].
 
-assign_belongs(BossRec) ->
-	Names = BossRec:belongs_to_names(),
-	assign_belongs(Names, BossRec).
+filter_hases(Hases, SkipRecs) ->
+	filter_hases(Hases, SkipRecs, []).
 
-assign_belongs(Names, BossRec) ->
-	assign_belongs(Names, BossRec, []).
-
-assign_belongs([], _BossRec, Acc) ->
+filter_hases([], _, Acc) ->
 	lists:reverse(Acc);
 
-assign_belongs([Name | Tail], BossRec, Acc) ->
+filter_hases([{Name, _Count} = H| Tail], Skips, Acc) ->
+	case lists:member(Name, Skips) of
+		true ->
+			filter_hases(Tail, Skips, Acc);
+		false ->
+			filter_hases(Tail, Skips, [H | Acc])
+	end;
+
+filter_hases([{Name, _Count, Options} = H | Tail], Skips, Acc) ->
+	NameMem = lists:member(Name, Skips),
+	ModMem = lists:member(proplists:get_value(module, Options), Skips),
+	if
+		NameMem orelse ModMem ->
+			filter_hases(Tail, Skips, Acc);
+		true ->
+			filter_hases(Tail, Skips, [H | Acc])
+	end.
+
+
+assign_belongs(BossRec, SkipRecs) when is_list(SkipRecs) ->
+	Names = BossRec:belongs_to_names(),
+	assign_belongs(Names, BossRec, SkipRecs).
+
+assign_belongs(Names, BossRec, SkipRecs) ->
+	assign_belongs(Names, BossRec, SkipRecs, []).
+
+assign_belongs([], _BossRec, _SkipRecs, Acc) ->
+	lists:reverse(Acc);
+
+assign_belongs([Name | Tail], BossRec, SkipRecs, Acc) ->
 	case BossRec:Name() of
 		{error, Err} ->
 			?info("not encoding ~s due to ~p", [Name, Err]),
 			assign_belongs(Tail, BossRec, Acc);
 		Rec ->
-			Json = to_json(Rec),
-			assign_belongs(Tail, BossRec, [{Name, Json} | Acc])
+			Type = boss_db:type(Rec:id()),
+			case lists:member(Type, SkipRecs) of
+				true ->
+					assign_belongs(Tail, BossRec, Acc);
+				false ->
+					Json = to_json(Rec, SkipRecs),
+					assign_belongs(Tail, BossRec, [{Name, Json} | Acc])
+			end
 	end.
 
 correct_types(Attrs, Types) ->
@@ -107,7 +143,7 @@ correct_types([{Key, Val} = H | Tail], Types, Acc) ->
 		{_, boolean} when Val; not Val ->
 			correct_types(Tail, Types, [H | Acc]);
 		{_, DahType} ->
-			?info("Skipping ~p:~p as type ~p didn't sync up", [Key, Val, DahType]),
+			?info("Skipping ~p: ~p as type ~p didn't sync up", [Key, Val, DahType]),
 			correct_types(Tail, Types, Acc)
 	end.
 
@@ -131,7 +167,7 @@ from_json({struct, Props}, RecType) when is_atom(RecType) ->
 	%BelongsNames = [{B, belongs_to} || B <- BossRec:belongs_to_names()],
 	HasTypes = extract_has_types(RecType),
 	Excluded = case erlang:function_exported(RecType, json_dec_exclude, 1) of
-		true -> BossRec:json_exlude();
+		true -> BossRec:json_dec_exlude();
 		_ -> []
 	end,
 	AllNames = lists:append([Attrs, HasTypes]),
