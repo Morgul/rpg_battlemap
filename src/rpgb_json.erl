@@ -172,7 +172,9 @@ from_json({struct, Props}, BossRec) ->
 	end,
 	Lexxed0 = [{Val, Key} || {Key, Val} <- Lexxed],
 	Props0 = proplists:substitute_aliases(Lexxed0, Props),
-	Attrs = BossRec:attribute_types(),
+	AttrsTypes = BossRec:attribute_types(),
+	AttrNames = BossRec:attribute_names(),
+	Attrs = [{N, proplists:get_value(N, AttrsTypes, any)} || N <- AttrNames],
 	%BelongsNames = [{B, belongs_to} || B <- BossRec:belongs_to_names()],
 	HasTypes = extract_has_types(RecType),
 	Excluded = case erlang:function_exported(RecType, json_dec_exclude, 1) of
@@ -200,6 +202,9 @@ from_json([{PropName, PropValue} | Tail], Names, BossRec) ->
 					{error, Error}
 			end
 	end;
+
+from_json({_PropName, PropValue}, {Name, any}, BossRec) ->
+	{ok, BossRec:set(Name, PropValue)};
 
 from_json({_PropName, PropValue}, {Name, string}, BossRec) when is_binary(PropValue) ->
 	{ok, BossRec:set(Name, binary_to_list(PropValue))};
