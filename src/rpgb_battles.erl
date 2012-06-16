@@ -175,15 +175,16 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
 	Name = proplists:get_value(<<"name">>, Props),
-	BattleMapNeg1 = boss_record:new(rpgb_battlemap, []),
-	BattleMap = BattleMapNeg1,
-	BattleMap:from_json(Body),
 	case boss_db:find(rpgb_battlemap, [{name, equals, Name},{owner_id,equals,Userid}]) of
 		[] ->
+			BattleMap = boss_record:new(rpgb_battlemap, [{owner_id, Userid}]),
 			{ok, BattleMap0} = BattleMap:save(),
+			{ok, BattleMap1} = rpgb_json:from_json({struct, Props}, BattleMap0),
 			NameSlug = rpgb:sluggify(Name),
 			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
-			{true, ReqData, {create_battle, Uri, Session}};
+			BattleMap2 = BattleMap1:set(url, iolist_to_binary(Uri)),
+			ReqData0 = wrq:set_resp_header("Location", Uri, ReqData),
+			{true, ReqData0, {create_battle, Uri, Session}};
 		_Recs ->
 			?info("Creation failed, map named ~p already exists for user ~p", [Name, Userid]),
 			ReqData0 = wrq:set_resp_body(iolist_to_binary(mochijson2:encode(<<"map with given name already exists">>)), ReqData),
@@ -191,28 +192,44 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	end.
 
 post_is_create(ReqData, {create_battle, Session} = Ctx) ->
-	{true, ReqData, Ctx}.
+	{false, ReqData, Ctx}.
 
 create_path(ReqData, {create_battle, Session} = Ctx) ->
-	User = rpgb_session:get_user(Session),
-	Userid = proplists:get_value(id, User),
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
 	Name = proplists:get_value(<<"name">>, Props),
-	BattleMap = boss_record:new(rpgb_battlemap, [
-		{name, Name},
-		{json, Body},
-		{owner_id, Userid}
-	]),
-	case is_conflict(ReqData, {battle, BattleMap, Session}) of
-		{false, _, _} ->
+	User = rpgb_session:get_user(Session),
+	Userid = proplists:get_value(id, User),
+	case boss_db:find(rpgb_battlemap, [{name, Name},{owner_id, Userid}]) of
+		[] ->
+			MapAttr = [{name, Name}, {owner_id, Userid}],
+			BattleMap = boss_record:new(rpgb_battlemap, MapAttr),
 			{ok, BattleMap0} = BattleMap:save(),
 			NameSlug = rpgb:sluggify(Name),
-			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
-			{Uri, ReqData, Ctx};
-		{true, ReqData0, Ctx} ->
-			{{halt, 409}, ReqData0, Ctx}
+			Url = rpgb:get_url(["battles", BattleMap0:id(), NameSlug]),
+			{Url, ReqData, Ctx};
+		_ ->
+			{{halt, 409}, ReqData, Ctx}
 	end.
+
+%	User = rpgb_session:get_user(Session),
+%	Userid = proplists:get_value(id, User),
+%	Body = wrq:req_body(ReqData),
+%	{struct, Props} = mochijson2:decode(Body),
+%	Name = proplists:get_value(<<"name">>, Props),
+%	BattleMap = boss_record:new(rpgb_battlemap, [
+%		{name, Name},
+%		{owner_id, Userid}
+%	]),
+%	case is_conflict(ReqData, {battle, BattleMap, Session}) of
+%		{false, _, _} ->
+%			{ok, BattleMap0} = BattleMap:save(),
+%			NameSlug = rpgb:sluggify(Name),
+%			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
+%			{Uri, ReqData, Ctx};
+%		{true, ReqData0, Ctx} ->
+%			{{halt, 409}, ReqData0, Ctx}
+%	end.
 
 generate_etag(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 	BattleMap = boss_db:find(MapId),
@@ -239,12 +256,20 @@ from_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 
 from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
-	{struct, Props} = mochijson2:decode(Body),
-	Name = proplists:get_value(<<"name">>, Props),
-	{struct, Props} = mochijson2:decode(Body),
-	BattleMap0 = BattleMap:set([{name, Name},{json, Body}]),
-	{ok, BattleMap1} = BattleMap0:save(),
-	{true, ReqData, {battle, BattleMap1, Session}}.
+	case rpgb_json:from_json(Body, BattleMap) of
+		{ok, BattleMap0} ->
+			case BattleMap0:save() of
+				{ok, BattleMap1} ->
+					{true, ReqData, {battle, BattleMap1, Session}};
+				Else ->
+					?warning("Could not create battle:  ~p", [Else]),
+					{{halt, 400}, ReqData, Ctx}
+			end;
+		Else ->
+			ErrMsg = io_lib:format("Error verifying supplied json:  ~p", [Else]),
+			ReqData0 = wrq:set_resp_body(iolist_to_binary(ErrMsg), ReqData),
+			{{halt, 400}, ReqData0, Ctx}
+	end.
 
 to_json(ReqData, {search_battles, Session} = Ctx) ->
 	Limit0 = list_to_integer(wrq:get_qs_value("limit", "100",ReqData)),

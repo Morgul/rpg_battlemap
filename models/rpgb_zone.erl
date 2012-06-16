@@ -1,5 +1,5 @@
--module(rpgb_zone, [Id, Name :: binary(), BattlemapId :: atom(),
-	Layer :: binary(), Url :: binary(), ZIndex :: integer(),
+-module(rpgb_zone, [Id, Name :: binary(), BattlemapId :: string(),
+	Layer :: binary(), ZIndex :: integer(),
 	Rotation :: binary(), StrokeWidth :: integer(),
 	StrokeOpacity :: float(), StrokeColor :: binary(),
 	Color :: binary(), Gappy :: boolean(), Path,

@@ -804,6 +804,9 @@ $().ready(function(){
 	$('#editGridProperties input[object-property]').change(function(ev){
 		var property = ev.target.getAttribute('object-property');
 		var val = ev.target.value;
+		if(ev.target.getAttribute('type') == 'number'){
+			val = parseFloat(val);
+		}
 		//console.log('changing', property, battleMap[property], val);
 		battleMap[property] = val;
 	});

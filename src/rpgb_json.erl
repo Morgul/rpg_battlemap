@@ -186,7 +186,7 @@ from_json({struct, Props}, BossRec) ->
 	from_json(Props0, FilteredNames, BossRec).
 
 from_json([], _Names, BossRec) ->
-	BossRec;
+	{ok, BossRec};
 
 from_json([{PropName, PropValue} | Tail], Names, BossRec) ->
 	NameTypeList = [ X || {Name, _Type} = X <- Names, propname_match(PropName, Name)],
@@ -215,6 +215,9 @@ from_json({_PropName, PropValue}, {Name, binary}, BossRec) when is_binary(PropVa
 from_json({_PropName, PropValue}, {Name, integer}, BossRec) when is_integer(PropValue) ->
 	{ok, BossRec:set(Name, PropValue)};
 
+from_json({_PropName, PropValue}, {Name, float}, BossRec) when is_integer(PropValue) ->
+	{ok, BossRec:set(Name, PropValue + 0.0)};
+
 from_json({_PropName, PropValue}, {Name, float}, BossRec) when is_float(PropValue) ->
 	{ok, BossRec:set(Name, PropValue)};
 
@@ -235,7 +238,7 @@ from_json({_PropName, PropValue}, {_Name, [RecType]}, BossRec) when is_list(Prop
 	ParentRecType = element(1, BossRec),
 	"rpgb_" ++ ParentRecStr = atom_to_list(ParentRecType),
 	ParentRecAttrStr = ParentRecStr ++ "_id",
-	BaseRec = boss_record:new(RecType, [{id, id}]),
+	BaseRec = boss_record:new(RecType, []),
 	Attrs = BaseRec:attribute_names(),
 	BaseRec0 = case [A || A <- Attrs, atom_to_list(A) =:= ParentRecAttrStr] of
 		[] ->
@@ -244,13 +247,19 @@ from_json({_PropName, PropValue}, {_Name, [RecType]}, BossRec) when is_list(Prop
 		_ ->
 			BaseRec:set(list_to_atom(ParentRecAttrStr), BossRec:id())
 	end,
-	[case from_json(Json, BaseRec0) of
+	SaveRes = [case from_json(Json, BaseRec0) of
 		{ok, BaseRec1} ->
 			BaseRec1:save();
 		OhGod ->
-			?info("Couldn't save sub thing:  ~p", [OhGod])
+			?info("Couldn't save sub thing:  ~p", [OhGod]),
+			OhGod
 	end || {struct, _Props} = Json <- PropValue],
-	{ok, BossRec};
+	case lists:any(fun({ok, _}) -> false; (_) -> true end, SaveRes) of
+		true ->
+			{error, SaveRes};
+		_ ->
+			{ok, BossRec}
+	end;
 
 from_json(PropData, NameData, _BossRec) ->
 	{error, {badjson, PropData, NameData}}.
