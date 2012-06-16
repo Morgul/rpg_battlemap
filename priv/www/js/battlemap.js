@@ -599,6 +599,9 @@ BattleMap.loadRemote = function(url, actionElem){
 	$.get(url).success(function(obj,success,xhr){
 		obj.url = url;
 		obj.etag = xhr.getResponseHeader('etag');
+		obj.zones.map(function(z){
+			z.path = JSON.parse(z.path);
+		});
 		if(actionElem){
 			var map = new BattleMap(actionElem, obj);
 			def.resolve(map);
@@ -1408,7 +1411,7 @@ CombatZone.makeSquare = function(size, x, y){
 	if(typeof y == "undefined"){
 		y = 0;
 	}
-	return Raphael.format("M {1} {2} h {0} v {0} h -{0} z", size, x, y);
+	return Raphael.parsePathString(Raphael.format("M {1} {2} h {0} v {0} h -{0} z", size, x, y));
 }
 
 CombatZone.makeOctogon = function(size, x, y){
@@ -1418,7 +1421,7 @@ CombatZone.makeOctogon = function(size, x, y){
 	if(typeof y == "undefined"){
 		y = 0;
 	}
-	return Raphael.format("M {1} {2} m {0} 0 h {0} l {0} {0} v {0} l -{0} {0} h -{0} l -{0} -{0} v -{0} z", size, x, y);
+	return Raphael.parsePathString(Raphael.format("M {1} {2} m {0} 0 h {0} l {0} {0} v {0} l -{0} {0} h -{0} l -{0} -{0} v -{0} z", size, x, y));
 }
 
 // CombatZone basic shapes
