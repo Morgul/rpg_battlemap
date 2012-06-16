@@ -181,9 +181,9 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 			{ok, BattleMap0} = BattleMap:save(),
 			{ok, BattleMap1} = rpgb_json:from_json({struct, Props}, BattleMap0),
 			NameSlug = rpgb:sluggify(Name),
-			Uri = io_lib:format("/battles/~s/~s", [BattleMap0:id(),NameSlug]),
+			Uri = rpgb:get_url(["battles", BattleMap0:id(),NameSlug]),
 			BattleMap2 = BattleMap1:set(url, iolist_to_binary(Uri)),
-			ReqData0 = wrq:set_resp_header("Location", Uri, ReqData),
+			ReqData0 = wrq:set_resp_header("Location", binary_to_list(Uri), ReqData),
 			{true, ReqData0, {create_battle, Uri, Session}};
 		_Recs ->
 			?info("Creation failed, map named ~p already exists for user ~p", [Name, Userid]),
@@ -315,6 +315,7 @@ to_html(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
 
 to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Json = rpgb_json:to_json(BattleMap),
+	rpgb_templates:init([battlemap]),
 	Templatevars = [
 		{"session", rpgb_session:to_dict(Session)},
 		{"json", mochijson2:encode(Json)},

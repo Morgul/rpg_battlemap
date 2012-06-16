@@ -10,7 +10,9 @@ init([Page]) ->
 				index ->
 					{"templates/base.html", base_dtl};
 				edit ->
-					{"templates/editor.html", editor_dtl}
+					{"templates/editor.html", editor_dtl};
+				battlemap ->
+					{"templates/battlemap.html", battlemap_dtl}
 			end,
 			ok = erlydtl:compile(File, Module, [{out_dir, "ebin"}])
 	end,

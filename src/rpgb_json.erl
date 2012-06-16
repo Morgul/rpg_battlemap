@@ -131,6 +131,8 @@ correct_types([{Key, Val} = H | Tail], Types, Acc) ->
 	case {Val, proplists:get_value(Key, Types, string)} of
 		{Val, string} when is_list(Val) ->
 			correct_types(Tail, Types, [{Key, list_to_binary(Val)} | Acc]);
+		{_, string} when is_binary(Val) ->
+			correct_types(Tail, Types, [{Key, Val} | Acc]);
 		{{Mega, Sec, Micro}, Time} when Time == timestamp; Time == datetime ->
 			Val0 = (Mega * 1000000) + Sec + (Micro / 1000000),
 			correct_types(Tail, Types, [{Key, Val0} | Acc]);
