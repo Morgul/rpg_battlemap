@@ -129,6 +129,7 @@ $().ready(function(){
 		if(isNaN(init)){
 			init = 0;
 		}
+		creationObj.size = parseInt(creationObj.size);
 		creationObj.initiative = init;
 		newCombatant = new Combatant(window.battleMap, creationObj);
 		insertCombatant(newCombatant);

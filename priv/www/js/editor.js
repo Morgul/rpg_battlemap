@@ -115,10 +115,10 @@ Editor.prototype.mousedownHandler = function(ev){
 Editor.prototype.dblclickHandler = function(ev){
 	this.dblclick = true;
 
-	if(this.currentZone != null){
+	/*if(this.currentZone != null){
 		this.currentZone.zone.path.push(["z"]);
 		this.currentZone.zone.updatePath();
-	}
+	}*/
 }
 
 Editor.prototype.contextmenuHandler = function(ev){

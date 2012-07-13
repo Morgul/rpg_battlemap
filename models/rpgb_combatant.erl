@@ -18,6 +18,17 @@ before_update() ->
 	]),
 	{ok, This0}.
 
+json_enc_exclude() ->
+	[battle].
+
+json_dec_exclude() ->
+	[created_time, updated_time].
+
+json_prop_names() ->
+	[{battle_id, <<"battleId">>}, {z_index, <<"zIndex">>},
+	{x, <<"cellX">>}, {y, <<"cellY">>}, {created_time, <<"createdTime">>},
+	{updated_time, <<"updatedTime">>}].
+
 %to_json() ->
 %	BattleURL = case boss_db:find(BattleId) of
 %		{error, _} -> undefined;
