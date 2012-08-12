@@ -74,10 +74,7 @@ make_cache_args(Args) ->
 %% -------------------------------------------------------------------
 
 make_webmachine_args(Args) ->
-	Dispatch = case proplists:get_value(dispatch, Args, "priv/dispatch.conf") of
-		X when is_list(X) -> {ok, Out} = file:consult(X), Out;
-		X -> X
-	end,
+	Dispatch = file:consult(filename:join(code:priv_dir(rpg_battlemap), "dispatch.conf")),
 	WebmachineDefaults = [
 		{log_dir, "priv/log"},
 		{ip, "0.0.0.0"},
