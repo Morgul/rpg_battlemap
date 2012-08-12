@@ -5,23 +5,22 @@
 -include("log.hrl").
 
 
-init(Args) ->
+init(_Args) ->
 	{ok, undefined}.
 
-resource_exists(ReqData, Context) ->
+resource_exists(ReqData, _Context) ->
 	Path = case wrq:path(ReqData) of
 		"/" -> "index.html";
+		[$/ | X] -> X;
 		X -> X
 	end,
-	{filelib:is_file("priv/www" ++ Path), ReqData, Context}.
+	Priv = code:priv_dir(rpg_battlemap),
+	Filename = filename:join([Priv, "www", Path]),
+	{filelib:is_file(Filename), ReqData, Filename}.
 
-to_html(ReqData, Context) ->
-	Path = case wrq:path(ReqData) of
-		"/" -> "index.html";
-		X -> X
-	end,
+to_html(ReqData, Path) ->
 	Ext = filename:extension(Path),
 	Mime = mochiweb_mime:from_extension(Ext),
-	{ok, Bin} = file:read_file("priv/www" ++ Path),
+	{ok, Bin} = file:read_file(Path),
 	ReqData0 = wrq:set_resp_header("Content-Type", Mime, ReqData),
-	{Bin, ReqData0, Context}.
+	{Bin, ReqData0, Path}.
