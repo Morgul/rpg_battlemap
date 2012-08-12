@@ -214,12 +214,14 @@ terminate(_Why, _State) -> ok.
 %% code_change
 %% --------------------------------------------------------------------
 
-code_change(_Huh, State, Xtra) ->
+code_change(_Huh, State, _Xtra) ->
 	{ok, State}.
 
 %% ====================================================================
 %% Internal Functions
 %% ====================================================================
 
+callback(Function, Args) when is_list(Args) ->
+	gen_server:call(?MODULE, {callback, Function, Args});
 callback(Function, Args) ->
-	gen_server:call(?MODULE, {callback, Function, Args}, []).
+	callback(Function, [Args]).
