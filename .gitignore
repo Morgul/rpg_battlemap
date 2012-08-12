@@ -7,12 +7,12 @@ key.pub
 oacd_office
 rel/rpg_battlemap
 *.config
-include/commit_ver.hrl
-rpg_battlemap
+app/rpg_battlemap/include/commit_ver.hrl
 
 # run artifacts
 *.log
 Mnesia.*
+app/rpg_battlemap/priv/rpgb_dets*
 
 # test artifacts
 .eunit
