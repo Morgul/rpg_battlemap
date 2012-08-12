@@ -328,10 +328,6 @@ svgObject.  Layer and zIndex are used for comparing.  If layer is equal,
 zIndex is compared.  svgObject is expected to a rapheal element object.
 order is ground -> action -> sky.
 */
-/*BattleMap.prototype.addCombatElement = function(combatElem){
-	this.combatElements.push(combatElem);
-	this.setPaintOrder();
-}*/
 
 BattleMap.prototype.addCombatant = function(combatant){
 	if(this._combatants.indexOf(combatant) > -1){
