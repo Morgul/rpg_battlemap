@@ -257,10 +257,11 @@ delete_combatant(Id) ->
 init(_) ->
 	Counters = [?dets_user, ?dets_user_group, ?dets_battlemap, ?dets_zone, 
 		?dets_combatant],
-	{ok, CounterDets} = dets:open_file(?dets_counter, []),
+	Priv = code:priv_dir(rpg_battlemap),
+	{ok, CounterDets} = dets:open_file(?dets_counter, [{file, filename:join(Priv, ?dets_counter)}]),
 	CounterObjs = [{C, 0} || C <- Counters],
 	dets:insert_new(CounterDets, CounterObjs),
-	[dets:open_file(C, [{keypos, 2}]) || C <- Counters],
+	[dets:open_file(C, [{keypos, 2}, {file, filename:join(Priv, C)}]) || C <- Counters],
 	{ok, undefined}.
 
 %% --------------------------------------------------------------------
@@ -309,9 +310,15 @@ empty_record_match(Tuple) when size(Tuple) > 0 ->
 	list_to_tuple([Recname | Fields0]).
 
 dets_cycle(Name, Match, Func) when Func == match_delete; Func == match_object; Func == insert ->
-	{ok, T} = dets:open_file(Name),
-	dets:Func(T, Match).
+	F = filename:join(code:priv_dir(rpg_battlemap), Name),
+	{ok, T} = dets:open_file(Name, [{keypos, 2}, {file, F}]),
+	Res = dets:Func(T, Match),
+	dets:close(T),
+	Res.
 
 update_counter(Counter) ->
-	{ok, T} = dets:open_file(?dets_counter),
-	dets:update_counter(T, Counter, 1).
+	F = filename:join(code:priv_dir(rpg_battlemap, ?dets_counter)),
+	{ok, T} = dets:open_file(?dets_counter, [{file, F}]),
+	Res = dets:update_counter(T, Counter, 1),
+	dets:close(T),
+	Res.
