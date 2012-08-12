@@ -20,7 +20,7 @@ function help_dump {
 	echo "-e defaults to \"erl\""
 }
 
-EBIN="ebin"
+EBIN="app/rpg_battlemap/ebin"
 COOKIE="RPGBattleMapDev"
 NAMETYPE="-sname"
 NODENAME="rpg_battlemap_dev"
