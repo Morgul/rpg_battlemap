@@ -107,7 +107,7 @@ is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 		Name ->
 			{false, ReqData, Ctx};
 		OtherName ->
-			MapsList = case rpgb_data:get_battlemaps_by_owner_id(BattleMap#battlemap.owner_id) of
+			MapsList = case rpgb_data:get_battlemaps_by_owner(BattleMap#battlemap.owner_id) of
 				{ok, ML} -> ML;
 				Else -> []
 			end,
@@ -117,7 +117,7 @@ is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 				[] ->
 					{false, ReqData, Ctx};
 				_ ->
-					?info("A map named ~p already exists for the user ~p", [Name, BattleMap:owner_id()]),
+					?info("A map named ~p already exists for the user ~p", [Name, BattleMap#battlemap.id]),
 					Urls = [rpgb:get_url(["battles", BattleMap#battlemap.id, "slug"]) ||
 						Map <- MapsFound],
 					Urls0 = mochijson2:encode(Urls),
@@ -186,8 +186,8 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	Recs = [M || #battlemap{name = FName} = M <- Maps, FName == Name],
 	case Recs of
 		[] ->
-			BattleMap = boss_record:new(rpgb_battlemap, [{owner_id, Userid}]),
-			{ok, BattleMap0} = BattleMap:save(),
+			BattleMap = #battlemap{owner_id = Userid},
+			{ok, BattleMap0} = rpgb_data:save_battlemap(BattleMap),
 			{ok, BattleMap1} = rpgb_json:from_json({struct, Props}, BattleMap0),
 			NameSlug = rpgb:sluggify(Name),
 			Uri = rpgb:get_url(["battles", BattleMap0:id(),NameSlug]),
@@ -209,7 +209,7 @@ create_path(ReqData, {create_battle, Session} = Ctx) ->
 	Name = proplists:get_value(<<"name">>, Props),
 	User = rpgb_session:get_user(Session),
 	Userid = proplists:get_value(id, User),
-	Maps = case rpgb_data:get_battlemap_by_owner_id(Userid) of
+	Maps = case rpgb_data:get_battlemap_by_owner(Userid) of
 		{ok, ML} -> ML;
 		_ -> []
 	end,
@@ -298,7 +298,7 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 		E -> E
 	end,
 	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
-	{ok, Records} = rpgb_data:get_battlemaps_by_owner_id(proplists:get_value(id, User)),
+	{ok, Records} = rpgb_data:get_battlemaps_by_owner(proplists:get_value(id, User)),
 	Jsons = [begin
 		Url = rpgb:get_url(["battles",Rid,"slug"]),
 		Name = Rname,
