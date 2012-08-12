@@ -3,18 +3,20 @@
 -export([init/1, to_html/2]).
 -include_lib("webmachine/include/webmachine.hrl").
 
+-define(basedirize(X), filename:join("app/rpg_battlemap", X)).
+
 init([Page]) ->
 	case rpgb:get_env(trace) of
 		{ok, _Tracedir} ->
 			{File,Module} = case Page of
 				index ->
-					{"templates/base.html", base_dtl};
+					{?basedirize("templates/base.html"), base_dtl};
 				edit ->
-					{"templates/editor.html", editor_dtl};
+					{?basedirize("templates/editor.html"), editor_dtl};
 				battlemap ->
-					{"templates/battlemap.html", battlemap_dtl}
+					{?basedirize("templates/battlemap.html"), battlemap_dtl}
 			end,
-			ok = erlydtl:compile(File, Module, [{out_dir, "ebin"}])
+			ok = erlydtl:compile(File, Module, [{out_dir, ?basedirize("ebin")}])
 	end,
 	{ok, Page}.
 
