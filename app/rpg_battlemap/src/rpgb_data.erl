@@ -47,7 +47,7 @@
 %% ====================================================================
 
 start_link(Callback) ->
-	gen_server:start_link({local, ?MODULE}, Callback, []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, Callback, []).
 
 get_user_group_by_id(Id) ->
 	callback(get_user_group_by_id, Id).

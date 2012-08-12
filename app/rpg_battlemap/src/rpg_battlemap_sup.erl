@@ -55,11 +55,11 @@ init(Args) ->
 %			[CacheKid | Kids]
 %	end,
 	
-	DataSetup = proplists:get_value(data_callback),
+	DataSetup = proplists:get_value(data_callback, Args),
 	Data = {rpgb_data, {rpgb_data, start_link, [DataSetup]}, permanent,
 		5000, worker, [rpgb_data]},
 
-	OtherModules = proplists:get_value(additional_modules),
+	OtherModules = proplists:get_value(additional_modules, Args, []),
 	OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || {OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
 
 	Kids = [Webmachine, Openid, Session, Data | OtherModules1],
@@ -74,7 +74,7 @@ make_cache_args(Args) ->
 %% -------------------------------------------------------------------
 
 make_webmachine_args(Args) ->
-	Dispatch = file:consult(filename:join(code:priv_dir(rpg_battlemap), "dispatch.conf")),
+	{ok, Dispatch} = file:consult(filename:join(code:priv_dir(rpg_battlemap), "dispatch.conf")),
 	WebmachineDefaults = [
 		{log_dir, "priv/log"},
 		{ip, "0.0.0.0"},

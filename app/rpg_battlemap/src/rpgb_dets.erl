@@ -54,7 +54,7 @@
 %% ====================================================================
 
 start_link() ->
-	gen_server:start_link({local, ?MODULE}, [], []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 get_user_group_by_id(Id) ->
 	Empty = empty_record_match(#user_group{}),
@@ -260,7 +260,7 @@ init(_) ->
 	{ok, CounterDets} = dets:open_file(?dets_counter, []),
 	CounterObjs = [{C, 0} || C <- Counters],
 	dets:insert_new(CounterDets, CounterObjs),
-	[dets:open_file(C, [{key_pos, 2}]) || C <- Counters],
+	[dets:open_file(C, [{keypos, 2}]) || C <- Counters],
 	{ok, undefined}.
 
 %% --------------------------------------------------------------------
