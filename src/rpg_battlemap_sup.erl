@@ -40,22 +40,31 @@ init(Args) ->
 	Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
 		5000, worker, [rpgb_session]},
 
-	Db = make_boss_db_args(Args),
+	%Db = make_boss_db_args(Args),
 
-	BossNews = {boss_news, {boss_news, start, []}, permanent, 5000, worker,
-		[boss_news]},
+	%BossNews = {boss_news, {boss_news, start, []}, permanent, 5000, worker,
+	%	[boss_news]},
 
-	Kids = [Webmachine, Openid, Session, Db, BossNews],
+	%Kids = [Webmachine, Openid, Session, Db, BossNews],
 
-	Kids0 = case proplists:get_value(boss_cache, Args) of
-		undefined ->
-			Kids;
-		CacheArgs ->
-			CacheKid = make_cache_args(CacheArgs),
-			[CacheKid | Kids]
-	end,
+%	Kids0 = case proplists:get_value(boss_cache, Args) of
+%		undefined ->
+%			Kids;
+%		CacheArgs ->
+%			CacheKid = make_cache_args(CacheArgs),
+%			[CacheKid | Kids]
+%	end,
+	
+	DataSetup = proplists:get_value(data_callback),
+	Data = {rpgb_data, {rpgb_data, start_link, [DataSetup]}, permanent,
+		5000, worker, [rpgb_data]},
 
-	{ok, { {one_for_one, 5, 10}, Kids0} }.
+	OtherModules = proplists:get_value(additional_modules),
+	OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || {OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
+
+	Kids = [Webmachine, Openid, Session, Data | OtherModules1],
+
+	{ok, { {one_for_one, 5, 10}, Kids} }.
 
 %% -------------------------------------------------------------------
 
