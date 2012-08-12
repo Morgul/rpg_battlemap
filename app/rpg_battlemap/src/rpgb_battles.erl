@@ -2,8 +2,9 @@
 -compile([export_all]).
 -include_lib("webmachine/include/webmachine.hrl").
 -include("log.hrl").
+-include("rpg_battlemap.hrl").
 
--type mode() :: 'zone' | 'zones' | 'combatant' | 'combatants'.
+%-type mode() :: 'zone' | 'zones' | 'combatant' | 'combatants'.
 init(Mode) ->
 	rpgb:res_init(Mode).
 
@@ -47,23 +48,25 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 	case wrq:path_info(battle_id, ReqData) of
 		undefined ->
 			{false, ReqData, Ctx};
-		MapId ->
-			case boss_db:find(MapId) of
+		MapId0 ->
+			MapId = list_to_integer(MapId0),
+			case rpgb_data:get_battlemap_by_id(MapId) of
 				{error, Reason} ->
 					?info("Error finding battlemap ~p:  ~p", [MapId, Reason]),
 					{false, ReqData, {battle, MapId, Session}};
-				undefined ->
+				notfound ->
 					?info("Didn't find the battlemap ~p", [MapId]),
 					MaxMaps = proplists:get_value(max_maps, SessionUser),
 					UserId = proplists:get_value(id, SessionUser),
-					MapList = boss_db:find(rpgb_battlemap, [{owner_id, UserId}]),
+					MapList = case rpgb_data:get_battlemaps_by_owner(UserId) of
+						{ok, ML} -> ML;
+						_ -> []
+					end,
 					MapListCount = length(MapList),
 					?info("List count:  ~p; max maps:  ~p", [MapListCount, MaxMaps]),
 					if
 						MaxMaps < 0 ->
 							{false, ReqData, {battle, MapId, Session}};
-						0 ->
-							{true, ReqData, {battle, MapId, Session}};
 						MapListCount < MaxMaps ->
 							{false, ReqData, {battle, MapId, Session}};
 						true ->
@@ -71,7 +74,7 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 					end;
 				BattleMap ->
 					Uid = proplists:get_value(id, SessionUser),
-					case BattleMap:owner_id() of
+					case BattleMap#battlemap.owner_id of
 						Uid ->
 							{false, ReqData, {battle, BattleMap, Session}};
 						_ ->
@@ -83,9 +86,9 @@ forbidden(ReqData, {battle, Session} = Ctx) ->
 moved_permanently(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
 	SessionUser = rpgb_session:get_user(Session),
 	UserId = proplists:get_value(id, SessionUser),
-	BattleMap = boss_record:new(rpgb_battlemap, [{owner_id, UserId}]),
-	{ok, BattleMap0} = BattleMap:save(),
-	Id = BattleMap0:id(),
+	BattleMap = #battlemap{owner_id = UserId},
+	{ok, BattleMap0} = rpgb_data:save_battlemap(BattleMap),
+	Id = BattleMap0#battlemap.id,
 	Url = rpgb:get_url(["battles",Id,"slug"]),
 	{{true, binary_to_list(Url)}, ReqData, {battle, BattleMap0, Session}};
 
@@ -93,28 +96,29 @@ moved_permanently(ReqData, Ctx) ->
 	{false, ReqData, Ctx}.
 	
 is_conflict(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
-	BattleMap = boss_db:find(MapId),
+	{ok, BattleMap} = rpgb_data:get_battlemap_by_id(MapId),
 	is_conflict(ReqData, {battle, BattleMap, Session});
 
 is_conflict(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
 	Name = proplists:get_value(<<"name">>, Props),
-	case BattleMap:name() of
+	case BattleMap#battlemap.name of
 		Name ->
 			{false, ReqData, Ctx};
 		OtherName ->
-			MapsFound = boss_db:find(rpgb_battlemap, [
-				{name, equals, Name},
-				{owner_id, equals, BattleMap:owner_id()},
-				{id, not_equals, BattleMap:id()}
-			]),
+			MapsList = case rpgb_data:get_battlemaps_by_owner_id(BattleMap#battlemap.owner_id) of
+				{ok, ML} -> ML;
+				Else -> []
+			end,
+			MapsFound = [M || #battlemap{id = Fid, name = FName} = M <- MapsList,
+				Fid =/= BattleMap#battlemap.id, FName == BattleMap#battlemap.name],
 			case MapsFound of
 				[] ->
 					{false, ReqData, Ctx};
 				_ ->
 					?info("A map named ~p already exists for the user ~p", [Name, BattleMap:owner_id()]),
-					Urls = [rpgb:get_url(["battles", Map:id(), "slug"]) ||
+					Urls = [rpgb:get_url(["battles", BattleMap#battlemap.id, "slug"]) ||
 						Map <- MapsFound],
 					Urls0 = mochijson2:encode(Urls),
 					Urls1 = iolist_to_binary(Urls0),
@@ -141,13 +145,13 @@ resource_exists(ReqData, {create_battle, _} = Ctx) ->
 	{false, ReqData, Ctx};
 
 resource_exists(ReqData, {battle, MapId, Session} = Ctx) when is_list(MapId) ->
-	case boss_db:find(MapId) of
+	case rpgb_data:get_battlemap_by_id(MapId) of
 		{error, Reason} ->
 			?info("Could not find map ~p", [MapId]),
 			{{halt, 404}, ReqData, Ctx};
-		undefined ->
+		notfound ->
 			{{halt, 404}, ReqData, Ctx};
-		BattleMap ->
+		{ok, BattleMap} ->
 			Ctx0 = {battle, BattleMap, Session},
 			{true, ReqData, Ctx0}
 	end;
@@ -161,11 +165,11 @@ allow_missing_post(ReqData, {create_battle, _} = Ctx) ->
 allow_missing_post(ReqData, Ctx) ->
 	{false, ReqData, Ctx}.
 
-delete_resource(ReqData, {battle, MapId, Session} = Ctx) ->
-	case boss_db:delete(MapId:id()) of
+delete_resource(ReqData, {battle, Map, Session} = Ctx) ->
+	case rpgb_data:delete_battlemap(Map) of
 		ok -> {true, ReqData, Ctx};
 		{error, Err} ->
-			?warning("Could not delete ~s due to ~p", [MapId, Err]),
+			?warning("Could not delete ~s due to ~p", [Map, Err]),
 			{false, ReqData, Ctx}
 	end.
 
@@ -175,7 +179,12 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	{struct, Props} = mochijson2:decode(Body),
 	Name = proplists:get_value(<<"name">>, Props),
-	case boss_db:find(rpgb_battlemap, [{name, equals, Name},{owner_id,equals,Userid}]) of
+	Maps = case rpgb_data:get_battlemaps_by_owner(Userid) of
+		{ok, L} -> L;
+		_ -> []
+	end,
+	Recs = [M || #battlemap{name = FName} = M <- Maps, FName == Name],
+	case Recs of
 		[] ->
 			BattleMap = boss_record:new(rpgb_battlemap, [{owner_id, Userid}]),
 			{ok, BattleMap0} = BattleMap:save(),
@@ -185,7 +194,7 @@ process_post(ReqData, {create_battle, Session} = Ctx) ->
 			BattleMap2 = BattleMap1:set(url, iolist_to_binary(Uri)),
 			ReqData0 = wrq:set_resp_header("Location", binary_to_list(Uri), ReqData),
 			{true, ReqData0, {create_battle, Uri, Session}};
-		_Recs ->
+		_ ->
 			?info("Creation failed, map named ~p already exists for user ~p", [Name, Userid]),
 			ReqData0 = wrq:set_resp_body(iolist_to_binary(mochijson2:encode(<<"map with given name already exists">>)), ReqData),
 			{{halt, 409}, ReqData0, Ctx}
@@ -200,11 +209,15 @@ create_path(ReqData, {create_battle, Session} = Ctx) ->
 	Name = proplists:get_value(<<"name">>, Props),
 	User = rpgb_session:get_user(Session),
 	Userid = proplists:get_value(id, User),
-	case boss_db:find(rpgb_battlemap, [{name, Name},{owner_id, Userid}]) of
+	Maps = case rpgb_data:get_battlemap_by_owner_id(Userid) of
+		{ok, ML} -> ML;
+		_ -> []
+	end,
+	Filtered = [M || #battlemap{name = FName} = M <- Maps, M == Name],
+	case Filtered of
 		[] ->
-			MapAttr = [{name, Name}, {owner_id, Userid}],
-			BattleMap = boss_record:new(rpgb_battlemap, MapAttr),
-			{ok, BattleMap0} = BattleMap:save(),
+			BattleMap = #battlemap{name = Name, owner_id = Userid},
+			{ok, BattleMap0} = rpgb_data:save_battlemap(BattleMap),
 			NameSlug = rpgb:sluggify(Name),
 			Url = rpgb:get_url(["battles", BattleMap0:id(), NameSlug]),
 			{Url, ReqData, Ctx};
@@ -232,11 +245,13 @@ create_path(ReqData, {create_battle, Session} = Ctx) ->
 %	end.
 
 generate_etag(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
-	BattleMap = boss_db:find(MapId),
+	Id = list_to_integer(MapId),
+	{ok, BattleMap} = rpgb_data:get_battlemap_by_id(Id),
 	generate_etag(ReqData, {battle, BattleMap, Session});
 
 generate_etag(ReqData, {battle, BattleMap, Session} = Ctx) ->
-	Iolist = io_lib:format("~p:~p", [BattleMap:id(), BattleMap:updated_time()]),
+	#battlemap{id = Id, updated = Updated} = BattleMap,
+	Iolist = io_lib:format("~p:~p", [Id, Updated]),
 	IoBin = iolist_to_binary(Iolist),
 	Md5 = erlang:md5(IoBin),
 	Etag = mochihex:to_hex(Md5),
@@ -251,14 +266,14 @@ from_json(ReqData, {create_battle, Session} = Ctx) ->
 	{true, ReqData, Ctx};
 
 from_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
-	BattleMap = boss_db:find(MapId),
+	{ok, BattleMap} = rpgb_data:get_battlemap_by_id(MapId),
 	from_json(ReqData, {battle, BattleMap, Session});
 
 from_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	Body = wrq:req_body(ReqData),
 	case rpgb_json:from_json(Body, BattleMap) of
 		{ok, BattleMap0} ->
-			case BattleMap0:save() of
+			case rpgb_data:save_battlemap(BattleMap0) of
 				{ok, BattleMap1} ->
 					{true, ReqData, {battle, BattleMap1, Session}};
 				Else ->
@@ -283,21 +298,21 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 		E -> E
 	end,
 	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
-	Records = boss_db:find(rpgb_battlemap, Conditions, Limit),
+	{ok, Records} = rpgb_data:get_battlemaps_by_owner_id(proplists:get_value(id, User)),
 	Jsons = [begin
-		Url = rpgb:get_url(["battles",Record:id(),"slug"]),
-		Name = Record:name(),
+		Url = rpgb:get_url(["battles",Rid,"slug"]),
+		Name = Rname,
 		{Etag, _, _} = generate_etag(ReqData, {battle, Record, Session}),
 		{struct, [
 			{<<"url">>, Url},
 			{<<"name">>, Name},
 			{<<"etag">>, list_to_binary(Etag)}
 		]}
-	end || Record <- Records],
+	end || #battlemap{id = Rid, name = Rname} = Record <- Records],
 	{mochijson2:encode(Jsons), ReqData, Ctx};
 
 to_json(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
-	BattleMap = boss_db:find(MapId),
+	{ok, BattleMap} = rpgb_data:get_battlemap_by_id(MapId),
 	to_json(ReqData, {battle, BattleMap, Session});
 
 to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
@@ -305,12 +320,13 @@ to_json(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	{mochijson2:encode(Json), ReqData, Ctx}.
 
 encode_map(BattleMap) ->
-	{struct, MapStruct} = mochijson2:decode(BattleMap:to_json()),
-	Url = rpgb:get_url(["battles",BattleMap:id(),"slug"]),
+	{struct, MapStruct} = mochijson2:decode(rpgb_json:to_json(BattleMap)),
+	Url = rpgb:get_url(["battles",BattleMap#battlemap.id,"slug"]),
 	{struct, [{<<"url">>, Url} | proplists:delete(<<"url">>, MapStruct)]}.
 
 to_html(ReqData, {battle, MapId, Session}) when is_list(MapId) ->
-	BattleMap = boss_db:find(MapId),
+	Id = list_to_integer(MapId),
+	{ok, BattleMap} = rpgb_data:get_battlemap_by_id(Id),
 	to_html(ReqData, {battle, BattleMap, Session});
 
 to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
@@ -324,12 +340,12 @@ to_html(ReqData, {battle, BattleMap, Session} = Ctx) ->
 	{ok, Out} = battlemap_dtl:render(Templatevars),
 	{Out, ReqData, Ctx}.
 
-finish_request(ReqData, {battle, _, Session} = Ctx) ->
-	SessionUser = rpgb_session:get_user(Session),
-	UserId = proplists:get_value(id, SessionUser),
-	BadMaps = boss_db:find(rpgb_battlemap, [{name, equals, undefined}]),
-	[boss_db:delete(BadMap:id()) || BadMap <- BadMaps],
-	{true, ReqData, Ctx};
-
-finish_request(R, C) ->
-	{true, R, C}.
+%finish_request(ReqData, {battle, _, Session} = Ctx) ->
+%	SessionUser = rpgb_session:get_user(Session),
+%	UserId = proplists:get_value(id, SessionUser),
+%	BadMaps = boss_db:find(rpgb_battlemap, [{name, equals, undefined}]),
+%	[boss_db:delete(BadMap:id()) || BadMap <- BadMaps],
+%	{true, ReqData, Ctx};
+%
+%finish_request(R, C) ->
+%	{true, R, C}.
