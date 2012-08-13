@@ -1,13 +1,13 @@
 % Define the data structures used throughout the app.
 
--type(time() :: {pos_integer(), non_neg_integer(), non_neg_integer()}).
+-type(time() :: {pos_integer(), non_neg_integer(), non_neg_integer()} | 'undefined').
 
 -record(user_group, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
 	permissions = [] :: [atom()],
-	created = os:timestamp() :: time(),
-	updated = os:timestamp() :: time()
+	created :: time(),
+	updated :: time()
 }).
 
 -record(user, {
@@ -17,8 +17,8 @@
 	group_id = 1 :: pos_integer(),
 	permissions = [] :: [atom()],
 	max_maps = 10 :: pos_integer() | 'infinity',
-	created = os:timestamp() :: time(),
-	updated = os:timestamp() :: time()
+	created :: time(),
+	updated :: time()
 }).
 	
 -record(battlemap, {
@@ -35,8 +35,8 @@
 	grid_opacity = 0.5 :: float(),
 	zones = [] :: [pos_integer()],
 	combatants = [] :: [pos_integer()],
-	created = os:timestamp() :: time(),
-	updated = os:timestamp() :: time()
+	created :: time(),
+	updated :: time()
 }).
 
 -record(zone, {
@@ -52,8 +52,8 @@
 	fill_color = <<"green">> :: binary(),
 	stroke_mode = gappy :: 'gappy' | 'solid',
 	path = <<>> :: binary(),
-	created = os:timestamp() :: time(),
-	updated = os:timestamp() :: time()
+	created :: time(),
+	updated :: time()
 }).
 
 -record(combatant, {
@@ -67,6 +67,8 @@
 	y = 0 :: integer(),
 	initiative = 1 :: float(),
 	size = 1 :: pos_integer(),
-	created = os:timestamp() :: time(),
-	updated = os:timestamp() :: time()
+	aura_size = 0 :: non_neg_integer(),
+	aura_color :: 'undefined' | binary(),
+	created :: time(),
+	updated :: time()
 }).
