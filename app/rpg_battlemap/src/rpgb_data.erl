@@ -14,11 +14,11 @@
 	save_user_group/1,
 	delete_user_group/1,
 
-	get_user_by_id/1,
-	get_user_by_openid/1,
-	get_user_by_name/1,
-	save_user/1,
-	delete_user/1,
+	get_web_user_by_id/1,
+	get_web_user_by_openid/1,
+	get_web_user_by_name/1,
+	save_web_user/1,
+	delete_web_user/1,
 
 	get_battlemap_by_id/1,
 	get_battlemaps_by_owner/1,
@@ -68,38 +68,38 @@ save_user_group(GroupRec) ->
 delete_user_group(GroupRec) ->
 	callback(delete_user_group, GroupRec).
 
-get_user_by_id(Id) ->
-	callback(get_user_by_id, Id).
+get_web_user_by_id(Id) ->
+	callback(get_web_user_by_id, Id).
 
-get_user_by_openid(OpenId) ->
-	callback(get_user_by_openid, OpenId).
+get_web_user_by_openid(OpenId) ->
+	callback(get_web_user_by_openid, OpenId).
 
-get_user_by_name(Name) ->
-	callback(get_user_by_name, Name).
+get_web_user_by_name(Name) ->
+	callback(get_web_user_by_name, Name).
 
-save_user(UserRec) ->
+save_web_user(UserRec) ->
 	Now = os:timestamp(),
-	UserRec1 = case UserRec#user.created of
+	UserRec1 = case UserRec#web_user.created of
 		undefined ->
-			UserRec#user{created = Now, updated = Now};
+			UserRec#web_user{created = Now, updated = Now};
 		_ ->
-			UserRec#user{updated = Now}
+			UserRec#web_user{updated = Now}
 	end,
-	callback(save_user, UserRec1).
+	callback(save_web_user, UserRec1).
 
-delete_user(UserRec) ->
-	callback(delete_user, UserRec).
+delete_web_user(UserRec) ->
+	callback(delete_web_user, UserRec).
 
 get_battlemap_by_id(MapId) ->
 	callback(get_battlemap_by_id, MapId).
 
-get_battlemaps_by_owner(#user{id = Id}) ->
+get_battlemaps_by_owner(#web_user{id = Id}) ->
 	get_battlemaps_by_owner(Id);
 
 get_battlemaps_by_owner(OwnerId) ->
 	callback(get_battlemaps_by_owner, OwnerId).
 
-get_battlemaps_by_participant(#user{id = Id}) ->
+get_battlemaps_by_participant(#web_user{id = Id}) ->
 	get_battlemaps_by_participant(Id);
 
 get_battlemaps_by_participant(UserId) ->
@@ -143,7 +143,7 @@ delete_zone(ZoneRec) ->
 get_combatant_by_id(Id) ->
 	callback(get_combatant_by_id, Id).
 
-get_combatants_by_owner(#user{id = Id}) ->
+get_combatants_by_owner(#web_user{id = Id}) ->
 	get_combatants_by_owner(Id);
 
 get_combatants_by_owner(OwnerId) ->

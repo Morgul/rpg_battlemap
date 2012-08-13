@@ -293,12 +293,11 @@ to_json(ReqData, {search_battles, Session} = Ctx) ->
 		Limit0 < 1 -> 1;
 		true -> Limit0
 	end,
-	User = case rpgb_session:get_user(Session) of
-		undefined -> [];
-		E -> E
+	User = rpgb_session:get_user(Session),
+	{ok, Records} = case User of
+		undefined -> {ok, []};
+		_ -> rpgb_data:get_battlemaps_by_owner(User#web_user.id)
 	end,
-	Conditions = [{owner_id, equals, proplists:get_value(id, User)}],
-	{ok, Records} = rpgb_data:get_battlemaps_by_owner(proplists:get_value(id, User)),
 	Jsons = [begin
 		Url = rpgb:get_url(["battles",Rid,"slug"]),
 		Name = Rname,

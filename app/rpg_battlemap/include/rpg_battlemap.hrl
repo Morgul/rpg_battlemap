@@ -10,7 +10,7 @@
 	updated :: time()
 }).
 
--record(user, {
+-record(web_user, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
 	openid :: binary(),

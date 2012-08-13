@@ -25,11 +25,11 @@
 	save_user_group/1,
 	delete_user_group/1,
 
-	get_user_by_id/1,
-	get_user_by_openid/1,
-	get_user_by_name/1,
-	save_user/1,
-	delete_user/1,
+	get_web_user_by_id/1,
+	get_web_user_by_openid/1,
+	get_web_user_by_name/1,
+	save_web_user/1,
+	delete_web_user/1,
 
 	get_battlemap_by_id/1,
 	get_battlemaps_by_owner/1,
@@ -89,47 +89,47 @@ delete_user_group(GroupRec) ->
 	Match = Empty#user_group{id = GroupRec#user_group.id},
 	dets_cycle(?dets_user_group, Match, match_delete).
 
-get_user_by_id(Id) ->
-	Empty = empty_record_match(#user{}),
-	Match = Empty#user{id = Id},
+get_web_user_by_id(Id) ->
+	Empty = empty_record_match(#web_user{}),
+	Match = Empty#web_user{id = Id},
 	case dets_cycle(?dets_user, Match, match_object) of
 		[] -> notfound;
 		[O | _] -> {ok, O};
 		Else -> Else
 	end.
 
-get_user_by_openid(OpenId) ->
-	Empty = empty_record_match(#user{}),
-	Match = Empty#user{openid = OpenId},
+get_web_user_by_openid(OpenId) ->
+	Empty = empty_record_match(#web_user{}),
+	Match = Empty#web_user{openid = OpenId},
 	case dets_cycle(?dets_user, Match, match_object) of
 		[] -> notfound;
 		[O | _] -> {ok, O};
 		Else -> Else
 	end.
 
-get_user_by_name(Name) ->
-	Empty = empty_record_match(#user{}),
-	Match = Empty#user{name = Name},
+get_web_user_by_name(Name) ->
+	Empty = empty_record_match(#web_user{}),
+	Match = Empty#web_user{name = Name},
 	case dets_cycle(?dets_user, Match, match_object) of
 		[] -> notfound;
 		[O | _] -> {ok, O};
 		Else -> Else
 	end.
 
-save_user(#user{id = undefined} = UserRec) ->
+save_web_user(#web_user{id = undefined} = UserRec) ->
 	Id = update_counter(?dets_user),
-	save_user(UserRec#user{id = Id});
+	save_web_user(UserRec#web_user{id = Id});
 
-save_user(UserRec) ->
+save_web_user(UserRec) ->
 	case dets_cycle(?dets_user, UserRec, insert) of
 		ok -> {ok, UserRec};
 		Else -> Else
 	end.
 
-delete_user(UserRec) ->
-	Id = UserRec#user.id,
+delete_web_user(UserRec) ->
+	Id = UserRec#web_user.id,
 	Empty = empty_record_match(UserRec),
-	Match = Empty#user{id = Id},
+	Match = Empty#web_user{id = Id},
 	dets_cycle(?dets_user, Match, match_delete).
 
 get_battlemap_by_id(MapId) ->
@@ -151,7 +151,7 @@ get_battlemaps_by_owner(Id) ->
 
 get_battlemaps_by_particpant(UserRec) ->
 	{ok, Table} = dets:open_file(?dets_battlemap),
-	Userid = UserRec#user.id,
+	Userid = UserRec#web_user.id,
 	Qh = qlc:q([M || #battlemap{participant_ids = P} = M <- dets:table(Table),
 		lists:member(Userid, P)]),
 	case qlc:e(Qh) of
@@ -317,7 +317,7 @@ dets_cycle(Name, Match, Func) when Func == match_delete; Func == match_object; F
 	Res.
 
 update_counter(Counter) ->
-	F = filename:join(code:priv_dir(rpg_battlemap, ?dets_counter)),
+	F = filename:join(code:priv_dir(rpg_battlemap), ?dets_counter),
 	{ok, T} = dets:open_file(?dets_counter, [{file, F}]),
 	Res = dets:update_counter(T, Counter, 1),
 	dets:close(T),

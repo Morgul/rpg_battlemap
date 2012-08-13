@@ -2,6 +2,7 @@
 -compile([export_all]).
 -include_lib("webmachine/include/webmachine.hrl").
 -include("log.hrl").
+-include("rpg_battlemap.hrl").
 
 init(Args) ->
 	?info("init"),
@@ -47,18 +48,18 @@ moved_temporarily(ReqData, Session) ->
 			?info("We have ourselves a user:  ~p", [OpenID]),
 			?info("query params:  ~p", [QueryParams]),
 			Username = proplists:get_value("openid.sreg.nickname", QueryParams, "Awesome User"),
-			{ok, Session1} = case boss_db:find(rpgb_user, [{open_id, equals, list_to_binary(OpenID)}], 1) of
-				[] ->
-					Userrec = boss_record:new(rpgb_user, [
-						{open_id, list_to_binary(OpenID)},
-						{name, list_to_binary(Username)},
-						{rpgb_ground_id, 'rpgb_ground-1'}
-					]),
+			{ok, Session1} = case rpgb_data:get_web_user_by_openid(list_to_binary(OpenID)) of
+				notfound ->
+					Userrec = #web_user{
+						openid = list_to_binary(OpenID),
+						name = list_to_binary(Username),
+						group_id = 1
+					},
 					?info("Das user:  ~p\n", [Userrec]),
-					{ok, Userrec0} = Userrec:save(),
-					rpgb_session:set_user(Userrec0:attributes(), Session);
-				[Userrec] ->
-					rpgb_session:set_user(Userrec:attributes(), Session)
+					{ok, Userrec0} = rpgb_data:save_web_user(Userrec),
+					rpgb_session:set_user(Userrec0, Session);
+				{ok, Userrec} ->
+					rpgb_session:set_user(Userrec, Session)
 			end,
 			ReqData1 = wrq:do_redirect(true, wrq:set_resp_header("Location", "/", ReqData)),
 			{{true, "/"}, ReqData1, Session1};
@@ -85,7 +86,7 @@ process_post(ReqData, Session) ->
 	Openid = proplists:get_value("openid", Post, ""),
 	?info("Openid:  ~p", [Openid]),
 	SessionId = rpgb_session:get_id(Session),
-	case gen_server:call(openid, {prepare, SessionId, Openid, true}) of
+	try gen_server:call(openid, {prepare, SessionId, Openid, true}) of
 		{ok, AuthReq} ->
 			BaseURL = rpgb:get_url(),
 			ReturnTo = <<BaseURL/binary, "/account/login_complete">>,
@@ -96,6 +97,10 @@ process_post(ReqData, Session) ->
 			{true, ReqData2, Session};
 		{error, Err} ->
 			?info("Error from openid:  ~p", [Err]),
+			{false, ReqData, Session}
+	catch
+		'EXIT':ExitY ->
+			?info("Exit from openid:  ~p", [ExitY]),
 			{false, ReqData, Session}
 	end.
 

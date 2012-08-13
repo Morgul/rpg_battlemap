@@ -9,11 +9,11 @@ behaviour_info(callbacks) -> [
 	{save_user_group, 1},
 	{delete_user_group, 1},
 
-	{get_user_by_id, 1},
-	{get_user_by_openid, 1},
-	{get_user_by_name, 1},
-	{save_user, 1},
-	{delete_user, 1},
+	{get_web_user_by_id, 1},
+	{get_web_user_by_openid, 1},
+	{get_web_user_by_name, 1},
+	{save_web_user, 1},
+	{delete_web_user, 1},
 
 	{get_battlemap_by_id, 1},
 	{get_battlemaps_by_owner, 1},
