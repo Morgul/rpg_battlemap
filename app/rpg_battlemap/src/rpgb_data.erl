@@ -35,7 +35,9 @@
 	get_combatants_by_owner/1,
 	get_combatants_by_battlemap/1,
 	save_combatant/1,
-	delete_combatant/1
+	delete_combatant/1,
+
+	to_json/1
 ]).
 
 % gen_server
@@ -167,6 +169,18 @@ save_combatant(CombatantRec) ->
 
 delete_combatant(Combatant) ->
 	callback(delete_combatant, Combatant).
+
+to_json(Rec) ->
+	Fields = if
+		is_record(Rec, user_group) -> record_info(fields, user_group);
+		is_record(Rec, web_user) -> record_info(fields, web_user);
+		is_record(Rec, battlemap) -> record_info(fields, battlemap);
+		is_record(Rec, zone) -> record_info(fields, zone);
+		is_record(Rec, combatant) -> record_info(fields, combatant)
+	end,
+	[_ | Values] = tuple_to_list(Rec),
+	Proplist = lists:zip(Fields, Values),
+	{struct, Proplist}.
 
 %% ====================================================================
 %% Gen server callbacks
