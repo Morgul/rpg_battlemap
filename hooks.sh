@@ -18,16 +18,6 @@ function pre_compile {
 		mkdir $APPDIR/include
 	fi
 
-#	for file in proto_src/*.proto
-#	do
-#		nameBase=`echo "$file" | sed -e "s/^proto_src\///"`
-#		nameBase="src/${nameBase}"
-#		if [ ! -e $nameBase -o $file -nt $nameBase ]
-#		then
-#			cp $file src/
-#		fi
-#	done
-
 	# record what commit/version the rep is at
 	COMMIT=""
 	if [ -d ".git" ]
