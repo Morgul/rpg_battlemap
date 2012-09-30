@@ -2,26 +2,26 @@
 
 -type(time() :: {pos_integer(), non_neg_integer(), non_neg_integer()} | 'undefined').
 
--record(user_group, {
-	id :: 'undefined' | pos_integer(),
-	name :: binary(),
-	permissions = [] :: [atom()],
-	created :: time(),
-	updated :: time()
-}).
-
--record(web_user, {
+-record(rpgb_rec_user, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
 	openid :: binary(),
 	group_id = 1 :: pos_integer(),
 	permissions = [] :: [atom()],
-	max_maps = 10 :: pos_integer() | 'infinity',
-	created :: time(),
-	updated :: time()
+	max_maps = 10 :: pos_integer() | 'infinity'%,
+	%created :: time(),
+	%updated :: time()
+}).
+
+-record(rpgb_rec_user_group, {
+	id :: 'undefined' | pos_integer(),
+	name :: binary(),
+	permissions = [] :: [atom()]%,
+	%created :: time(),
+	%updated :: time()
 }).
 	
--record(battlemap, {
+-record(rpgb_rec_battlemap, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
 	owner_id :: pos_integer(),
@@ -39,10 +39,17 @@
 	updated :: time()
 }).
 
--record(zone, {
+-record(rpgb_rec_layer, {
+  id :: 'undefined' | pos_integer(),
+  name :: binary(),
+  battlemap_id :: pos_integer(),
+  z_index = 1 :: pos_integer()
+}).
+
+-record(rpgb_rec_zone, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
-	battlemap_id :: pos_integer(),
+	layer_id :: pos_integer(),
 	layer = ground :: 'sky' | 'ground',
 	z_index = 1 :: pos_integer(),
 	rotation = 'none' :: 'none' | 'ccw' | 'cw' | 'about',
@@ -51,24 +58,35 @@
 	stoke_color = <<"black">> :: binary(),
 	fill_color = <<"green">> :: binary(),
 	stroke_mode = gappy :: 'gappy' | 'solid',
-	path = <<>> :: binary(),
-	created :: time(),
-	updated :: time()
+	path = <<>> :: binary()%,
+	%created :: time(),
+	%updated :: time()
 }).
 
--record(combatant, {
+-record(rpgb_rec_combatant, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
 	battlemap_id :: pos_integer(),
 	owner_id :: pos_integer(),
 	color = <<"green">> :: binary(),
-	image :: 'undefined' | binary(),
+  portrait_image :: 'undefined' | binary(),
+	token_image :: 'undefined' | binary(),
 	x = 0 :: integer(),
 	y = 0 :: integer(),
+  layer_id :: 'undefined' | pos_integer(),
 	initiative = 1 :: float(),
 	size = 1 :: pos_integer(),
 	aura_size = 0 :: non_neg_integer(),
-	aura_color :: 'undefined' | binary(),
-	created :: time(),
-	updated :: time()
+	aura_color :: 'undefined' | binary()%,
+	%created :: time(),
+	%updated :: time()
+}).
+
+-record(rpgb_rec_character, {
+  id :: 'undefined' | pos_integer(),
+  owner_id :: pos_integer(),
+  color = <<"green">> :: binary(),
+  portait_image :: 'undefined' | binary(),
+  token_image :: 'undefined' | binary(),
+  size = 1 :: pos_integer()
 }).

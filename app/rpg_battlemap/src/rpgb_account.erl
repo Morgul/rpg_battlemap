@@ -50,7 +50,7 @@ moved_temporarily(ReqData, Session) ->
 			Username = proplists:get_value("openid.sreg.nickname", QueryParams, "Awesome User"),
 			{ok, Session1} = case rpgb_data:get_web_user_by_openid(list_to_binary(OpenID)) of
 				notfound ->
-					Userrec = #web_user{
+					Userrec = #rpgb_rec_user{
 						openid = list_to_binary(OpenID),
 						name = list_to_binary(Username),
 						group_id = 1
