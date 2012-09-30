@@ -37,5 +37,5 @@ rel: deps
 relclean:
 	rm -rf rel/$(REPO)
 
-stage: rel
+devrel: rel
 	rm -rf rel/$(REPO)/lib/$(REPO)*; ln -sf $(abspath app/$(REPO)) rel/$(REPO)/lib/rpg_battlemap-0.1.0;
