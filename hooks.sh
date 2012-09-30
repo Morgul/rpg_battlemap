@@ -52,6 +52,4 @@ case $1 in
 		post_compile;;
 	"pre_clean")
 		pre_clean;;
-	"pre_eunit")
-		pre_eunit;;
 esac
