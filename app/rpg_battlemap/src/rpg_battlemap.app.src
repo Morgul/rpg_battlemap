@@ -11,7 +11,8 @@
                   mochiweb,
                   webmachine,
                   lager,
-                  openid
+                  openid,
+                  rec2json
                  ]},
   {mod, { rpg_battlemap_app, []}},
   {env, []}

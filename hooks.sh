@@ -39,6 +39,8 @@ function pre_compile {
 %% will just be overwritten.
 
 -define(COMMIT, $COMMIT)." > app/rpg_battlemap/include/commit_ver.hrl
+
+  rec2json -src=$APPDIR/include/rpg_battlemap.hrl -dest=$APPDIR/ebin -include=$APPDIR/include
 }
 
 function post_compile {
