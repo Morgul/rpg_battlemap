@@ -9,7 +9,7 @@
 -define(dets_table, rpgb_dets).
 
 % api
--export([start_link/0, start_link/1]).
+-export([start_link/0, start_link/1, stop/0]).
 % gen_server
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
 	code_change/3]).
@@ -31,10 +31,13 @@ start_link() ->
 start_link(Options) ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, Options, []).
 
+stop() ->
+   gen_server:cast(?MODULE, stop).
+
 get_by_id(Type, Id) ->
   case dets:lookup(?dets_table, {Type, Id}) of
     [] -> {error, notfound};
-    [O | _] -> {ok, O}
+    [{_Key, O} | _] -> {ok, O}
   end.
 
 save(Rec) ->
@@ -67,11 +70,12 @@ search(Type, Params) ->
   BlankTuple1 = ['_' || _ <- FieldNames],
   BlankTuple2 = [Type | BlankTuple1],
   BlankRec = list_to_tuple(BlankTuple2),
-  FieldIndexs = indexize(FieldNames, 1),
+  FieldIndexs = indexize(FieldNames, 2),
   Match = build_match(Params, FieldIndexs, BlankRec),
   case dets:match_object(?dets_table, {{Type, '_'}, Match}) of
     Objs when is_list(Objs) ->
-      {ok, Objs};
+      Objs1 = [O || {_, O} <- Objs],
+      {ok, Objs1};
     E ->
       E
   end.
@@ -91,13 +95,13 @@ init(Options) ->
       ok = filelib:ensure_dir(Dir1),
       Dir1;
     Dir ->
-      Dir
+      filename:join(Dir, "data")
   end,
   {ok, _} = dets:open_file(?dets_table, [{file, DataDir}]),
   Counters = [ rpgb_rec_user, rpgb_rec_user_group, rpgb_rec_battlemap,
     rpgb_rec_zone, rpgb_rec_combatant, rpgb_rec_character,
     rpgb_rec_layer ],
-  [dets:insert_new({C, 0}) || C <- Counters],
+  [dets:insert_new(?dets_table, {C, 0}) || C <- Counters],
   {ok, undefined}.
 
 %% --------------------------------------------------------------------
@@ -110,6 +114,9 @@ handle_call(_Msg, _From, State) ->
 %% --------------------------------------------------------------------
 %% handle_cast
 %% --------------------------------------------------------------------
+
+handle_cast(stop, State) ->
+  {stop, normal, State};
 
 handle_cast(_Msg, State) ->
 	{noreply, State}.
