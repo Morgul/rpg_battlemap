@@ -1,6 +1,5 @@
 -module(rpgb_battles).
 -compile([export_all]).
--include_lib("webmachine/include/webmachine.hrl").
 -include("log.hrl").
 -include("rpg_battlemap.hrl").
 

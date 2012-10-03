@@ -1,7 +1,6 @@
 -module(rpgb_templates).
 
 -export([init/1, to_html/2]).
--include_lib("webmachine/include/webmachine.hrl").
 
 -define(basedirize(X), filename:join("app/rpg_battlemap", X)).
 

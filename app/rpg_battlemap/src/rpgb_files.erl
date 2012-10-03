@@ -1,7 +1,6 @@
 -module(rpgb_files).
 
 -export([init/1,to_html/2,resource_exists/2]).
--include_lib("webmachine/include/webmachine.hrl").
 -include("log.hrl").
 
 

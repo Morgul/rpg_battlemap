@@ -6,13 +6,11 @@
   {applications, [
                   kernel,
                   stdlib,
-                  mnesia,
                   crypto,
-                  mochiweb,
-                  webmachine,
+                  cowboy,
+                  bullet,
                   lager,
-                  openid,
-                  rec2json
+                  openid
                  ]},
   {mod, { rpg_battlemap_app, []}},
   {env, []}
