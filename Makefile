@@ -38,4 +38,4 @@ relclean:
 	rm -rf rel/$(REPO)
 
 devrel: rel
-	rm -rf rel/$(REPO)/lib/$(REPO)*; ln -sf $(abspath app/$(REPO)) rel/$(REPO)/lib/rpg_battlemap-0.1.0;
+	rm -rf rel/$(REPO)/lib/$(REPO)*; ln -sf $(abspath app/$(REPO)) rel/$(REPO)/lib/$(REPO)-1;
