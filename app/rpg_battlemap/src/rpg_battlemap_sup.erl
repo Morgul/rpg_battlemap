@@ -18,7 +18,6 @@
 
 start_link(Args) ->
         ssl:start(),
-        cowboy:start(),
         supervisor:start_link({local, ?MODULE}, ?MODULE, Args).
 
 %% ===================================================================
@@ -26,7 +25,35 @@ start_link(Args) ->
 %% ===================================================================
 
 init(Args) ->
-    
+		{ok, Host} = rpgb:get_env(hostname, "localhost"),
+		{ok, Port} = rpgb:get_env(port, 9090),
+		{ok, Listeners} = rpgb:get_env(listeners, 100),
+		HP = {Host, Port},
+    Dispatch = [
+			{Host, [
+				{[], rpgb_handle_index, HP},
+				{[<<"maps">>], rpgb_handle_maps, HP},
+				{[<<"maps">>, map_id], rpgb_handle_map, HP},
+				{[<<"maps">>, map_id, property], rpgb_handle_map, {host, Port}},
+				{[<<"users">>], rpgb_handle_users, HP},
+				{[<<"users">>, user_id], rpgb_handle_user, HP},
+				{[<<"users">>, user_id, property], rpgb_handle_user, HP},
+				{[<<"layers">>, layer_id], rpgb_handle_layer, HP},
+				{[<<"layers">>, layer_id, property], rpgb_handle_layer, HP},
+				{[<<"zones">>, zone_id], rpgb_handle_zone, HP},
+				{[<<"zones">>, zone_id, property], rpgb_handle_zone, HP},
+				{[<<"characters">>], rpgb_handle_characters, HP},
+				{[<<"characters">>, id], rpgb_handle_character, HP},
+				{[<<"characters">>, id, property], rpgb_handle_character, HP},
+				{[<<"combatants">>, id], rpgb_handle_combatants, HP},
+				{[<<"combatants">>, id, property], rpgb_handle_combatants, HP}
+			]}
+		],
+
+		cowboy:start_listener(rpgb_listener, Listeners, 
+			cowboy_tcp_transport, [{port, Port}],
+			cowboy_http_protocol, [{dispatch, Dispatch}]
+		),
 
     Openid = {openid, {openid_srv, start_link, [{local, openid}]}, permanent, 
         5000, worker, [openid_srv]},
@@ -34,21 +61,6 @@ init(Args) ->
     Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
         5000, worker, [rpgb_session]},
 
-    %Db = make_boss_db_args(Args),
-
-    %BossNews = {boss_news, {boss_news, start, []}, permanent, 5000, worker,
-    %    [boss_news]},
-
-    %Kids = [Webmachine, Openid, Session, Db, BossNews],
-
-%    Kids0 = case proplists:get_value(boss_cache, Args) of
-%        undefined ->
-%            Kids;
-%        CacheArgs ->
-%            CacheKid = make_cache_args(CacheArgs),
-%            [CacheKid | Kids]
-%    end,
-    
     DataSetup = proplists:get_value(data_callback, Args),
     Data = {rpgb_data, {rpgb_data, start_link, [DataSetup]}, permanent,
         5000, worker, [rpgb_data]},
@@ -59,48 +71,3 @@ init(Args) ->
     Kids = [Openid, Session, Data | OtherModules1],
 
     {ok, { {one_for_one, 5, 10}, Kids} }.
-
-%% -------------------------------------------------------------------
-
-make_cache_args(Args) ->
-    {boss_cache, {boss_cache, start, [Args]}, permanent, 5000, worker, [boss_cache]}.
-
-%% -------------------------------------------------------------------
-
-make_webmachine_args(Args) ->
-    {ok, Dispatch} = file:consult(filename:join(code:priv_dir(rpg_battlemap), "dispatch.conf")),
-    WebmachineDefaults = [
-        {log_dir, "priv/log"},
-        {ip, "0.0.0.0"},
-        {port, 9090}
-    ],
-    Webmachine = proplists:get_value(webmachine, Args, []),
-    WebmachineArgs = override_defaults(WebmachineDefaults, Webmachine),
-    StartArgs = [{dispatch, Dispatch} | WebmachineArgs],
-    {webmachine_mochiweb, {webmachine_mochiweb, start,
-        [StartArgs]}, permanent, 5000, worker, [webmachine_mochiweb]}.
-
-%% -------------------------------------------------------------------
-
-make_boss_db_args(Args) ->
-    BossArgs = proplists:get_value(boss_db, Args, []),
-    {boss_db, {boss_db, start, [BossArgs]}, permanent, 5000, worker, [boss_db]}.
-
-%% -------------------------------------------------------------------
-
-override_defaults(Defaults, Args) ->
-    override_defaults(Defaults, Args, []).
-
-override_defaults([], _Args, Acc) ->
-    Acc;
-
-override_defaults([{Key, Value} = H | Tail], Args, Acc) ->
-    Acc0 = case proplists:get_value(Key, Args) of
-        undefined ->
-            [H | Acc];
-        Value ->
-            [H | Acc];
-        Else ->
-            [{Key, Else} | Acc]
-    end,
-    override_defaults(Tail, Args, Acc0).
