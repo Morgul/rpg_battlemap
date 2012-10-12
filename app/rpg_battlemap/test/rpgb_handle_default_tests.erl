@@ -4,15 +4,16 @@
 
 request_test_() ->
 	{setup, fun() ->
-		?debugMsg("bing"),
 		application:start(cowboy),
 		cowboy:start_listener(handle_default_tests, 1,
 			cowboy_tcp_transport, [{port, 9091}],
-			cowboy_http_protocol, [{dispatch, [{[], rpgb_handle_default, {"localhost", 9091}}]}]
+			cowboy_http_protocol, [{dispatch, [
+				{'_', [
+					{'_', rpgb_handle_default, {<<"localhost">>, 9091}}
+				]}
+			]}]
 		),
-		?debugMsg("bing"),
 		ibrowse:start(),
-		?debugMsg("bing"),
 		rpgb_test_util:mecked_data(handle_default_data)
 	end,
 	fun(_) ->
@@ -21,6 +22,9 @@ request_test_() ->
 	end,
 	fun(_) -> [
 
-		
+		{"Get the favicon", fun() ->
+			{ok, Status, _Heads, _Body} = ibrowse:send_req("http://localhost:9091/favicon.ico", [], get),
+			?assertEqual("200", Status)
+		end}
 
 	] end}.
