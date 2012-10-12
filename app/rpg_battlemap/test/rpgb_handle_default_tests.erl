@@ -25,6 +25,11 @@ request_test_() ->
 		{"Get the favicon", fun() ->
 			{ok, Status, _Heads, _Body} = ibrowse:send_req("http://localhost:9091/favicon.ico", [], get),
 			?assertEqual("200", Status)
+		end},
+
+		{"Get a file that doesn't exist", fun() ->
+			{ok, Status, _Heads, _Body} = ibrowse:send_req("http://localhost:9091/alsdhfksfksdahfldsjfljdsalfsafsalj", [], get),
+			?assertEqual("404", Status)
 		end}
 
 	] end}.
