@@ -16,7 +16,7 @@
 % api
 -export([start_link/0, start_link/1, get_or_create/1, get/1, create/0,
 	destroy/1, get_id/1, get_user/1, get_value/2, get_value/3, set_user/2,
-	to_dict/1]).
+	to_dict/1, make_ets/0]).
 
 %% =================================================================
 %% Api
@@ -61,11 +61,20 @@ get_or_create(ReqData) ->
 		new ->
 			SessionId1 = get_id(Session),
 			?info("session was created:  ~p", [SessionId1]),
-			{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid",
-				SessionId1, [{max_age, 60 * 60 * 24 * 7},{path,"/"}]),
-			ReqData0 = wrq:set_resp_header(CookieHKey, CookieHVal, ReqData),
-			{ok, Session, ReqData0}
+			ReqData1 = set_cookie(SessionId1, ReqData),
+			{ok, Session, ReqData1}
 	end.
+
+set_cookie(SessionId, Req) when element(1, Req) =:= mochiweb_request ->
+	{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid",
+	SessionId, [{max_age, 60 * 60 * 24 * 7},{path,"/"}]),
+	wrq:set_resp_header(CookieHKey, CookieHVal, Req);
+
+set_cookie(SessionId, Req) ->
+	{Header, Val} = cowboy_cookies:cookie(<<"rpgbsid">>, SessionId, [
+		{max_age, 60 * 60 * 24 * 7}, {path, <<"/">>}]),
+	{ok, Out} = cowboy_http_req:set_resp_header(Header, Val, Req),
+	Out.
 
 %% @doc Get session data if available based on id or `request_data()'.
 -spec get/1 :: (SessionReference :: string() | binary() | request_data()) ->
@@ -86,10 +95,14 @@ get(Id) when is_binary(Id) ->
 			{ok, Session}
 	end;
 
-get(ReqData) ->
+get(ReqData) when element(1, ReqData) =:= mochiweb_request ->
 	?info("getting session based on req data"),
 	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
-	?MODULE:get(SessionId).
+	?MODULE:get(SessionId);
+
+get(Req) ->
+	{Cookie, Req1} = cowboy_http_req:cookie(<<"rpgbsid">>, Req),
+	?MODULE:get(Cookie).
 
 %% @doc Creates a new session in the ets table and returns it.  While the
 %% uuid's for the session are randomly generated, there is still a check
@@ -163,13 +176,16 @@ to_dict({_Id, User, Values, TimeStarted}) ->
 		{values, Values}
 	]).
 
+make_ets() ->
+	ets:new(?MODULE, [named_table, public]).
+
 %% =================================================================
 %% Init
 %% =================================================================
 
 %% @hidden
 init(_Opts) ->
-	Ets = ets:new(?MODULE, [named_table, public]),
+	Ets = make_ets(),
 	Self = self(),
 	Timer = erlang:send_after(1000 * 60 * 60, Self, clear_dead_sessions),
 	{ok, {Timer, Ets}}.
