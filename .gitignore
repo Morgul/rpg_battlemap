@@ -12,7 +12,7 @@ app/rpg_battlemap/include/commit_ver.hrl
 # run artifacts
 *.log
 Mnesia.*
-app/rpg_battlemap/priv/rpgb_dets*
+app/rpg_battlemap/priv/data
 
 # test artifacts
 .eunit
