@@ -23,6 +23,7 @@ request_test_() ->
 	end,
 	fun(_) ->
 		meck:unload(rpgb_data),
+		meck:unload(openid),
 		cowboy:stop_listener(handle_account_tests)
 	end,
 	fun(_) -> [
