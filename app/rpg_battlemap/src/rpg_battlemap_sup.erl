@@ -55,12 +55,6 @@ init(Args) ->
 			cowboy_http_protocol, [{dispatch, Dispatch}]
 		),
 
-    %Openid = {openid, {openid_srv, start_link, [{local, openid}]}, permanent, 
-    %    5000, worker, [openid_srv]},
-
-		Openid = {openid, {openid, start_link, [[]]}, permanent,
-				5000, worker, [openid]},
-
     Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
         5000, worker, [rpgb_session]},
 
@@ -71,6 +65,6 @@ init(Args) ->
     OtherModules = proplists:get_value(additional_modules, Args, []),
     OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || {OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
 
-    Kids = [Openid, Session, Data | OtherModules1],
+    Kids = [Session, Data | OtherModules1],
 
     {ok, { {one_for_one, 5, 10}, Kids} }.
