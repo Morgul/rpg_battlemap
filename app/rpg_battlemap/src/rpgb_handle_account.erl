@@ -89,6 +89,7 @@ to_html(Req, #ctx{action = login, session = Session, hostport = {Host, Port}} = 
 	ReturnTo = <<BaseURL/binary, "account/login_complete">>,
 	{QueryParams, Req1} = cowboy_http_req:qs_vals(Req),
 	?debug("query params:  ~p", [QueryParams]),
+	QueryParams1 = [ {binary_to_list(K), binary_to_list(V)} || {K, V} <- QueryParams],
 	case openid:verify(SessionId, binary_to_list(ReturnTo), QueryParams) of
 		{ok, OpenID} ->
 			Username = proplists:get_value(<<"openid.sreg.nickname">>, QueryParams, <<"Awesome User">>),

@@ -66,7 +66,12 @@ request_test_() ->
 				?assertEqual("nickname", proplists:get_value("openid.sreg.optional", Opts)),
 				"http://www.example.com/openid"
 			end),
-			meck:expect(openid, verify, fun(_SessionId, "http://localhost:9092/account/login_complete", _QueryString) ->
+			meck:expect(openid, verify, fun(_SessionId, "http://localhost:9092/account/login_complete", QueryString) ->
+				Test = fun
+					({K,V}) -> is_list(K) andalso is_list(V);
+					(_) -> false
+				end,
+				?assert(lists:all(Test, QueryString)),
 				{ok, "openid_url_data"}
 			end),
 			{ok, _Status, Heads, _Body} = ibrowse:send_req("http://localhost:9092/account", [], get),
