@@ -13,7 +13,7 @@ deps:
 clean: testclean
 	./rebar clean
 
-distclean: clean devclean relclean ballclean
+distclean: clean relclean
 	./rebar delete-deps
 
 
