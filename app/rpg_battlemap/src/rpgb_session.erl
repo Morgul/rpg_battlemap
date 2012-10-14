@@ -177,7 +177,12 @@ to_dict({_Id, User, Values, TimeStarted}) ->
 	]).
 
 make_ets() ->
-	ets:new(?MODULE, [named_table, public]).
+	case ets:info(?MODULE) of
+		undefined ->
+			ets:new(?MODULE, [named_table, public]);
+		_ ->
+			ets:delete_all_objects(?MODULE)
+	end.
 
 %% =================================================================
 %% Init
