@@ -90,7 +90,7 @@ to_html(Req, #ctx{action = login, session = Session, hostport = {Host, Port}} = 
 	{QueryParams, Req1} = cowboy_http_req:qs_vals(Req),
 	?debug("query params:  ~p", [QueryParams]),
 	QueryParams1 = [ {binary_to_list(K), binary_to_list(V)} || {K, V} <- QueryParams],
-	case openid:verify(SessionId, binary_to_list(ReturnTo), QueryParams) of
+	case openid:verify(SessionId, binary_to_list(ReturnTo), QueryParams1) of
 		{ok, OpenID} ->
 			Username = proplists:get_value(<<"openid.sreg.nickname">>, QueryParams, <<"Awesome User">>),
 			OpenID1 = list_to_binary(OpenID),
@@ -113,5 +113,7 @@ to_html(Req, #ctx{action = login, session = Session, hostport = {Host, Port}} = 
 			{halt, Req3, Ctx};
 		{error, Fail} ->
 			?info("Failure handling login:  ~p", [Fail]),
-			{ok, Req, Ctx}
+			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, <<"/">>, Req1),
+			{ok, Req3} = cowboy_http_req:reply(303, Req2),
+			{halt, Req3, Ctx}
 	end.
