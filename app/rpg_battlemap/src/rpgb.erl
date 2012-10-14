@@ -1,5 +1,6 @@
 -module(rpgb).
--export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/1,sluggify/1]).
+-export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/4,
+	sluggify/1]).
 %-export([is_printable/1, is_not_printable/1, is_string/1]).
 %-export([to_json/1, to_json/2]).
 -export([set_proplist/3, set_proplist/2]).
@@ -26,17 +27,24 @@ get_url() ->
 	{ok, Host} = get_env(host, "localhost"),
 	{ok, Port} = get_env(port, 9090),
 	{ok, Proto} = get_env(protocol, http),
-	iolist_to_binary(io_lib:format("~s://~s:~p", [Proto,Host, Port])).
+	get_url(Proto, Host, Port, []).
 
-get_url([]) -> get_url();
+get_url(Host, Port) ->
+	get_url("http", Host, Port, []).
 
-get_url([I | _] = Path) when is_integer(I) ->
-	get_url([Path]);
-
-get_url(Path) ->
-	Path0 = string:join(Path,"/"),
-	Base = get_url(),
-	iolist_to_binary(io_lib:format("~s/~s",[Base,Path0])).
+get_url(Proto, Host, Port, Path) when is_list(Path), is_list(hd(Path)) ->
+	Path1 = filename:join(Path),
+	get_url(Proto, Host, Port, Path1);
+get_url(Proto, Host, Port, [$/ | Path]) ->
+	get_url(Proto, Host, Port, Path);
+get_url(Proto, Host, Port, <<$/, Path/binary>>) ->
+	get_url(Proto, Host, Port, Path);
+get_url("http", Host, 80, Path) ->
+	iolist_to_binary(io_lib:format("http://~s/~s", [Host, Path]));
+get_url("https", Host, 443, Path) ->
+	iolist_to_binary(io_lib:format("https://~s/~s", [Host, Path]));
+get_url(Proto, Host, Port, Path) ->
+	iolist_to_binary(io_lib:format("~s://~s:~p/~s", [Proto, Host, Port, Path])).
 
 sluggify(Binary) when is_binary(Binary) ->
 	list_to_binary(sluggify(binary_to_list(Binary)));

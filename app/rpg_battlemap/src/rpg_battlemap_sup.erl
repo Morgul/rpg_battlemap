@@ -55,8 +55,11 @@ init(Args) ->
 			cowboy_http_protocol, [{dispatch, Dispatch}]
 		),
 
-    Openid = {openid, {openid_srv, start_link, [{local, openid}]}, permanent, 
-        5000, worker, [openid_srv]},
+    %Openid = {openid, {openid_srv, start_link, [{local, openid}]}, permanent, 
+    %    5000, worker, [openid_srv]},
+
+		Openid = {openid, {openid, start_link, [[]]}, permanent,
+				5000, worker, [openid]},
 
     Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
         5000, worker, [rpgb_session]},
