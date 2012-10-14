@@ -1,6 +1,6 @@
 -module(rpgb).
--export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/4,
-	sluggify/1]).
+-export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/3,
+	get_url/4,sluggify/1]).
 %-export([is_printable/1, is_not_printable/1, is_string/1]).
 %-export([to_json/1, to_json/2]).
 -export([set_proplist/3, set_proplist/2]).
@@ -31,6 +31,9 @@ get_url() ->
 
 get_url(Host, Port) ->
 	get_url("http", Host, Port, []).
+
+get_url(Host, Port, Path) ->
+	get_url("http", Host, Port, Path).
 
 get_url(Proto, Host, Port, Path) when is_list(Path), is_list(hd(Path)) ->
 	Path1 = filename:join(Path),

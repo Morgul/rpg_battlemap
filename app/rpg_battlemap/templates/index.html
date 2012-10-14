@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link type="text/css" href="/css/base.css" rel="stylesheet" />
+</head>
+<body>
+
+	<div id="head">
+		RPG Battlemap{% if user %}
+		<span class="login">Welcome, {{ user.name }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>{% endif %}
+	</div>{% if not user %}
+
+		{{ user }}
+	<form method="post" action="{{login_link}}">
+		<input name="openid" /><input type="submit" value="Login" />
+	</form>{% endif %}
+</body>
+</html>

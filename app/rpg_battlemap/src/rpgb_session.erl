@@ -57,6 +57,7 @@ get_or_create(ReqData) ->
 	case Newness of
 		old ->
 			?info("session already exists:  ~p", [get_id(Session)]),
+			?debug("session:  ~p", [Session]),
 			{ok, Session, ReqData};
 		new ->
 			SessionId1 = get_id(Session),

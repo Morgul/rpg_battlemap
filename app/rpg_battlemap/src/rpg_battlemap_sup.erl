@@ -46,7 +46,7 @@ init(Args) ->
 				{[<<"characters">>, id, property], rpgb_handle_character, HP},
 				{[<<"combatants">>, id], rpgb_handle_combatants, HP},
 				{[<<"combatants">>, id, property], rpgb_handle_combatants, HP},
-				{[], rpgb_handle_template, {HP, index}},
+				{[], rpgb_handle_template, {HP, index_dtl}},
 				{'_', rpgb_handle_default, HP}
 			]}
 		],
