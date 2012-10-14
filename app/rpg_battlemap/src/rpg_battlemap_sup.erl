@@ -25,12 +25,13 @@ start_link(Args) ->
 %% ===================================================================
 
 init(Args) ->
-		{ok, Host} = rpgb:get_env(hostname, '_'),
+		{ok, ListenHost} = rpgb:get_env(listen_host, '_'),
+		{ok, Host} = rpgb:get_env(hostname, <<"localhost">>),
 		{ok, Port} = rpgb:get_env(port, 9090),
 		{ok, Listeners} = rpgb:get_env(listeners, 100),
 		HP = {Host, Port},
     Dispatch = [
-			{Host, [
+			{ListenHost, [
 				{[<<"maps">>], rpgb_handle_maps, HP},
 				{[<<"maps">>, map_id], rpgb_handle_map, HP},
 				{[<<"maps">>, map_id, property], rpgb_handle_map, {host, Port}},
