@@ -11,6 +11,11 @@
 
 	<form method="post" action="{{login_link}}">
 		<input name="openid" /><input type="submit" value="Login" />
-	</form>{% endif %}
+	</form>{% else %}{% include "map_character_list.html" %}{% endif %}
+	{% if user %}
+	<script type="text/javascript" src="/contrib/jquery.js"></script>
+	<script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
+	<script type="text/javascript" src="/contrib/ember.js"></script>
+	{% endif %}
 </body>
 </html>
