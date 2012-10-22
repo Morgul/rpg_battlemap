@@ -120,9 +120,23 @@ create() ->
 	end.
 
 %% @doc Remove a session from the ets.
--spec destroy (Id :: binary()) -> 'ok'.
-destroy(Id) ->
-	ets:delete(?MODULE, Id).
+-spec destroy (Id :: any()) -> 'ok'.
+destroy(Id) when is_binary(Id) ->
+	ets:delete(?MODULE, Id);
+destroy(Id) when is_list(Id) ->
+	ets:delete(list_to_binary(Id));
+destroy(Req) when element(1, Req) =:= mochiweb_request ->
+	SessionId = wrq:get_cookie_value("rpgbsid", Req),
+	?MODULE:destroy(SessionId),
+	{Header, Val} = mochiweb_cookies:cookie("rpgbsid", "", [{path, "/"},{max_age, 0}]),
+	wrq:set_resp_header(Header, Val, Req);
+destroy(Req) ->
+	{SessionId, Req1} = cowboy_http_req:cookie(<<"rpgbsid">>, Req),
+	?MODULE:destroy(SessionId),
+	{Header, Val} = cowboy_cookies:cookie(<<"rpgbsid">>, <<>>, [
+		{max_age, 0}, {path, <<"/">>}]),
+	{ok, Out} = cowboy_http_req:set_resp_header(Header, Val, Req1),
+	Out.
 
 %% @doc Extracts the id from a `session()'.
 -spec get_id(Session :: session()) -> binary().

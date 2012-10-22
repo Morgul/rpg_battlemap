@@ -22,6 +22,8 @@ rest_init(Req, HostPort) ->
 	Action= case Path of
 		[_, <<"login_complete">>] ->
 			login;
+		[_, <<"logout">>] ->
+			logout;
 		_ ->
 			undefined
 	end,
@@ -30,7 +32,7 @@ rest_init(Req, HostPort) ->
 allowed_methods(Req, Ctx) ->
 	{['GET', 'POST', 'HEAD'], Req, Ctx}.
 
-is_authorized(Req, #ctx{action = login} = Ctx) ->
+is_authorized(Req, #ctx{action = Action} = Ctx) when Action =:= login; Action =:= logout ->
 	{true, Req, Ctx};
 is_authorized(Req, #ctx{action = undefined, session = Session} = Ctx) ->
 	case cowboy_http_req:method(Req) of
@@ -57,6 +59,12 @@ resource_exists(Req, Ctx) ->
 
 previously_existed(Req, Ctx) ->
 	{true, Req, Ctx}.
+
+process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = logout} = Ctx) ->
+	?info("processing logout"),
+	Req1 = rpgb_session:destroy(Req),
+	{ok, Req2} = cowboy_http_req:reply(200, Req1),
+	{halt, Req2, Ctx};
 
 process_post(Req, #ctx{session = Session, hostport = {Host, Port}} = Ctx) ->
 	?info("processing a likely login"),

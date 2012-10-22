@@ -13,7 +13,8 @@ request_test_() ->
 			cowboy_http_protocol, [{dispatch, [
 				{'_', [
 					{[<<"account">>], rpgb_handle_account, HostPort},
-					{[<<"account">>, <<"login_complete">>], rpgb_handle_account, HostPort}
+					{[<<"account">>, <<"login_complete">>], rpgb_handle_account, HostPort},
+					{[<<"account">>, <<"logout">>], rpgb_handle_account, HostPort}
 				]}
 			]}]
 		),
@@ -109,9 +110,35 @@ request_test_() ->
 			?assertEqual("303", Status3),
 			?assertEqual("/", proplists:get_value("Location", Heads3)),
 			?assertMatch({ok, [Userrec1]}, rpgb_data:search(rpgb_rec_user, [{openid, <<"openid_url_existant">>}]))
+		end},
 
-
-
+		{"logout destroys session", fun() ->
+			Userrec = #rpgb_rec_user{
+				openid = <<"openid_url_existant">>,
+				name = <<"mega user">>,
+				group_id = 1
+			},
+			{ok, Userrec1} = rpgb_data:save(Userrec),
+			meck:expect(openid, prepare, fun(_SessionId, "http://localhost:9092/openid") ->
+				{ok, meck_auth}
+			end),
+			meck:expect(openid, authentication_url, fun(meck_auth, "http://localhost:9092/account/login_complete", "http://localhost:9092/", Opts) ->
+				?assertEqual("nickname", proplists:get_value("openid.sreg.optional", Opts)),
+				"http://www.example.com/openid"
+			end),
+			meck:expect(openid, verify, fun(_SessionId, "http://localhost:9092/account/login_complete", _QueryString) ->
+				{ok, "openid_url_existant"}
+			end),
+			{ok, _Status, Heads, _Body} = ibrowse:send_req("http://localhost:9092/account", [], get),
+			Cookie = proplists:get_value("Set-Cookie", Heads),
+			Post = <<"openid=http://localhost:9092/openid">>,
+			{ok, Status2, Heads2, _Body} = ibrowse:send_req("http://localhost:9092/account", [{"Cookie", Cookie}], post, Post),
+			{ok, Status3, Heads3, _Body} = ibrowse:send_req("http://localhost:9092/account/login_complete", [{"Cookie", Cookie}], get, []),
+			{ok, "200", Heads4, _Body} = ibrowse:send_req("http://localhost:9092/account/logout", [{"Cookie", Cookie}], post, []),
+			{ok, Status5, Heads5, _Body} = ibrowse:send_req("http://localhost:9092/account", [{"Cookie", Cookie}], get),
+			?assertEqual("401", Status5),
+			?assertNotEqual(Cookie, proplists:get_value("Set-Cookie", Heads5)),
+			?assertNotEqual(undefined, proplists:get_value("Set-Cookie", Heads5))
 		end}
 
 	] end}.
