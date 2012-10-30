@@ -24,13 +24,18 @@ prop_map_statem() ->
 	cowboy:start_listener(handle_map_tests, 1,
 		cowboy_tcp_transport, [{port, 9093}],
 		cowboy_http_protocol, [{dispatch, [
-			{[<<"map">>], rpgb_handle_map, HostPort},
-			{[<<"map">>, mapid], rpgb_handle_map, HostPort}
+			{'_', [
+				{[<<"map">>], rpgb_handle_map, HostPort},
+				{[<<"map">>, mapid], rpgb_handle_map, HostPort}
+			]}
 		]}]
 	),
 	ibrowse:start(),
 	rpgb_test_util:mecked_data(handle_map_data),
 	rpgb_session:make_ets(),
+	{ok, Session} = rpgb_session:get_or_create(<<"id">>),
+	Session1 = setelement(1, Session, <<"sessionid">>),
+	ets:insert(rpgb_session, Session1),
 	?FORALL(Cmds, triq_statem:commands(?MODULE), begin
 		triq_statem:run_commands(?MODULE, Cmds),
 		true
