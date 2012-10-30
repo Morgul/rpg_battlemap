@@ -3,13 +3,17 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("triq/include/triq.hrl").
 -include_lib("triq/include/triq_statem.hrl").
+-include("rpg_battlemap.hrl").
 
 % both eunit and triq define let, triq lets (heh) eunit win
 % so, setting up a triqlet
 -define(TRIQLET(X,Gen1,Gen2), 
 	?DOMAIN_MODULE:bind(Gen1, fun(X)->Gen2 end)).
 
--define(cookie, {"Cookie", element(2, cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>))}).
+-define(cookie, begin
+	{Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
+	{"Cookie", binary_to_list(Cookie)}
+end).
 -define(accepts, {"Accepts", "application/json"}).
 
 -compile(export_all).
@@ -36,6 +40,12 @@ prop_map_statem() ->
 	{ok, Session} = rpgb_session:get_or_create(<<"id">>),
 	Session1 = setelement(1, Session, <<"sessionid">>),
 	ets:insert(rpgb_session, Session1),
+	{ok, Session2} = rpgb_session:get(<<"sessionid">>),
+	User = #rpgb_rec_user{
+		name = <<"Batman">>
+	},
+	{ok, User1} = rpgb_data:save(User),
+	{ok, Session3} = rpgb_session:set_user(User, Session2),
 	?FORALL(Cmds, triq_statem:commands(?MODULE), begin
 		triq_statem:run_commands(?MODULE, Cmds),
 		true
