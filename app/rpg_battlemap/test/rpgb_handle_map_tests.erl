@@ -14,7 +14,8 @@
 	{Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
 	{"Cookie", binary_to_list(Cookie)}
 end).
--define(accepts, {"Accepts", "application/json"}).
+-define(accepts, {"Accept", "application/json"}).
+-define(contenttype, {"Content-Type", "application/json"}).
 
 -compile(export_all).
 
@@ -141,13 +142,13 @@ next_state(State, _Res, _Call) ->
 create_map(Json, #state{map_id = undefined}) ->
 	Url = "http://localhost:9093/map",
 	Binary = jsx:to_json(Json),
-	ibrowse:send_req(Url, [?cookie, ?accepts], put, Binary).
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Binary).
 
 destroy_map(#state{map_id = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts], delete).
 
 update_map(Json, #state{map_id = Url}) ->
-	ibrowse:send_req(Url, [?cookie, ?accepts], put, jsx:to_json(Json)).
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
 %% =======================================================
 %% postcondition
