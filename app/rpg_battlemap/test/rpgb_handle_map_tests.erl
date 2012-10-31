@@ -117,6 +117,8 @@ uniquify([{K, V} | Tail], Acc) ->
 
 precondition(#state{map_id = undefined}, {call, _, create_map, _}) ->
 	true;
+precondition(_S, {call, _, create_map, _}) ->
+	false;
 precondition(#state{map_id = undefined}, Blorp) ->
 	false.
 
