@@ -15,7 +15,7 @@ end).
 
 -record(state, {url, props}).
 
-property_test_() -> {timeout, 60000, {setup, fun() ->
+browser_test_() -> {setup, fun() ->
 			application:start(cowboy),
 			HostPort = {<<"localhost">>, 9093},
 			cowboy:start_listener(handle_map_tests, 1,
@@ -38,7 +38,52 @@ property_test_() -> {timeout, 60000, {setup, fun() ->
 				name = <<"Batman">>
 			},
 			{ok, User1} = rpgb_data:save(User),
-			{ok, Session3} = rpgb_session:set_user(User, Session2)
+			{ok, Session3} = rpgb_session:set_user(User1, Session2)
+	end,
+	fun(_) ->
+		meck:unload(rpgb_data)
+	end,
+	fun(_) -> [
+
+		{"Simple create", fun() ->
+			Url = "http://localhost:9093/map",
+			Binary = jsx:to_json([{gridline_color, <<"pink">>}]),
+			Res = ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Binary),
+			?assertMatch({ok, "201", _H, _B}, Res),
+			{ok, _S, Heads, Body} = Res,
+			?assertMatch("http://localhost:9093/map/" ++ _MapId, proplists:get_value("Location", Heads))
+		end},
+
+		{"statem", timeout, 60000, fun() ->
+			?assert(proper:quickcheck(?MODULE:prop_map_statem()))
+		end}
+
+	] end}.
+
+property_test_d() -> {timeout, 60000, {setup, fun() ->
+			application:start(cowboy),
+			HostPort = {<<"localhost">>, 9093},
+			cowboy:start_listener(handle_map_tests, 1,
+				cowboy_tcp_transport, [{port, 9093}],
+				cowboy_http_protocol, [{dispatch, [
+					{'_', [
+						{[<<"map">>], rpgb_handle_map, HostPort},
+						{[<<"map">>, mapid], rpgb_handle_map, HostPort}
+					]}
+				]}]
+			),
+			ibrowse:start(),
+			rpgb_test_util:mecked_data(handle_props),
+			rpgb_session:make_ets(),
+			{ok, Session} = rpgb_session:get_or_create(<<"id">>),
+			Session1 = setelement(1, Session, <<"sessionid">>),
+			ets:insert(rpgb_session, Session1),
+			{ok, Session2} = rpgb_session:get(<<"sessionid">>),
+			User = #rpgb_rec_user{
+				name = <<"Batman">>
+			},
+			{ok, User1} = rpgb_data:save(User),
+			{ok, Session3} = rpgb_session:set_user(User1, Session2)
 	end,
 	fun(_) ->
 		meck:unload(rpgb_data)
@@ -52,19 +97,21 @@ property_test_() -> {timeout, 60000, {setup, fun() ->
 	] end}}.
 
 prop_map_statem() ->
-	?FORALL(Cmds, proper_statem:commands(?MODULE), begin
-		{_Hist, _State, Res} = run_commands(?MODULE, Cmds),
-		Res == ok
+	?FORALL(Cmds, commands(?MODULE), begin
+		{Hist, State, Res} = run_commands(?MODULE, Cmds),
+		?WHENFAIL(?debugFmt("proper check failed!\n== Hstory ==\n~p\n\n== State ==\n~p\n\n== Result ==\n~p", [Hist, State, Res]),
+			Res == ok)
 	end).
 
 initial_state() ->
 	#state{}.
 
+command(#state{url = undefined} = State) ->
+	{call, ?MODULE, create_map, [g_mapjson(), State]};
 command(State) ->
 	frequency([
-		{1, {call, ?MODULE, create_map, [g_mapjson(), State]}},
 		{1, {call, ?MODULE, destroy_map, [State]}},
-		{5, {call, ?MODULE, update_map, [g_mapjson(), State]}}
+		{9, {call, ?MODULE, update_map, [g_mapjson(), State]}}
 	]).
 
 %% =======================================================
@@ -83,10 +130,11 @@ g_name() ->
 	?LET(N,
 	list(
 		frequency([
-			{8, char()},
-			{2, oneof([$ , $1, $2, $3, $4, $5, $6, $7, $8, $9, $0, $', $"])}
+			{1, 9},
+			{8, integer(32, 126)},
+			{5, char()}
 		])
-	), list_to_binary(N)).
+	), unicode:characters_to_binary(N)).
 
 g_color() ->
 	oneof([
@@ -94,7 +142,7 @@ g_color() ->
 	]).
 
 g_opacity() ->
-	?LET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
+	?LET(N, int(), case N of 0 -> 0.0; _ -> 1 / abs(N) end).
 
 g_color_rgb() ->
 	[R,B,G,_] = g_color_rgba(),
@@ -124,7 +172,7 @@ precondition(#state{url = undefined}, {call, _, create_map, _}) ->
 	true;
 precondition(_S, {call, _, create_map, _}) ->
 	false;
-precondition(#state{url = undefined}, Blorp) ->
+precondition(#state{url = undefined}, _Blorp) ->
 	false.
 
 %% =======================================================
@@ -143,7 +191,7 @@ next_state(State, _Result, {call, _, destroy_map, _}) ->
 next_state(State, _Res, _Call) ->
 	State.
 
-extract_location_header({ok, _State, Headers, _Body}) ->
+extract_location_header({ok, _State, Headers, _Body} = R) ->
 	proplists:get_value("Location", Headers);
 
 extract_location_header(Res) ->
@@ -160,7 +208,7 @@ decode_json_body({ok, _State, _Headers, Body}) ->
 
 create_map(Json, #state{url = undefined}) ->
 	Url = "http://localhost:9093/map",
-	Binary = jsx:to_json(Json),
+	Binary = jsx:to_json(case Json of [] -> [{}]; _ -> Json end),
 	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Binary).
 
 destroy_map(#state{url = Url}) ->
@@ -173,7 +221,7 @@ update_map(Json, #state{url = Url}) ->
 %% postcondition
 %% =======================================================
 
-postcondition(State, {call, _, create_map, [Json, InState]}, {ok, "201", Heads, Body}) ->
+postcondition(State, {call, _, create_map, [Json, InState]}, {ok, "201", Heads, Body} = Goop) ->
 	?assertNotEqual(undefined, proplists:get_value("Location", Heads)),
 	?assert(assert_body(Json, Body)),
 	true;
@@ -185,7 +233,6 @@ postcondition(State, {call, _, destroy_map, [_InState]}, {ok, "204", Heads, Body
 	true;
 
 postcondition(State, Call, Res) ->
-	?debugFmt("State:  ~p\nCall:  ~p\nRes:  ~p", [State, Call, Res]),
 	false.
 
 assert_body(Json, Body) ->
