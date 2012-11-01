@@ -45,7 +45,7 @@ mecked_data(Callback) ->
 		case ets:lookup(Ets, Key) of
 			[] ->
 				{error, notfound};
-			[Rec | _] ->
+			[{Key, Rec} | _] ->
 				{ok, Rec}
 		end
 	end),
