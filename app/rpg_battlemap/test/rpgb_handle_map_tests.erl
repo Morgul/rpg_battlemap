@@ -1,16 +1,8 @@
 -module(rpgb_handle_map_tests).
 
 -include_lib("proper/include/proper.hrl").
-%-include_lib("proper/include/proper_statem.hrl").
 -include_lib("eunit/include/eunit.hrl").
-%-include_lib("triq/include/triq.hrl").
-%-include_lib("triq/include/triq_statem.hrl").
 -include("rpg_battlemap.hrl").
-
-% both eunit and triq define let, triq lets (heh) eunit win
-% so, setting up a triqlet
-%-define(TRIQLET(X,Gen1,Gen2), 
-%	?DOMAIN_MODULE:bind(Gen1, fun(X)->Gen2 end)).
 
 -define(cookie, begin
 	{Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
@@ -60,7 +52,6 @@ property_test_() -> {timeout, 60000, {setup, fun() ->
 	] end}}.
 
 prop_map_statem() ->
-	%?FORALL(Cmds, triq_statem:commands(?MODULE), begin
 	?FORALL(Cmds, proper_statem:commands(?MODULE), begin
 		{_Hist, _State, Res} = run_commands(?MODULE, Cmds),
 		Res == ok
@@ -81,7 +72,6 @@ command(State) ->
 %% =======================================================
 
 g_mapjson() ->
-	%?TRIQLET(X, list(oneof([
 	?LET(X, list(oneof([
 		{name, g_name()},
 		{background_color,  g_color()},
@@ -90,7 +80,6 @@ g_mapjson() ->
 	])), uniquify(X)).
 
 g_name() ->
-	%?TRIQLET(N,
 	?LET(N,
 	list(
 		frequency([
@@ -106,7 +95,6 @@ g_color() ->
 
 g_opacity() ->
 	?LET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
-	%?TRIQLET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
 
 g_color_rgb() ->
 	[R,B,G,_] = g_color_rgba(),
