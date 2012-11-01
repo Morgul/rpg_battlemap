@@ -13,7 +13,7 @@ end).
 
 -compile(export_all).
 
--record(state, {map_id}).
+-record(state, {url, props}).
 
 property_test_() -> {timeout, 60000, {setup, fun() ->
 			application:start(cowboy),
@@ -28,7 +28,7 @@ property_test_() -> {timeout, 60000, {setup, fun() ->
 				]}]
 			),
 			ibrowse:start(),
-			rpgb_test_util:mecked_data(handle_map_data),
+			rpgb_test_util:mecked_data(handle_props),
 			rpgb_session:make_ets(),
 			{ok, Session} = rpgb_session:get_or_create(<<"id">>),
 			Session1 = setelement(1, Session, <<"sessionid">>),
@@ -120,52 +120,63 @@ uniquify([{K, V} | Tail], Acc) ->
 %% preconditions
 %% =======================================================
 
-precondition(#state{map_id = undefined}, {call, _, create_map, _}) ->
+precondition(#state{url = undefined}, {call, _, create_map, _}) ->
 	true;
 precondition(_S, {call, _, create_map, _}) ->
 	false;
-precondition(#state{map_id = undefined}, Blorp) ->
+precondition(#state{url = undefined}, Blorp) ->
 	false.
 
 %% =======================================================
 %% next_state
 %% =======================================================
 
-next_state(State, {ok, _Status, _Heads, Body}, {call, _, create_map, _}) ->
-	Props = case jsx:to_term(list_to_binary(Body)) of
-		{incomplete, _} -> [];
-		Else -> Else
-	end,
-	Id = proplists:get_value(<<"url">>, Props),
-	State#state{map_id = Id};
+next_state(State, Result, {call, _, create_map, _}) ->
+	State#state{
+		url = {call, ?MODULE, extract_location_header, [Result]},
+		props = {call, ?MODULE, decode_json_body, [Result]}
+	};
 
-next_state(State, {ok, _Status, _Heads, _Body}, {call, _, destroy_map, _}) ->
-	State#state{map_id = undefined};
+next_state(State, _Result, {call, _, destroy_map, _}) ->
+	State#state{url = undefined};
 
 next_state(State, _Res, _Call) ->
 	State.
+
+extract_location_header({ok, _State, Headers, _Body}) ->
+	proplists:get_value("Location", Headers);
+
+extract_location_header(Res) ->
+	{call, proplists, get_value, ["Location",
+		{call, erlang, element, [3, Res]}
+	]}.
+
+decode_json_body({ok, _State, _Headers, Body}) ->
+	jsx:to_term(list_to_binary(Body)).
 
 %% =======================================================
 %% tests proper
 %% =======================================================
 
-create_map(Json, #state{map_id = undefined}) ->
+create_map(Json, #state{url = undefined}) ->
 	Url = "http://localhost:9093/map",
 	Binary = jsx:to_json(Json),
 	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Binary).
 
-destroy_map(#state{map_id = Url}) ->
+destroy_map(#state{url = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts], delete).
 
-update_map(Json, #state{map_id = Url}) ->
+update_map(Json, #state{url = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
 %% =======================================================
 %% postcondition
 %% =======================================================
 
-postcondition(State, {call, _, create_map, [Json, InState]}, {ok, "204", Heads, Body}) ->
-	assert_body(Json, Body);
+postcondition(State, {call, _, create_map, [Json, InState]}, {ok, "201", Heads, Body}) ->
+	?assertNotEqual(undefined, proplists:get_value("Location", Heads)),
+	?assert(assert_body(Json, Body)),
+	true;
 
 postcondition(State, {call, _, update_map, [Json, InState]}, {ok, "200", Heads, Body}) ->
 	assert_body(Json, Body);
@@ -174,7 +185,7 @@ postcondition(State, {call, _, destroy_map, [_InState]}, {ok, "204", Heads, Body
 	true;
 
 postcondition(State, Call, Res) ->
-	%?debugFmt("State:  ~p\nCall:  ~p\nRes:  ~p", [State, Call, Res]),
+	?debugFmt("State:  ~p\nCall:  ~p\nRes:  ~p", [State, Call, Res]),
 	false.
 
 assert_body(Json, Body) ->
