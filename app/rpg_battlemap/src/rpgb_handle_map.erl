@@ -5,7 +5,7 @@
 
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
 	forbidden/2, content_types_provided/2, to_json/2, to_html/2,
-	content_types_accepted/2, from_json/2]).
+	content_types_accepted/2, from_json/2, delete_resource/2]).
 
 -record(ctx, { hostport, session, mapid, map}).
 
@@ -29,6 +29,9 @@ rest_init(Req, HostPort) ->
 			end
 	end,
 	{ok, Req3, #ctx{hostport = HostPort, session = Session, mapid = MapId1}}.
+
+allowed_methods(Req, #ctx{mapid = undefined} = Ctx) ->
+	{['GET', 'PUT', 'HEAD'], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
 	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
@@ -61,6 +64,16 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 					{ok, Req2} = cowboy_http_req:reply(404, Req),
 					{halt, Req2, Ctx}
 			end
+	end.
+
+delete_resource(Req, #ctx{mapid = MapId} = Ctx) ->
+	case rpgb_data:delete(rpgb_rec_battlemap, MapId) of
+		{ok, _} ->
+			{true, Req, Ctx};
+		{error, Err} ->
+			Body = iolist_to_binary(io_lib:format("Error deleting:  ~p", [Err])),
+			{ok, Req1} = cowboy_http_req:set_resp_body(Body),
+			{false, Req1, Ctx}
 	end.
 
 content_types_provided(Req, Ctx) ->

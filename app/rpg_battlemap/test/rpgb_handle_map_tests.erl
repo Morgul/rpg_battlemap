@@ -103,6 +103,10 @@ prop_map_statem() ->
 			Res == ok)
 	end).
 
+%% =======================================================
+%% generators
+%% =======================================================
+
 initial_state() ->
 	#state{}.
 
@@ -113,10 +117,6 @@ command(State) ->
 		{1, {call, ?MODULE, destroy_map, [State]}},
 		{9, {call, ?MODULE, update_map, [g_mapjson(), State]}}
 	]).
-
-%% =======================================================
-%% generators
-%% =======================================================
 
 g_mapjson() ->
 	?LET(X, list(oneof([
