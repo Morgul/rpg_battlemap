@@ -40,6 +40,15 @@ mecked_data(Callback) ->
 		true = ets:delete(Ets, {Type, Id}),
 		{ok, 1}
 	end),
+	meck:expect(rpgb_data, get_by_id, fun(Type, Id) ->
+		Key = {Type, Id},
+		case ets:lookup(Ets, Key) of
+			[] ->
+				{error, notfound};
+			[Rec | _] ->
+				{ok, Rec}
+		end
+	end),
 	ok.
 
 get_fields(rpgb_rec_user) -> record_info(fields, rpgb_rec_user);
