@@ -1,4 +1,3 @@
-
 -module(rpg_battlemap_sup).
 
 -behaviour(supervisor).
@@ -49,6 +48,8 @@ init(Args) ->
 				{[<<"combatants">>, id, property], rpgb_handle_combatants, HP},
 				{[<<"account">>], rpgb_handle_account, HP},
 				{[<<"account">>, <<"login_complete">>], rpgb_handle_account, HP},
+				{[<<"map">>], rpgb_handle_map, HP},
+				{[<<"map">>, mapid], rpgb_handle_map, HP},
 				{[], rpgb_handle_template, {HP, index_dtl}},
 				{'_', rpgb_handle_default, HP}
 			]}

@@ -173,7 +173,10 @@ precondition(#state{url = undefined}, {call, _, create_map, _}) ->
 precondition(_S, {call, _, create_map, _}) ->
 	false;
 precondition(#state{url = undefined}, _Blorp) ->
-	false.
+	false;
+precondition(S, Blorp) ->
+	?debugFmt("Letting through ~p with state ~p", [Blorp, S]),
+	true.
 
 %% =======================================================
 %% next_state
@@ -234,6 +237,9 @@ postcondition(State, {call, _, destroy_map, [_InState]}, {ok, "204", Heads, Body
 
 postcondition(State, Call, Res) ->
 	false.
+
+assert_body(Json, Body) when is_list(Body) ->
+	assert_body(Json, list_to_binary(Body));
 
 assert_body(Json, Body) ->
 	Json1 = binary_keys(Json),
