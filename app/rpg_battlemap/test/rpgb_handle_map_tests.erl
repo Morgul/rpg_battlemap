@@ -1,14 +1,16 @@
 -module(rpgb_handle_map_tests).
 
+-include_lib("proper/include/proper.hrl").
+%-include_lib("proper/include/proper_statem.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include_lib("triq/include/triq.hrl").
--include_lib("triq/include/triq_statem.hrl").
+%-include_lib("triq/include/triq.hrl").
+%-include_lib("triq/include/triq_statem.hrl").
 -include("rpg_battlemap.hrl").
 
 % both eunit and triq define let, triq lets (heh) eunit win
 % so, setting up a triqlet
--define(TRIQLET(X,Gen1,Gen2), 
-	?DOMAIN_MODULE:bind(Gen1, fun(X)->Gen2 end)).
+%-define(TRIQLET(X,Gen1,Gen2), 
+%	?DOMAIN_MODULE:bind(Gen1, fun(X)->Gen2 end)).
 
 -define(cookie, begin
 	{Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
@@ -21,35 +23,47 @@ end).
 
 -record(state, {map_id}).
 
-property_test_() -> {timeout, 60000, ?assert(check())}.
+property_test_() -> {timeout, 60000, {setup, fun() ->
+			application:start(cowboy),
+			HostPort = {<<"localhost">>, 9093},
+			cowboy:start_listener(handle_map_tests, 1,
+				cowboy_tcp_transport, [{port, 9093}],
+				cowboy_http_protocol, [{dispatch, [
+					{'_', [
+						{[<<"map">>], rpgb_handle_map, HostPort},
+						{[<<"map">>, mapid], rpgb_handle_map, HostPort}
+					]}
+				]}]
+			),
+			ibrowse:start(),
+			rpgb_test_util:mecked_data(handle_map_data),
+			rpgb_session:make_ets(),
+			{ok, Session} = rpgb_session:get_or_create(<<"id">>),
+			Session1 = setelement(1, Session, <<"sessionid">>),
+			ets:insert(rpgb_session, Session1),
+			{ok, Session2} = rpgb_session:get(<<"sessionid">>),
+			User = #rpgb_rec_user{
+				name = <<"Batman">>
+			},
+			{ok, User1} = rpgb_data:save(User),
+			{ok, Session3} = rpgb_session:set_user(User, Session2)
+	end,
+	fun(_) ->
+		meck:unload(rpgb_data)
+	end,
+	fun(_) -> [
+
+		{"put, delete, get", timeout, 60000, fun() ->
+			?assert(proper:quickcheck(?MODULE:prop_map_statem()))
+		end}
+
+	] end}}.
 
 prop_map_statem() ->
-	application:start(cowboy),
-	HostPort = {<<"localhost">>, 9093},
-	cowboy:start_listener(handle_map_tests, 1,
-		cowboy_tcp_transport, [{port, 9093}],
-		cowboy_http_protocol, [{dispatch, [
-			{'_', [
-				{[<<"map">>], rpgb_handle_map, HostPort},
-				{[<<"map">>, mapid], rpgb_handle_map, HostPort}
-			]}
-		]}]
-	),
-	ibrowse:start(),
-	rpgb_test_util:mecked_data(handle_map_data),
-	rpgb_session:make_ets(),
-	{ok, Session} = rpgb_session:get_or_create(<<"id">>),
-	Session1 = setelement(1, Session, <<"sessionid">>),
-	ets:insert(rpgb_session, Session1),
-	{ok, Session2} = rpgb_session:get(<<"sessionid">>),
-	User = #rpgb_rec_user{
-		name = <<"Batman">>
-	},
-	{ok, User1} = rpgb_data:save(User),
-	{ok, Session3} = rpgb_session:set_user(User, Session2),
-	?FORALL(Cmds, triq_statem:commands(?MODULE), begin
-		triq_statem:run_commands(?MODULE, Cmds),
-		true
+	%?FORALL(Cmds, triq_statem:commands(?MODULE), begin
+	?FORALL(Cmds, proper_statem:commands(?MODULE), begin
+		{_Hist, _State, Res} = run_commands(?MODULE, Cmds),
+		Res == ok
 	end).
 
 initial_state() ->
@@ -67,7 +81,8 @@ command(State) ->
 %% =======================================================
 
 g_mapjson() ->
-	?TRIQLET(X, list(oneof([
+	%?TRIQLET(X, list(oneof([
+	?LET(X, list(oneof([
 		{name, g_name()},
 		{background_color,  g_color()},
 		{gridline_color,  g_color()},
@@ -75,7 +90,8 @@ g_mapjson() ->
 	])), uniquify(X)).
 
 g_name() ->
-	?TRIQLET(N,
+	%?TRIQLET(N,
+	?LET(N,
 	list(
 		frequency([
 			{8, char()},
@@ -89,7 +105,8 @@ g_color() ->
 	]).
 
 g_opacity() ->
-	?TRIQLET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
+	?LET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
+	%?TRIQLET(N, int(), case N of 0 -> 0; _ -> 1 / abs(N) end).
 
 g_color_rgb() ->
 	[R,B,G,_] = g_color_rgba(),
@@ -127,7 +144,10 @@ precondition(#state{map_id = undefined}, Blorp) ->
 %% =======================================================
 
 next_state(State, {ok, _Status, _Heads, Body}, {call, _, create_map, _}) ->
-	Props = jsx:to_term(Body),
+	Props = case jsx:to_term(list_to_binary(Body)) of
+		{incomplete, _} -> [];
+		Else -> Else
+	end,
 	Id = proplists:get_value(<<"url">>, Props),
 	State#state{map_id = Id};
 
@@ -166,7 +186,7 @@ postcondition(State, {call, _, destroy_map, [_InState]}, {ok, "204", Heads, Body
 	true;
 
 postcondition(State, Call, Res) ->
-	?debugFmt("State:  ~p\nCall:  ~p\nRes:  ~p", [State, Call, Res]),
+	%?debugFmt("State:  ~p\nCall:  ~p\nRes:  ~p", [State, Call, Res]),
 	false.
 
 assert_body(Json, Body) ->
