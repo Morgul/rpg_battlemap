@@ -175,7 +175,6 @@ precondition(_S, {call, _, create_map, _}) ->
 precondition(#state{url = undefined}, _Blorp) ->
 	false;
 precondition(S, Blorp) ->
-	?debugFmt("Letting through ~p with state ~p", [Blorp, S]),
 	true.
 
 %% =======================================================
@@ -225,7 +224,10 @@ update_map(Json, #state{url = Url}) ->
 %% =======================================================
 
 postcondition(State, {call, _, create_map, [Json, InState]}, {ok, "201", Heads, Body} = Goop) ->
-	?assertNotEqual(undefined, proplists:get_value("Location", Heads)),
+	Location = proplists:get_value("Location", Heads),
+	?assertNotEqual(undefined, Location),
+	BodyJson = jsx:to_term(list_to_binary(Body)),
+	?assertEqual(list_to_binary(Location), proplists:get_value(<<"url">>, BodyJson)),
 	?assert(assert_body(Json, Body)),
 	true;
 
