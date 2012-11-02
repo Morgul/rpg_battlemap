@@ -112,7 +112,11 @@ to_html(Req, #ctx{action = login, session = Session, hostport = {Host, Port}} = 
 					},
 					{ok, Userrec1} = rpgb_data:save(Userrec),
 					rpgb_session:set_user(Userrec1, Session);
-				{ok, [Userrec]} ->
+				{ok, Userrecs} ->
+					[Userrec | Destroy] = lists:keysort(2, Userrecs),
+					spawn(fun() ->
+						[rpgb_data:delete(R) || R <- Destroy]
+					end),
 					?info("existant user ~p", [Userrec]),
 					rpgb_session:set_user(Userrec, Session)
 			end,
