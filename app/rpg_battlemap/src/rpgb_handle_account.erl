@@ -5,7 +5,7 @@
 
 -export([get_routes/0]).
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
-	content_types_provided/2, process_post/2, to_html/2]).
+	content_types_provided/2, process_post/2]).
 
 -record(ctx, {
 	hostport,
@@ -16,7 +16,7 @@
 get_routes() ->
 	[
 		[<<"account">>],
-		[<<"account">>, <<"login_complete">>],
+		[<<"account">>, <<"login">>],
 		[<<"account">>, <<"logout">>]
 	].
 
@@ -28,7 +28,7 @@ rest_init(Req, HostPort) ->
 	{Path, Req2} = cowboy_http_req:path(Req1),
 	?debug("path:  ~p", [Path]),
 	Action= case Path of
-		[_, <<"login_complete">>] ->
+		[_, <<"login">>] ->
 			login;
 		[_, <<"logout">>] ->
 			logout;
@@ -71,69 +71,47 @@ previously_existed(Req, Ctx) ->
 process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = logout} = Ctx) ->
 	?info("processing logout"),
 	Req1 = rpgb_session:destroy(Req),
-	{ok, Req2} = cowboy_http_req:reply(200, Req1),
-	{halt, Req2, Ctx};
+	%{ok, Req2} = cowboy_http_req:reply(200, Req1),
+	%{halt, Req2, Ctx};
+	{true, Req1, Ctx};
 
-process_post(Req, #ctx{session = Session, hostport = {Host, Port}} = Ctx) ->
-	?info("processing a likely login"),
-	{Post, Req1} = cowboy_http_req:body_qs(Req),
-	Openid = proplists:get_value(<<"openid">>, Post, <<>>),
-	?debug("The body:  ~p", [Post]),
-	?info("Openid:  ~p", [Openid]),
+process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = login} = Ctx) ->
+	?info("processing login"),
 	SessionId = rpgb_session:get_id(Session),
-	try openid:prepare(SessionId, binary_to_list(Openid)) of
-		{ok, AuthReq} ->
-			BaseURL = rpgb:get_url(Host, Port),
-			ReturnTo = <<BaseURL/binary, "account/login_complete">>,
-			AuthURL = openid:authentication_url(AuthReq, binary_to_list(ReturnTo), binary_to_list(BaseURL), [
-				{"openid.sreg.optional", "nickname"}]),
-			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, AuthURL, Req1),
-			{ok, Req3} = cowboy_http_req:reply(303, Req2),
-			{halt, Req3, Ctx};
-		{error, Err} ->
-			?info("Error from openid: ~p", [Err]),
+	BaseURL = rpgb:get_url(Req, []),
+	{ok, Post, Req1} = cowboy_http_req:body(Req),
+	Json = jsx:to_term(Post),
+	?info("Json term:  ~p", [Json]),
+	Assertion = proplists:get_value(<<"assertion">>, Json),
+	AssertBody = jsx:to_json([{<<"assertion">>, Assertion},
+		{<<"audience">>, BaseURL}]),
+	Asserted = ibrowse:send_req("https://verifier.login.persona.org/verify",
+		[{"Content-Type", "application/json"}], post, AssertBody),
+	case Asserted of
+		{ok, "200", _Heads, AssertedBody} ->
+			AssertedJson = jsx:to_term(list_to_binary(AssertedBody)),
+			Email = proplists:get_value(<<"email">>, AssertedJson),
+			case proplists:get_value(<<"status">>, AssertedJson) of
+				<<"okay">> ->
+					{ok, Session1} = case rpgb_data:search(rpgb_rec_user, [{email, Email}]) of
+						{ok, []} ->
+							?info("Creating new user ~p", [Email]),
+							Userrec = #rpgb_rec_user{ email = Email, group_id = 1 },
+							{ok, Userrec1} = rpgb_data:save(Userrec),
+							rpgb_session:set_user(Userrec1, Session);
+						{ok, Userrecs} ->
+							[Userrec | Destroy] = lists:keysort(2, Userrecs),
+							spawn(fun() ->
+								[rpgb_data:delete(R) || R <- Destroy]
+							end),
+							?info("existant user ~p", [Userrec]),
+							rpgb_session:set_user(Userrec, Session)
+					end,
+					{true, Req1, Ctx#ctx{session = Session1}};
+				_ ->
+					{false, Req1, Ctx}
+			end;
+		_ ->
+			?info("Verifier failed:  ~p", [Asserted]),
 			{false, Req1, Ctx}
-	catch
-		'EXIT':ExitY ->
-			?info("Exit from openid: ~p", [ExitY]),
-			{false, Req1, Ctx}
-	end.
-
-to_html(Req, #ctx{action = login, session = Session, hostport = {Host, Port}} = Ctx) ->
-	SessionId = rpgb_session:get_id(Session),
-	BaseURL = rpgb:get_url(Host, Port),
-	ReturnTo = <<BaseURL/binary, "account/login_complete">>,
-	{QueryParams, Req1} = cowboy_http_req:qs_vals(Req),
-	?debug("query params:  ~p", [QueryParams]),
-	QueryParams1 = [ {binary_to_list(K), binary_to_list(V)} || {K, V} <- QueryParams],
-	case openid:verify(SessionId, binary_to_list(ReturnTo), QueryParams1) of
-		{ok, OpenID} ->
-			Username = proplists:get_value(<<"openid.sreg.nickname">>, QueryParams, <<"Awesome User">>),
-			OpenID1 = list_to_binary(OpenID),
-			{ok, Session1} = case rpgb_data:search(rpgb_rec_user, [{openid, OpenID1}]) of
-				{ok, []} ->
-					?info("Creating new user for openid ~p", [OpenID1]),
-					Userrec = #rpgb_rec_user{
-						openid = OpenID1,
-						name = Username,
-						group_id = 1
-					},
-					{ok, Userrec1} = rpgb_data:save(Userrec),
-					rpgb_session:set_user(Userrec1, Session);
-				{ok, Userrecs} ->
-					[Userrec | Destroy] = lists:keysort(2, Userrecs),
-					spawn(fun() ->
-						[rpgb_data:delete(R) || R <- Destroy]
-					end),
-					?info("existant user ~p", [Userrec]),
-					rpgb_session:set_user(Userrec, Session)
-			end,
-			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, <<"/">>, Req1),
-			{ok, Req3} = cowboy_http_req:reply(303, Req2),
-			{halt, Req3, Ctx};
-		{error, Fail} ->
-			?info("Failure handling login:  ~p", [Fail]),
-			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, <<"/">>, Req1),
-			{ok, Req3} = cowboy_http_req:reply(303, Req2),
-			{halt, Req3, Ctx}
 	end.

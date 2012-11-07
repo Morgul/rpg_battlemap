@@ -4,21 +4,20 @@
 
 -record(rpgb_rec_user, {
 	id :: 'undefined' | pos_integer(),
-	name :: binary(),
-	openid :: binary(),
+	email :: binary(),
 	group_id = 1 :: pos_integer(),
 	permissions = [] :: [atom()],
-	max_maps = 10 :: pos_integer() | 'infinity'%,
-	%created :: time(),
-	%updated :: time()
+	max_maps = 10 :: pos_integer() | 'infinity',
+	created :: time(),
+	updated :: time()
 }).
 
 -record(rpgb_rec_user_group, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
-	permissions = [] :: [atom()]%,
-	%created :: time(),
-	%updated :: time()
+	permissions = [] :: [atom()],
+	created :: time(),
+	updated :: time()
 }).
 	
 -record(rpgb_rec_battlemap, {
@@ -58,9 +57,9 @@
 	stoke_color = <<"black">> :: binary(),
 	fill_color = <<"green">> :: binary(),
 	stroke_mode = gappy :: 'gappy' | 'solid',
-	path = <<>> :: binary()%,
-	%created :: time(),
-	%updated :: time()
+	path = <<>> :: binary(),
+	created :: time(),
+	updated :: time()
 }).
 
 -record(rpgb_rec_combatant, {
@@ -77,9 +76,9 @@
 	initiative = 1 :: float(),
 	size = 1 :: pos_integer(),
 	aura_size = 0 :: non_neg_integer(),
-	aura_color :: 'undefined' | binary()%,
-	%created :: time(),
-	%updated :: time()
+	aura_color :: 'undefined' | binary(),
+	created :: time(),
+	updated :: time()
 }).
 
 -record(rpgb_rec_character, {
@@ -88,5 +87,7 @@
   color = <<"green">> :: binary(),
   portait_image :: 'undefined' | binary(),
   token_image :: 'undefined' | binary(),
-  size = 1 :: pos_integer()
+  size = 1 :: pos_integer(),
+	created :: time(),
+	updated :: time()
 }).

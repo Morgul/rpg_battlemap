@@ -14,7 +14,8 @@ $().ready(function(){
 			$.ajax({
 				type: 'POST',
 				url: loginUrl,
-				data: {assertion: assertion},
+				data: JSON.stringify({assertion: assertion}),
+				contentType: 'application/json',
 				success: function(res, status, xhr){ window.location.reload(); },
 				error: function(xhr, status, err){ console.log('login fail', err); }
 			});
