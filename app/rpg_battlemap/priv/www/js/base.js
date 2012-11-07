@@ -10,15 +10,17 @@ $().ready(function(){
 	navigator.id.watch({
 		loggedInUser: currentUser,
 		onlogin: function(assertion){
+			console.log('onlogin');
 			$.ajax({
 				type: 'POST',
 				url: loginUrl,
-				data: {'assertion': assertion},
+				data: {assertion: assertion},
 				success: function(res, status, xhr){ window.location.reload(); },
 				error: function(xhr, status, err){ console.log('login fail', err); }
 			});
 		},
 		onlogout: function(){
+			console.log('onlogout');
 			$.ajax({
 				type: 'POST',
 				url: logoutUrl,
