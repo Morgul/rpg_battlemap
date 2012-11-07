@@ -26,14 +26,24 @@ get_env(Key, Default) ->
 get_url() ->
 	{ok, Host} = get_env(host, "localhost"),
 	{ok, Port} = get_env(port, 9090),
-	{ok, Proto} = get_env(protocol, http),
-	get_url(Proto, Host, Port, []).
+	get_url(http, Host, Port, []).
+
+get_url(Req, Path) when is_tuple(Req) ->
+	Proto = case cowboy_http_req:transport(Req) of
+		{ok, cowboy_ssl_transport, _} ->
+			https;
+		_ ->
+			http
+	end,
+	{ok, Host} = get_env(host, "localhost"),
+	{ok, Port} = get_env(port, 9090),
+	get_url(Proto, Host, Port, Path);
 
 get_url(Host, Port) ->
-	get_url("http", Host, Port, []).
+	get_url(http, Host, Port, []).
 
 get_url(Host, Port, Path) ->
-	get_url("http", Host, Port, Path).
+	get_url(http, Host, Port, Path).
 
 get_url(Proto, Host, Port, Path) when is_list(Path), is_list(hd(Path)) ->
 	Path1 = filename:join(Path),

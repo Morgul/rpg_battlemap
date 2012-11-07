@@ -14,8 +14,8 @@ init(_Transport, Req, Ctx) ->
 handle(Req, {Host, Port} = Ctx) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	User = rpgb_session:get_user(Session),
-	LoginLink = rpgb:get_url(Host, Port, ["account"]),
-	LogoutLink = rpgb:get_url(Host, Port, ["account", "logout"]),
+	LoginLink = rpgb:get_url(Req, ["account"]),
+	LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
 	{ok, Output} = index_dtl:render([
 		{user, User}, {login_link, LoginLink}, {logout_link, LogoutLink}
 	]),
