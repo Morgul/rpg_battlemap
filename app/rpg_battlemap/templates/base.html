@@ -29,10 +29,10 @@
 	</div>
 
 	<script type="text/javascript">{% if user %}
-		var currentUser = {{user.name}};{% else %}
+		var currentUser = "{{user.name}}";{% else %}
 		var currentUser = null;{% endif %}
-		var loginUrl = {{loginUrl}}
-		var logoutUrl = {{logoutUrl}}
+		var loginUrl = "{{login_link}}"
+		var logoutUrl = "{{logout_link}}"
 	</script>
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="https://login.persona.org/include.js"></script>

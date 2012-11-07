@@ -8,7 +8,7 @@ $().ready(function(){
 	});
 
 	navigator.id.watch({
-		loggedInUser: currentUser;
+		loggedInUser: currentUser,
 		onlogin: function(assertion){
 			$.ajax({
 				type: 'POST',

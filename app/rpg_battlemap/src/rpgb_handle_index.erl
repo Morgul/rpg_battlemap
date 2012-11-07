@@ -19,7 +19,7 @@ handle(Req, {Host, Port} = Ctx) ->
 	{ok, Output} = index_dtl:render([
 		{user, User}, {login_link, LoginLink}, {logout_link, LogoutLink}
 	]),
-	{ok, Req2} = cowboy_http_req:reply(200, [], Output, Req1),
+	{ok, Req2} = cowboy_http_req:reply(200, [{<<"Content-Type">>, <<"text/html">>}], Output, Req1),
 	{ok, Req2, Ctx}.
 
 terminate(Req, Ctx) ->
