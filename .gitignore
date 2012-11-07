@@ -4,6 +4,8 @@ deps
 erl_crash.dump
 key
 key.pub
+rpgb.crt
+rpgb.csr
 oacd_office
 rel/rpg_battlemap
 *.config
