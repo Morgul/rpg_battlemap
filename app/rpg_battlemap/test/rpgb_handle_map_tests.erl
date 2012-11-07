@@ -18,13 +18,11 @@ end).
 browser_test_() -> {setup, fun() ->
 			application:start(cowboy),
 			HostPort = {<<"localhost">>, 9093},
+			Routes = rpgb:get_routes(HostPort, [rpgb_handle_map]),
 			cowboy:start_listener(handle_map_tests, 1,
 				cowboy_tcp_transport, [{port, 9093}],
 				cowboy_http_protocol, [{dispatch, [
-					{'_', [
-						{[<<"map">>], rpgb_handle_map, HostPort},
-						{[<<"map">>, mapid], rpgb_handle_map, HostPort}
-					]}
+					{'_', Routes}
 				]}]
 			),
 			ibrowse:start(),

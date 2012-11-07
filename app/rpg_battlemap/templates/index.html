@@ -1,21 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<link type="text/css" href="/css/base.css" rel="stylesheet" />
-</head>
-<body>
-	RPG Battlemap
-	<div id="head">{% if user %}
-		<span class="login">Welcome, {{ user.name }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>{% endif %}
-	</div>{% if not user %}
+{% extends "base.html" %}
 
-	<form method="post" action="{{login_link}}">
-		<input name="openid" /><input type="submit" value="Login" />
-	</form>{% else %}{% include "map_character_list.html" %}{% endif %}
+	{% block content %}
 	{% if user %}
+		hi!
+	{% else %}
+		<a href="#" class="persona-button"><span>Sign in with your Email</span></a>
+	{% endif %}
+	{% endblock %}
+	
+	{% block page_scripts %}
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
 	<script type="text/javascript" src="/contrib/ember.js"></script>
-	{% endif %}
-</body>
-</html>
+	{% endblock %}
+{% comment %}
+{# -*- vim: set ft=htmldjango: -- vim modeline -*- #}{% endcomment %}

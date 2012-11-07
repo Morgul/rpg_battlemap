@@ -3,12 +3,22 @@
 -include("log.hrl").
 -include("rpg_battlemap.hrl").
 
+-export([get_routes/0]).
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
 	forbidden/2, content_types_provided/2, to_json/2, to_html/2,
 	content_types_accepted/2, from_json/2, delete_resource/2]).
 
 -record(ctx, { hostport, session, mapid, map}).
 
+get_routes() ->
+	[
+		[<<"map">>],
+		[<<"map">>, mapid]
+	].
+
+%				{[<<"maps">>], rpgb_handle_maps, HP},
+%				{[<<"maps">>, map_id], rpgb_handle_map, HP},
+%				{[<<"maps">>, map_id, property], rpgb_handle_map, {host, Port}},
 init(_Protos, Req, _HostPort) ->
 	{upgrade, protocol, cowboy_http_rest}.
 

@@ -3,6 +3,7 @@
 -include("log.hrl").
 -include("rpg_battlemap.hrl").
 
+-export([get_routes/0]).
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
 	content_types_provided/2, process_post/2, to_html/2]).
 
@@ -11,6 +12,12 @@
 	session,
 	action
 }).
+
+get_routes() ->
+	[
+		[<<"account">>],
+		[<<"account">>, <<"login_complete">>]
+	].
 
 init(_Protos, Req, _HostPort) ->
 	{upgrade, protocol, cowboy_http_rest}.

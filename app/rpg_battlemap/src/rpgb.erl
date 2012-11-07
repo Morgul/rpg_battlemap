@@ -1,6 +1,6 @@
 -module(rpgb).
 -export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/3,
-	get_url/4,sluggify/1]).
+	get_url/4,sluggify/1, get_routes/2]).
 %-export([is_printable/1, is_not_printable/1, is_string/1]).
 %-export([to_json/1, to_json/2]).
 -export([set_proplist/3, set_proplist/2]).
@@ -88,6 +88,24 @@ now_to_timestamp({Mega, Sec, Micro}) ->
 	Sec1 = lists:append(Mega0, Sec0, ".", Micro0),
 	Sec2 = list_to_float(Sec1),
 	Sec2 * 1000.
+
+get_routes(HP, Mods) ->
+	get_routes(HP, Mods, []).
+
+get_routes(_HP, [], Acc) ->
+	lists:reverse(Acc);
+
+get_routes(HP, [Mod | Tail], Acc) ->
+	Routes = Mod:get_routes(),
+	Acc2 = make_route_tuple(HP, Mod, Routes, Acc),
+	get_routes(HP, Tail, Acc2).
+
+make_route_tuple(_HP, _Mod, [], Acc) ->
+	Acc;
+
+make_route_tuple(HP, Mod, [Route | Tail], Acc) ->
+	Tuple = {Route, Mod, HP},
+	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]).
 
 %is_string(List) ->
 %	lists:any(fun is_not_printable/1, List).

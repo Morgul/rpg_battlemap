@@ -49,7 +49,11 @@ mecked_data(Callback) ->
 				{ok, Rec}
 		end
 	end),
+	meck:expect(rpgb_data, reset, fun(Type, Id) ->
+		ets:delete_all_objects(Ets)
+	end),
 	ok.
+
 
 get_fields(rpgb_rec_user) -> record_info(fields, rpgb_rec_user);
 get_fields(rpgb_rec_user_group) -> record_info(fields, rpgb_rec_user_group);

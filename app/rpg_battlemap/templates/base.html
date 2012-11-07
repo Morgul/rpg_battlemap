@@ -1,233 +1,42 @@
 <!DOCTYPE html>
 <html>
 
-{#---------------------------------------------------------------------------------------#}
-
 <head>
 
 	<link type="text/css" href="/css/base.css" rel="stylesheet" />
-	<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
-	<link type="text/css" href="/contrib/colorpicker/css/colorpicker.css" rel="stylesheet" media="screen" />
-	<link type="text/css" href="/css/jquery.ui.battlemapLocker.css" rel="stylesheet" />
+	<link type="text/css" href="/contrib/css/persona-buttons.css" rel="stylesheet" />
 
-	<script type="text/javascript" src="/contrib/jquery.js"></script>
-	<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
-	<script type="text/javascript" src="/contrib/raphael-min.js"></script>
-	<script type="text/javascript" src="/js/battlemap.js"></script>
-	<script type="text/javascript" src="/js/jquery.ui.battlemapLocker.js"></script>
-	<script type="text/javascript" src="/js/base.js"></script>
-	<script type="text/javascript" src="/contrib/colorpicker/js/colorpicker.js"></script>
-	{% block page_scripts %}
-	<script type="text/javascript" src="/js/index.js"></script>
+	{% block eager_page_script %}
 	{% endblock %}
-	<title>RPG Battle Map{% block title %}{% endblock %}</title>
 	{% block page_style %}
 	{% endblock %}
+
+	<title>RPG Battle Map{% block title %}{% endblock %}</title>
 </head>
 
-{#---------------------------------------------------------------------------------------#}
-
 <body>
+
 	<div id="head">
-		{% if session.user %}
-			<span class="login">Welcome, {{ session.user.name }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>
+		{% if user %}
+			{% comment %}TODO change logout call to post or delete
+			{% endcomment %}
+			<span class="login">Welcome, {{ user.name }}.  <a href="/account/logout/">{% trans "Sign Off" %}</a></span>
 		{% else %}
-			<form id="login" class="login" action="/account/login/" method="post">
-				<input name="openid" placeholder="{% trans "OpenID" %}" />
-				<input type="submit" value="{% trans "Login" %}" />
-			</form>
+			Welcome!
 		{% endif %}
 	</div>
-
-	{#-----------------------------------------------------------------------------------#}
 
 	<div id="main">
 	{% block content %}
 
-		<div id="leftColumn">
-		{% block left_column %}
-			<button id="saveButton">Save</button>
-
-			<div id="leftColumnItems">
-			{% block left_column_items %}
-
-				{#-----------------------------------------------------------------------#}
-
-				<h3><a href="#">Combatants</a></h3>
-				<div id="combatantInfo">
-					<div object-property="color" display-attr="style" style-display="border-color"
-						style="float: left; width: 48px; height: 48px; border-width: 3px; margin:3px; border-style:solid;">
-
-						<img object-property="image" display-attr="src" style="width:100%; height: 100%;"
-							display-default="/images/default_combatant.png"/>
-					</div>
-					<p object-property="name">&nbsp;</p>
-					<p>cell
-						<span object-property="cellX">&nbsp;</span>, <span object-property="cellY">&nbsp;</span>
-					</p>
-					<p id="combatantConditions">&nbsp;</p>
-					<ul id="combatantList">
-					</ul>
-					<div id="combatantTrashcan"></div>
-				</div>
-
-				{#-----------------------------------------------------------------------#}
-
-				<h3><a href="#">New Combatant</a></h3>
-				<div id="addCombatant">
-					<form name="addCombatant">
-						<p>
-							<input name="name" placeholder="Combatant Name" />
-						</p>
-						<p>
-							<label>Starting Position</label>
-							<input style="width: 4em;" name="cellX" placeholder="X" type="number" />,
-							<input style="width: 4em;" name="cellY" placeholder="Y" type="number" /></p>
-						<p>
-							<div class="colorSelector"><div style="background-color: #0000ff"></div></div>
-							<label for="color">Color</label>
-							<input name="color" placeholder="blue" type="color" />
-						</p>
-						<p>
-							<label for="initiative">Initiative</label>
-							<input name="initiative" placeholder="10" type="number" />
-						</p>
-						<p>
-							<label for="size">Size</label>
-							<input name="size" value="1" type="number" />
-						</p>
-						<p>
-							<input name="create" type="submit" value="Add Combatant" />
-						</p>
-					</form>
-				</div>
-
-				{#-----------------------------------------------------------------------#}
-
-				<h3><a href="#">Zone List</a></h3>
-				<div id="zoneEditor">
-					<ul id="zoneList">
-					</ul>
-					<form name="zoneEditor" action="javascript:void(0)">
-						<input id="editZonesToggle" type="checkbox">
-							Enabled Zone Edits
-						</input>
-						<p>
-							<label>Top Left Corner</label>
-							<input style="width: 4em;" name="cellX" placeholder="X" type="number" />,
-							<input style="width: 4em" name="cellY" placeholder="Y" type="number" />
-						</p>
-						<p>
-							<label for="rotation">Rotation</label>
-							<select name="rotation">
-								<option value="none">None</option>
-								<option value="cw">&#x21BB; a quarter</option>
-								<option value="ccw">&#x21BA; a quarter</option>
-								<option value="about">Half-turn</option>
-							</select>
-						</p>
-						<p>
-							<label for="layer">Above or Below Combatants</label>
-							<select name="layer">
-								<option value="ground">Below</option>
-								<option value="sky">Above</option>
-							</select>
-						</p>
-						<p>
-							<label for="color">Color</label>
-							<input name="color" />
-						</p>
-						<p>
-							<label for="strokeColor">Border Color</label>
-							<input name="strokeColor" />
-						</p>
-						<p>
-							<label for="strokeOpacity">Border Opacity Percentage</label>
-							<input name="strokeOpacity" type="number" />
-						</p>
-						<p>
-							<label>Path Data</label>
-							<textarea name="path" rows="7"></textarea>
-						</p>
-						<p>While editing is enabled, you can add a new point connected to
-		the most recent point by clicking.  To remove a point, secondary (right)
-		click on it.  To add a point on an existing line, secondary click on the
-		line.  To move a point, drag it to the desired position.
-						</p>
-						<p>
-							<div id="zoneTrashcan"></div>
-							<input type="hidden" name="zoneIndex" />
-							<input type="submit" value="Save" />
-						</p>
-					</form>
-				</div>
-
-				{#-----------------------------------------------------------------------#}
-
-				<h3><a href="#">New Zone</a></h3>
-				<div>
-					<form id="newZone" name="newZone">
-						<p>New Zone</p>
-						<p>
-							<label for="name">Name</label>
-							<input name="name" />
-						</p>
-						<p>
-							<label for="size">Edge Size</label>
-							<input type="number" name="size" />
-						</p>
-						<p>
-							<label for="shape">Shape</label>
-							<select name="shape">
-								<option value="square">Square</option>
-								<option value="octogon">Octogon</option>
-							</select>
-						</p>
-						<p>
-							<label for="layer">Ground or Sky</label>
-							<select name="layer">
-								<option value="ground">Ground</option>
-								<option value="sky">Sky</option>
-							</select>
-						</p>
-						<p>
-							<label for="color">Color</label>
-							<input name="color" />
-						</p>
-						<p>
-							<input type="submit" value="Create" />
-						</p>
-					</form>
-				</div>
-
-				{#-----------------------------------------------------------------------#}
-
-				<h3><a href="#">Saved Maps</a></h3>
-				<div id="savedMapsList">
-				</div>
-
-				{#-----------------------------------------------------------------------#}
-
-			{% endblock %} {# end left_column_items block #}
-			</div>
-		{% endblock %} {# end left_column block #}
-		</div>
-
-		{#-------------------------------------------------------------------------------#}
-
-		<div id="rightColumn" class="ui-corner-all">
-		{% block right_column %}
-			<div id="drawingBoard">
-			</div>
-		{% endblock %} {# end right_column block #}
-		</div>
-
-		{#-------------------------------------------------------------------------------#}
-
-	{% endblock %} {# end content block #}
+	{% endblock %}
 	</div>
-</body>
-</html>
 
-{# -*- vim: set ft=htmldjango: -- vim modeline -*- #}
+	<script type="text/javascript" src="/contrib/jquery.js"></script>
+	<script type="text/javascript" src="https://login.persona.org/include.js"></script>
+	{% block page_scripts %}
+	{% endblock %}
+
+</body>
+</html>{% comment %}
+{# -*- vim: set ft=htmldjango: -- vim modeline -*- #}{% endcomment %}
