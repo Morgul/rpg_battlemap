@@ -1,4 +1,4 @@
--module(rpgb_handle_template_tests).
+-module(rpgb_handle_index_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 -include("rpg_battlemap.hrl").
@@ -7,13 +7,12 @@ request_test_() ->
 	{setup, fun() ->
 		application:start(cowboy),
 		HostPort = {<<"localhost">>, 9094},
+		Routes = rpgb:get_routes(HostPort, [rpgb_handle_index]),
 		meck:new(openid),
 		cowboy:start_listener(handle_template_tests, 1,
 			cowboy_tcp_transport, [{port, 9094}],
 			cowboy_http_protocol, [{dispatch, [
-				{'_', [
-					{[], rpgb_handle_template, {HostPort, index_dtl}}
-				]}
+				{'_', Routes}
 			]}]
 		),
 		ibrowse:start(),

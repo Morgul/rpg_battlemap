@@ -16,7 +16,8 @@
 get_routes() ->
 	[
 		[<<"account">>],
-		[<<"account">>, <<"login_complete">>]
+		[<<"account">>, <<"login_complete">>],
+		[<<"account">>, <<"logout">>]
 	].
 
 init(_Protos, Req, _HostPort) ->
