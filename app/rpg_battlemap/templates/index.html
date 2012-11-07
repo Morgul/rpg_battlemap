@@ -2,9 +2,13 @@
 
 	{% block content %}
 	{% if user %}
-		hi!
+		<a href="javascript:void()" class="persona-button">
+			<span>Sign Out</span>
+		</a>
 	{% else %}
-		<a href="#" class="persona-button"><span>Sign in with your Email</span></a>
+		<a href="javascript:void()" class="persona-button">
+			<span>Sign in with your Email</span>
+		</a>
 	{% endif %}
 	{% endblock %}
 	

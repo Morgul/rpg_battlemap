@@ -28,7 +28,7 @@ request_test_() ->
 			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			rpgb_session:make_ets(),
 			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [], get),
-			{ok, Regex} = re:compile("action=\"http://localhost:9094/account\""),
+			{ok, Regex} = re:compile("Sign in"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))
 		end},
 
@@ -46,7 +46,7 @@ request_test_() ->
 			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [{"Cookie", Cookie}], get),
 			?debugFmt("The body:  ~p", [Body]),
-			{ok, Regex} = re:compile("href=\"/account/logout/\""),
+			{ok, Regex} = re:compile("Sign Out"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))
 		end}
 
