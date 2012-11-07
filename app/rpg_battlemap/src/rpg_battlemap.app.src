@@ -9,8 +9,7 @@
                   crypto,
                   cowboy,
                   bullet,
-                  lager,
-                  openid
+                  lager
                  ]},
   {mod, { rpg_battlemap_app, []}},
   {env, []}
