@@ -18,6 +18,37 @@ function pre_compile {
 		mkdir $APPDIR/include
 	fi
 
+	# build certificates if needed
+	if [ ! -f $APPDIR/priv/key ]; then
+		echo "RSA key does not exist, generating..."
+		ssh-keygen -t rsa -f $APPDIR/priv/key -N ""
+		RES=$?
+		if [ $RES != 0 ]; then
+			echo "Key generation failed with error $RES!"
+			exit $RES
+		fi
+	fi
+		
+	if [ ! -f $APPDIR/priv/rpgb.csr ]; then
+		echo "Certificate Signing Request does not exist, generating..."
+		openssl req -new -key $APPDIR/priv/key -out $APPDIR/priv/rpgb.csr
+		RES=$?
+		if [ $RES != 0 ]; then
+			echo "CSR generation failed with error $RES"
+			exit $RES
+		fi
+	fi
+	
+	if [ ! -f $APPDIR/priv/rpgb.crt ]; then
+		echo "Certificate does not exists, generating self-signed for a year..."
+		openssl x509 -req -days 365 -in $APPDIR/priv/rpgb.csr -signkey $APPDIR/priv/key -out $APPDIR/priv/rpgb.crt
+		RES=$?
+		if [ $RES != 0 ]; then
+			echo "Certificate generation failed with error $RES"
+			exit $RES
+		fi
+	fi
+
 	# record what commit/version the rep is at
 	COMMIT=""
 	if [ -d ".git" ]
