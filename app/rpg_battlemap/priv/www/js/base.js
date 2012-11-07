@@ -1,4 +1,35 @@
-function resizeBattleMap() {
+$().ready(function(){
+	$('#signinlink').click(function(){
+		navigator.id.request();
+	});
+
+	$('#signoutlink').click(function(){
+		navigator.id.logout();
+	});
+
+	navigator.id.watch({
+		loggedInUser: currentUser;
+		onlogin: function(assertion){
+			$.ajax({
+				type: 'POST',
+				url: loginUrl,
+				data: {'assertion': assertion},
+				success: function(res, status, xhr){ window.location.reload(); },
+				error: function(xhr, status, err){ console.log('login fail', err); }
+			});
+		},
+		onlogout: function(){
+			$.ajax({
+				type: 'POST',
+				url: logoutUrl,
+				success: function(res, status, xhr){ window.location.reload(); },
+				error: function(xhr, status, err){ console.log('logout fail', err); }
+			});
+		}
+	});
+});
+
+/*function resizeBattleMap() {
 	var headerHeight = $('#head').height();
 	var guessheight = window.innerHeight - (headerHeight + 20) ;
 	$('#drawingBoard').height(guessheight);
@@ -213,4 +244,4 @@ $().ready(function(){
 	$(window).resize(resizeBattleMap);
 
 	resizeBattleMap();
-});
+});*/
