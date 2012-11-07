@@ -37,7 +37,8 @@ init(Args) ->
 		Certfile = rpgb:get_env(certfile, code:priv_dir(rpg_battlemap) ++ "/rpgb.crt"),
 		Routes = rpgb:get_routes(HP, [rpgb_handle_map, rpgb_handle_user,
 			rpgb_handle_layer, rpgb_handle_zone, rpgb_handle_character,
-			rpgb_handle_combatant, rpgb_handle_account]),
+			rpgb_handle_combatant, rpgb_handle_account, rpgb_handle_index,
+			rpgb_handle_default]),
 		Dispatch = [
 			{ListenHost, Routes}
 		],

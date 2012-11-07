@@ -5,12 +5,12 @@
 request_test_() ->
 	{setup, fun() ->
 		application:start(cowboy),
+		HostPort = {<<"localhost">>, 9091},
+		Routes = rpgb:get_routes(HostPort, [rpgb_handle_default]),
 		cowboy:start_listener(handle_default_tests, 1,
 			cowboy_tcp_transport, [{port, 9091}],
 			cowboy_http_protocol, [{dispatch, [
-				{'_', [
-					{'_', rpgb_handle_default, {<<"localhost">>, 9091}}
-				]}
+				{'_', Routes}
 			]}]
 		),
 		ibrowse:start(),

@@ -8,14 +8,11 @@ request_test_() ->
 		application:start(cowboy),
 		HostPort = {<<"localhost">>, 9092},
 		meck:new(openid),
+		Routes = rpgb:get_routes(HostPort, [rpgb_handle_account]),
 		cowboy:start_listener(handle_account_tests, 1,
 			cowboy_tcp_transport, [{port, 9092}],
 			cowboy_http_protocol, [{dispatch, [
-				{'_', [
-					{[<<"account">>], rpgb_handle_account, HostPort},
-					{[<<"account">>, <<"login_complete">>], rpgb_handle_account, HostPort},
-					{[<<"account">>, <<"logout">>], rpgb_handle_account, HostPort}
-				]}
+				{'_', Routes}
 			]}]
 		),
 		ibrowse:start(),

@@ -2,7 +2,13 @@
 
 -include("log.hrl").
 
+-export([get_routes/0]).
 -export([init/3, handle/2, terminate/2]).
+
+get_routes() ->
+	[
+		'_'
+	].
 
 init(_Protos, Req, {Host, Port}) ->
 	%{upgrade, protocol, cowboy_http_rest},
