@@ -17,10 +17,11 @@ end).
 
 browser_test_() -> {setup, fun() ->
 			application:start(cowboy),
-			HostPort = {<<"localhost">>, 9093},
+			Port = rpgb_test_util:get_port(?MODULE),
+			HostPort = {<<"localhost">>, Port},
 			Routes = rpgb:get_routes(HostPort, [rpgb_handle_map]),
 			cowboy:start_listener(handle_map_tests, 1,
-				cowboy_tcp_transport, [{port, 9093}],
+				cowboy_tcp_transport, [{port, Port}],
 				cowboy_http_protocol, [{dispatch, [
 					{'_', Routes}
 				]}]
@@ -60,9 +61,10 @@ browser_test_() -> {setup, fun() ->
 
 property_test_d() -> {timeout, 60000, {setup, fun() ->
 			application:start(cowboy),
-			HostPort = {<<"localhost">>, 9093},
+			Port = rpgb_test_util:get_port(?MODULE),
+			HostPort = {<<"localhost">>, Port},
 			cowboy:start_listener(handle_map_tests, 1,
-				cowboy_tcp_transport, [{port, 9093}],
+				cowboy_tcp_transport, [{port, Port}],
 				cowboy_http_protocol, [{dispatch, [
 					{'_', [
 						{[<<"map">>], rpgb_handle_map, HostPort},

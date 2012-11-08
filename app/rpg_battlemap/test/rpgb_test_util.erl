@@ -3,6 +3,7 @@
 -include("rpg_battlemap.hrl").
 
 -export([mecked_data/1]).
+-export([get_port/1]).
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -84,3 +85,8 @@ listpos(Needle, [Needle | _Tail], Pos) ->
 listpos(Needle, [_NotNeedle | Tail], Pos) ->
     listpos(Needle, Tail, Pos + 1).
 
+get_port(rpgb_handle_default_tests) -> 9091;
+get_port(rpgb_handle_account_tests) -> 9092;
+get_port(rpgb_handle_map_tests) -> 9093;
+get_port(rpgb_handle_index_tests) -> 9094;
+get_port(rpgb_handle_combatant_tests) -> 9095.

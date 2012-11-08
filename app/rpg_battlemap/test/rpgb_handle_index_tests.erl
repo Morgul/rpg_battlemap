@@ -6,11 +6,12 @@
 request_test_() ->
 	{setup, fun() ->
 		application:start(cowboy),
-		HostPort = {<<"localhost">>, 9094},
+		Port = rpgb_test_util:get_port(?MODULE),
+		HostPort = {<<"localhost">>, Port},
 		Routes = rpgb:get_routes(HostPort, [rpgb_handle_index]),
 		meck:new(openid),
 		cowboy:start_listener(handle_template_tests, 1,
-			cowboy_tcp_transport, [{port, 9094}],
+			cowboy_tcp_transport, [{port, Port}],
 			cowboy_http_protocol, [{dispatch, [
 				{'_', Routes}
 			]}]

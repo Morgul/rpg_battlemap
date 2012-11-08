@@ -5,10 +5,11 @@
 request_test_() ->
 	{setup, fun() ->
 		application:start(cowboy),
-		HostPort = {<<"localhost">>, 9091},
+		Port = rpgb_test_util:get_port(?MODULE),
+		HostPort = {<<"localhost">>, Port},
 		Routes = rpgb:get_routes(HostPort, [rpgb_handle_default]),
 		cowboy:start_listener(handle_default_tests, 1,
-			cowboy_tcp_transport, [{port, 9091}],
+			cowboy_tcp_transport, [{port, Port}],
 			cowboy_http_protocol, [{dispatch, [
 				{'_', Routes}
 			]}]
