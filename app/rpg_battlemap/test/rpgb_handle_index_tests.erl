@@ -25,8 +25,8 @@ request_test_() ->
 	fun(_) -> [
 
 		{"access without login", fun() ->
-			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			rpgb_session:make_ets(),
+			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [], get),
 			{ok, Regex} = re:compile("Sign in"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))
@@ -39,7 +39,7 @@ request_test_() ->
 			Key = ets:first(rpgb_session),
 			[Session] = ets:lookup(rpgb_session, Key),
 			User = #rpgb_rec_user{
-				openid = <<"openid">>,
+				email = <<"batman@jla.org">>,
 				name = <<"Batman">>
 			},
 			rpgb_session:set_user(User, Session),
