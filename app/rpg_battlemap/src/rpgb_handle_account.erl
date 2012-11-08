@@ -49,7 +49,7 @@ is_authorized(Req, #ctx{action = undefined, session = Session} = Ctx) ->
 			{true, Req1, Ctx};
 		{_, Req1} ->
 			?debug("not authorized, post to me"),
-			{{false, <<"post">>}, Req1, Ctx}
+			{{false, <<"persona">>}, Req1, Ctx}
 	end.
 
 content_types_provided(Req, Ctx) ->
