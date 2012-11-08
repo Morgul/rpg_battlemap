@@ -10,7 +10,7 @@ $().ready(function(){
 	navigator.id.watch({
 		loggedInUser: currentUser,
 		onlogin: function(assertion){
-			console.log('onlogin');
+			console.log('onlogin', currentUser);
 			$.ajax({
 				type: 'POST',
 				url: loginUrl,
@@ -21,7 +21,7 @@ $().ready(function(){
 			});
 		},
 		onlogout: function(){
-			console.log('onlogout');
+			console.log('onlogout', currentUser);
 			$.ajax({
 				type: 'POST',
 				url: logoutUrl,

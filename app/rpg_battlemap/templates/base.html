@@ -17,8 +17,8 @@
 <body>
 
 	<div id="head">{% if user %}
-		<a id="signinlink" href="javascript:void()" class="persona-button">
-			<span>Welcom {{user.name}}! [Sign Out]</span>
+		<a id="signoutlink" href="javascript:void()" class="persona-button">
+			<span>Welcome {{user.email}}! [Sign Out]</span>
 		</a>{% endif %}
 	</div>
 
@@ -29,7 +29,7 @@
 	</div>
 
 	<script type="text/javascript">{% if user %}
-		var currentUser = "{{user.name}}";{% else %}
+		var currentUser = "{{user.email}}";{% else %}
 		var currentUser = null;{% endif %}
 		var loginUrl = "{{login_link}}";
 		var logoutUrl = "{{logout_link}}";

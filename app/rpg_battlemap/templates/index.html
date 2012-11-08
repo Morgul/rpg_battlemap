@@ -2,9 +2,7 @@
 
 	{% block content %}
 	{% if user %}
-		<a id="signoutlink" href="javascript:void()" class="persona-button">
-			<span>Sign Out</span>
-		</a>
+		Welcome {{user.email}}!
 	{% else %}
 		<a id="signinlink" href="javascript:void()" class="persona-button">
 			<span>Sign in with your Email</span>
