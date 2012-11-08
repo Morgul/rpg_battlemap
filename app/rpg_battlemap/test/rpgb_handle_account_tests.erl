@@ -3,7 +3,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("rpg_battlemap.hrl").
 
-request_test_() ->
+request_test_d() ->
 	{setup, fun() ->
 		application:start(cowboy),
 		HostPort = {<<"localhost">>, 9092},
@@ -38,6 +38,14 @@ request_test_() ->
 			{ok, Status, Heads2, _Body} = ibrowse:send_req("http://localhost:9092/account", [{"Cookie", Cookie}], get),
 			?assertEqual("401", Status),
 			?assertEqual(undefined, proplists:get_value("Set-Cookie", Heads2))
+		end},
+
+		{"peronsa login success", fun() ->
+			{ok, _Status, Heads, _Body} = ibrowse:send_req("http://localhost:9092/account"),
+			Cookie = proplists:get_vlaue("Set-Cookie", Heads),
+			Audience = <<"http://localhost:9092">>,
+			Audience2 = cowboy_http:urlencode(Audience),
+			{ok, "200", _Heads, TestUserBin} = ibrowse:send_req(<<"http://personatestuser.org/email_with_assertion/", Audience2/binary>>)
 		end},
 
 		{"post kicks off openid", fun() ->
@@ -84,7 +92,7 @@ request_test_() ->
 
 		{"return from open id get existing user", fun() ->
 			Userrec = #rpgb_rec_user{
-				openid = <<"openid_url_existant">>,
+				email = <<"existent@example.com">>,
 				name = <<"mega user">>,
 				group_id = 1
 			},
@@ -111,7 +119,7 @@ request_test_() ->
 
 		{"logout destroys session", fun() ->
 			Userrec = #rpgb_rec_user{
-				openid = <<"openid_url_existant">>,
+				email = <<"existant@example.com">>,
 				name = <<"mega user">>,
 				group_id = 1
 			},
