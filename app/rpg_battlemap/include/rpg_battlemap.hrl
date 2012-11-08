@@ -5,6 +5,7 @@
 -record(rpgb_rec_user, {
 	id :: 'undefined' | pos_integer(),
 	email :: binary(),
+	name :: binary(),
 	group_id = 1 :: pos_integer(),
 	permissions = [] :: [atom()],
 	max_maps = 10 :: pos_integer() | 'infinity',
