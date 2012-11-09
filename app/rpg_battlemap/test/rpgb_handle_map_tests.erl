@@ -16,33 +16,10 @@ end).
 -record(state, {url, props}).
 
 browser_test_() -> {setup, fun() ->
-%			application:start(cowboy),
-%			Port = rpgb_test_util:get_port(?MODULE),
-%			HostPort = {<<"localhost">>, Port},
-%			Routes = rpgb:get_routes(HostPort, [rpgb_handle_map]),
-%			cowboy:start_listener(handle_map_tests, 1,
-%				cowboy_tcp_transport, [{port, Port}],
-%				cowboy_http_protocol, [{dispatch, [
-%					{'_', Routes}
-%				]}]
-%			),
-%			ibrowse:start(),
-%			rpgb_test_util:mecked_data(handle_props),
-%			rpgb_session:make_ets(),
-%			{ok, Session} = rpgb_session:get_or_create(<<"id">>),
-%			Session1 = setelement(1, Session, <<"sessionid">>),
-%			ets:insert(rpgb_session, Session1),
-%			{ok, Session2} = rpgb_session:get(<<"sessionid">>),
-%			User = #rpgb_rec_user{
-%				name = <<"Batman">>
-%			},
-%			{ok, User1} = rpgb_data:save(User),
-%			{ok, Session3} = rpgb_session:set_user(User1, Session2)
 		rpgb_test_util:web_test_setup(?MODULE),
 		rpgb_test_util:create_authed_session(<<"sessionid">>)
 	end,
 	fun(_) ->
-		%meck:unload(rpgb_data)
 		rpgb_test_util:web_test_teardown()
 	end,
 	fun(_) -> [
@@ -61,43 +38,6 @@ browser_test_() -> {setup, fun() ->
 		end}
 
 	] end}.
-
-property_test_d() -> {timeout, 60000, {setup, fun() ->
-			application:start(cowboy),
-			Port = rpgb_test_util:get_port(?MODULE),
-			HostPort = {<<"localhost">>, Port},
-			cowboy:start_listener(handle_map_tests, 1,
-				cowboy_tcp_transport, [{port, Port}],
-				cowboy_http_protocol, [{dispatch, [
-					{'_', [
-						{[<<"map">>], rpgb_handle_map, HostPort},
-						{[<<"map">>, mapid], rpgb_handle_map, HostPort}
-					]}
-				]}]
-			),
-			ibrowse:start(),
-			rpgb_test_util:mecked_data(handle_props),
-			rpgb_session:make_ets(),
-			{ok, Session} = rpgb_session:get_or_create(<<"id">>),
-			Session1 = setelement(1, Session, <<"sessionid">>),
-			ets:insert(rpgb_session, Session1),
-			{ok, Session2} = rpgb_session:get(<<"sessionid">>),
-			User = #rpgb_rec_user{
-				name = <<"Batman">>
-			},
-			{ok, User1} = rpgb_data:save(User),
-			{ok, Session3} = rpgb_session:set_user(User1, Session2)
-	end,
-	fun(_) ->
-		meck:unload(rpgb_data)
-	end,
-	fun(_) -> [
-
-		{"put, delete, get", timeout, 60000, fun() ->
-			?assert(proper:quickcheck(?MODULE:prop_map_statem()))
-		end}
-
-	] end}}.
 
 prop_map_statem() ->
 	?FORALL(Cmds, commands(?MODULE), begin
