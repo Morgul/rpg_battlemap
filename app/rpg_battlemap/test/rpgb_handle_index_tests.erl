@@ -5,23 +5,10 @@
 
 request_test_() ->
 	{setup, fun() ->
-		application:start(cowboy),
-		Port = rpgb_test_util:get_port(?MODULE),
-		HostPort = {<<"localhost">>, Port},
-		Routes = rpgb:get_routes(HostPort, [rpgb_handle_index]),
-		meck:new(openid),
-		cowboy:start_listener(handle_template_tests, 1,
-			cowboy_tcp_transport, [{port, Port}],
-			cowboy_http_protocol, [{dispatch, [
-				{'_', Routes}
-			]}]
-		),
-		ibrowse:start(),
-		rpgb_test_util:mecked_data(handle_template_data)
+		rpgb_test_util:web_test_setup(?MODULE)
 	end,
 	fun(_) ->
-		meck:unload(rpgb_data),
-		cowboy:stop_listener(handle_template_tests)
+		rpgb_test_util:web_test_teardown()
 	end,
 	fun(_) -> [
 
