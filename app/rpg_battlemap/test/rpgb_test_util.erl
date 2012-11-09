@@ -4,6 +4,8 @@
 
 -export([mecked_data/1]).
 -export([get_port/1]).
+-export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
+	create_authed_session/0, create_authed_session/1]).
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -55,6 +57,46 @@ mecked_data(Callback) ->
 	end),
 	ok.
 
+web_test_setup(TestingModule) ->
+	TMList = atom_to_list(TestingModule),
+	"stset_" ++ RevModule = lists:reverse(TMList),
+	Module = list_to_atom(lists:reverse(RevModule)),
+	web_test_setup(TestingModule, Module).
+
+web_test_setup(TestingModule, ModuleUnderTest) ->
+	application:start(cowboy),
+	Port = rpgb_test_util:get_port(TestingModule),
+	HostPort = {<<"localhost">>, Port},
+	Routes = rpgb:get_routes(HostPort, [ModuleUnderTest]),
+	cowboy:start_listener(TestingModule, 1,
+		cowboy_tcp_transport, [{port, Port}],
+		cowboy_http_protocol, [{dispatch, [
+			{'_', Routes}
+		]}]
+	),
+	ibrowse:start(),
+	rpgb_test_util:mecked_data(meck_data_name(TestingModule)),
+	rpgb_session:make_ets().
+
+web_test_teardown() ->
+	meck:unload(rpgb_data).
+
+create_authed_session() ->
+	create_authed_session(<<"test_session">>).
+
+create_authed_session(SessionId) ->
+	{ok, Session} = rpgb_session:get_or_create(SessionId),
+	Session1 = setelement(1, Session, SessionId),
+	ets:insert(rpgb_session, Session1),
+	{ok, Session2} = rpgb_session:get(SessionId),
+	User = #rpgb_rec_user{
+		name = <<"test_user">>
+	},
+	{ok, User1} = rpgb_data:save(User),
+	rpgb_session:set_user(User1, Session2).
+
+meck_data_name(Module) ->
+	list_to_atom(atom_to_list(Module) ++ "_data").
 
 get_fields(rpgb_rec_user) -> record_info(fields, rpgb_rec_user);
 get_fields(rpgb_rec_user_group) -> record_info(fields, rpgb_rec_user_group);
