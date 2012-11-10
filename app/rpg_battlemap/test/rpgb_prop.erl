@@ -6,7 +6,7 @@
 -export([g_mapjson/0, g_combatantjson/0]).
 % more nuts 'n' bolts
 -export([g_name/0, g_color/0, g_opacity/0, g_color_rgb/0,
-	g_color_rgba/0, g_256/0, uniquify/1]).
+	g_color_rgba/0, g_256/0, uniquify/1, g_url/0]).
 
 %% higher level
 
@@ -15,7 +15,8 @@ g_mapjson() ->
 		{name, g_name()},
 		{background_color,  g_color()},
 		{gridline_color,  g_color()},
-		{grid_opacity,  g_opacity()}
+		{grid_opacity,  g_opacity()},
+		{rating, g_rating()}
 	])), uniquify(X)).
 
 g_combatantjson() ->
@@ -47,10 +48,11 @@ g_name() ->
 
 g_url() ->
 	?LET({Proto, Domain, Path},
-		{oneof([<<"http">>, <<"https">>]), list(char()), list(list(char()))},
+		{oneof([<<"http">>, <<"https">>]), ?SUCHTHAT(X, list(integer(97, 122)), X =/= []), list(list(integer(97, 122)))},
 		begin
-			Path = list_to_binary(string:join(Path, "/")),
-			<<Proto, "://", Domain, "/", Path>>
+			PathBin = list_to_binary(string:join(Path, "/")),
+			DomainBin = list_to_binary(Domain),
+			<<Proto/binary, "://", DomainBin/binary, ".com/", PathBin/binary>>
 		end
 	).
 
@@ -71,6 +73,9 @@ g_color_rgba() ->
 
 g_256() ->
 	choose(0, 255).
+
+g_rating() ->
+	oneof([<<"g">>, <<"pg">>, <<"r">>, <<"x">>]).
 
 uniquify(X) ->
 	uniquify(X, []).

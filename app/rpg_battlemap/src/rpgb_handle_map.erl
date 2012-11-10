@@ -114,8 +114,8 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 				id = undefined,
 				owner_id = User#rpgb_rec_user.id,
 				participant_ids = [],
-				zones = [],
-				combatants = [],
+				top_layer_id = undefined,
+				first_combatant_id = [],
 				created = os:timestamp(),
 				updated = os:timestamp()
 			};
@@ -137,7 +137,8 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 				_ ->
 					{ok, Req1}
 			end,
-			OutJson = jsx:to_json(Rec2:to_json([{<<"url">>, Location}])),
+			JsonableRec = Rec2#rpgb_rec_battlemap{created = null, updated = null},
+			OutJson = jsx:to_json(JsonableRec:to_json([{<<"url">>, Location}])),
 			{ok, Req3} = cowboy_http_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
 		{error, Error} ->
@@ -153,7 +154,8 @@ scrub_disallowed([{}]) ->
 scrub_disallowed(Json) ->
 	Disallowed = [<<"id">>, <<"owner_id">>, <<"created">>, <<"updated">>,
 		<<"participant_ids">>, <<"zoom">>, <<"translate_x">>,
-		<<"translate_y">>, <<"grid_spacing">>, <<"zones">>, <<"combatants">>],
+		<<"translate_y">>, <<"grid_spacing">>, <<"top_layer_id">>,
+		<<"first_combatant_id">>],
 	Disallowed1 = ordsets:from_list(Disallowed),
 	Json1 = ordsets:from_list(Json),
 	scrub_disallowed(Json1, Disallowed1).

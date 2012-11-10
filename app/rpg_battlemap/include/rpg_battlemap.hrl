@@ -26,6 +26,7 @@
 	name :: binary(),
 	owner_id :: pos_integer(),
 	participant_ids = [] :: [pos_integer()],
+	rating = g :: g | pg | r | x,
 	zoom  = 1 :: float(),
 	translate_x = 0 :: integer(),
 	translate_y = 0 :: integer(),
@@ -33,8 +34,8 @@
 	background_color = <<"gray">> :: binary(),
 	gridline_color = <<"black">> :: binary(),
 	grid_opacity = 0.5 :: float(),
-	zones = [] :: [pos_integer()],
-	combatants = [] :: [pos_integer()],
+	top_layer_id :: [pos_integer()],
+	first_combatant_id = [] :: [pos_integer()],
 	created :: time(),
 	updated :: time()
 }).
@@ -43,7 +44,7 @@
   id :: 'undefined' | pos_integer(),
   name :: binary(),
   battlemap_id :: pos_integer(),
-  z_index = 1 :: pos_integer()
+  next_layer_id :: pos_integer()
 }).
 
 -record(rpgb_rec_zone, {
@@ -75,6 +76,7 @@
 	y = 0 :: integer(),
   layer_id :: 'undefined' | pos_integer(),
 	initiative = 1 :: float(),
+	next_combatant_id :: pos_integer(),
 	size = 1 :: pos_integer(),
 	aura_size = 0 :: non_neg_integer(),
 	aura_color :: 'undefined' | binary(),
