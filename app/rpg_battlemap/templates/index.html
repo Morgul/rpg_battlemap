@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 
+	{% block page_style %}
+	<link type="text/css" href="/contrib/css/simplegrid.css" rel="stylesheet" />
+	{% endblock %}
+
 	{% block content %}
 	{% if user %}
-		Welcome {{user.email}}!
+		nom nom
 	{% else %}
 		<a id="signinlink" href="javascript:void()" class="persona-button">
 			<span>Sign in with your Email</span>
