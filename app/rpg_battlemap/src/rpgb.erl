@@ -5,6 +5,7 @@
 %-export([to_json/1, to_json/2]).
 -export([set_proplist/3, set_proplist/2]).
 -export([now_to_timestamp/1]).
+-export([refresh_templates/1]).
 
 res_init(Term) ->
 	case get_env(trace) of
@@ -116,6 +117,29 @@ make_route_tuple(_HP, _Mod, [], Acc) ->
 make_route_tuple(HP, Mod, [Route | Tail], Acc) ->
 	Tuple = {Route, Mod, HP},
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]).
+
+refresh_templates(Template) when is_atom(Template) ->
+	refresh_templates([Template]);
+
+refresh_templates(Templates) ->
+	LibDir = code:lib_dir(rpg_battlemap, templates),
+	case filelib:is_dir(LibDir) of
+		true ->
+			refresh_templates(Templates, LibDir);
+		_ ->
+			ok
+	end.
+
+refresh_templates([], _) ->
+	ok;
+
+refresh_templates([Template | Tail], LibDir) ->
+	"ltd_" ++ RevFile = lists:reverse(atom_to_list(Template)),
+	File = lists:reverse(RevFile) ++ ".html",
+	erlydtl:compile(LibDir ++ "/" ++ File, Template, [{out_dir, code:lib_dir(rpg_battlemap, ebin)}]),
+	code:soft_purge(Template),
+	{module, Template} = code:load_file(Template),
+	refresh_templates(Tail, LibDir).
 
 %is_string(List) ->
 %	lists:any(fun is_not_printable/1, List).
