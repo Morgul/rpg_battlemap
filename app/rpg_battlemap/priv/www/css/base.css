@@ -1,12 +1,14 @@
-*
+/* *
 {
 	font-family: sans-serif;
 	font-size: 8pt;
-}
+}*/
 
 body
 {
 	margin: 0;
+	font-family: sans-serif;
+	font-size: 8pt;
 }
 
 #head
@@ -15,7 +17,7 @@ body
 	padding: 2px;
 }
 
-.login
+/*.login
 {
 	margin: 0 auto;
 }
@@ -140,4 +142,4 @@ div.colorSelector div {
 	height: 28px;
 	background: url(/contrib/colorpicker/images/select2.png) center;
 }
-
+*/
