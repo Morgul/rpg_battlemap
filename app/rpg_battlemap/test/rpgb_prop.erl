@@ -37,14 +37,16 @@ g_combatantjson() ->
 %% nuts n bolts
 
 g_name() ->
-	?LET(N,
-	list(
-		frequency([
-			{1, 9},
-			{8, integer(32, 126)},
-			{5, char()}
-		])
-	), unicode:characters_to_binary(N)).
+	?SUCHTHAT(X,
+		?LET(N,
+			list(
+				frequency([
+					{1, 9},
+					{8, integer(32, 126)},
+					{5, char()}
+				])
+			), unicode:characters_to_binary(N)),
+			X =/= <<>>).
 
 g_url() ->
 	?LET({Proto, Domain, Path},
@@ -79,6 +81,9 @@ g_rating() ->
 
 uniquify(X) ->
 	uniquify(X, []).
+
+uniquify([], []) ->
+	[{}];
 
 uniquify([], Acc) ->
 	Acc;

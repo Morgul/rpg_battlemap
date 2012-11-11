@@ -1,4 +1,9 @@
 -module(rpgb).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/3,
 	get_url/4,sluggify/1, get_routes/2]).
 %-export([is_printable/1, is_not_printable/1, is_string/1]).
@@ -6,6 +11,7 @@
 -export([set_proplist/3, set_proplist/2]).
 -export([now_to_timestamp/1]).
 -export([refresh_templates/1]).
+-export([bind/2]).
 
 res_init(Term) ->
 	case get_env(trace) of
@@ -141,6 +147,47 @@ refresh_templates([Template | Tail], LibDir) ->
 	{module, Template} = code:load_file(Template),
 	refresh_templates(Tail, LibDir).
 
+bind(Arg, []) ->
+	{ok, Arg};
+
+bind(Arg, [Fun | Tail]) ->
+	case Fun(Arg) of
+		{ok, Arg2} ->
+			bind(Arg2, Tail);
+		Else ->
+			Else
+	end.
+
+-ifdef(TEST).
+
+bind_test_() -> [
+	{"three successes", fun() ->
+		F1 = fun(a) ->
+			{ok, b}
+		end,
+		F2 = fun(b) ->
+			{ok, c}
+		end,
+		F3 = fun(c) ->
+			{ok, d}
+		end,
+		?assertEqual({ok, d}, bind(a, [F1, F2, F3]))
+	end},
+
+	{"boom on second", fun() ->
+		F1 = fun(a) ->
+			{ok, b}
+		end,
+		F2 = fun(b) ->
+			{error, b}
+		end,
+		F3 = fun(c) ->
+			{ok, d}
+		end,
+		?assertEqual({error, b}, bind(a, [F1, F2, F3]))
+	end}].
+
+-endif.
 %is_string(List) ->
 %	lists:any(fun is_not_printable/1, List).
 %

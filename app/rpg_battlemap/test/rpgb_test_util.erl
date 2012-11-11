@@ -5,7 +5,7 @@
 -export([mecked_data/1]).
 -export([get_port/1]).
 -export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
-	create_authed_session/0, create_authed_session/1]).
+	create_authed_session/0, create_authed_session/1, create_authed_session/2]).
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -52,8 +52,9 @@ mecked_data(Callback) ->
 				{ok, Rec}
 		end
 	end),
-	meck:expect(rpgb_data, reset, fun(Type, Id) ->
-		ets:delete_all_objects(Ets)
+	meck:expect(rpgb_data, reset, fun() ->
+		ets:delete_all_objects(Ets),
+		ets:insert(Ets, {id_counter, 0})
 	end),
 	ok.
 
@@ -82,18 +83,25 @@ web_test_teardown() ->
 	meck:unload(rpgb_data).
 
 create_authed_session() ->
-	create_authed_session(<<"test_session">>).
-
-create_authed_session(SessionId) ->
-	{ok, Session} = rpgb_session:get_or_create(SessionId),
-	Session1 = setelement(1, Session, SessionId),
-	ets:insert(rpgb_session, Session1),
-	{ok, Session2} = rpgb_session:get(SessionId),
 	User = #rpgb_rec_user{
 		name = <<"test_user">>
 	},
 	{ok, User1} = rpgb_data:save(User),
-	rpgb_session:set_user(User1, Session2).
+	create_authed_session(<<"test_session">>, User1).
+
+create_authed_session(SessionId) ->
+	User = #rpgb_rec_user{
+		name = <<"test_user">>
+	},
+	{ok, User1} = rpgb_data:save(User),
+	create_authed_session(SessionId, User1).
+
+create_authed_session(SessionId, User) ->
+	{ok, Session} = rpgb_session:get_or_create(SessionId),
+	Session1 = setelement(1, Session, SessionId),
+	ets:insert(rpgb_session, Session1),
+	{ok, Session2} = rpgb_session:get(SessionId),
+	rpgb_session:set_user(User, Session2).
 
 meck_data_name(Module) ->
 	list_to_atom(atom_to_list(Module) ++ "_data").

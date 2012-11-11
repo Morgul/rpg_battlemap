@@ -99,8 +99,11 @@ content_types_accepted(Req, Ctx) ->
 	],
 	{Types, Req, Ctx}.
 
-to_json(Req, Ctx) ->
-	{<<"json">>, Req, Ctx}.
+to_json(Req, #ctx{map = Map} = Ctx) ->
+	Url = make_location(Ctx, Map),
+	% TODO layers, combatants, zones, and participants
+	Json = Map:to_json([{url, Url}]),
+	{jsx:to_json(Json), Req, Ctx}.
 
 to_html(Req, Ctx) ->
 	{<<"html">>, Req, Ctx}.
@@ -110,6 +113,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	InitialMap = case MapId of
 		undefined ->
+			?debug("creating new map"),
 			#rpgb_rec_battlemap{
 				id = undefined,
 				owner_id = User#rpgb_rec_user.id,
@@ -120,33 +124,88 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 				updated = os:timestamp()
 			};
 		_ ->
+			?debug("updating existing map ~p", [MapId]),
 			InitM = Ctx#ctx.map,
 			InitM#rpgb_rec_battlemap{updated = os:timestamp()}
 	end,
 	{ok, Body, Req1} = cowboy_http_req:body(Req),
 	Term = jsx:to_term(Body),
 	?debug("Submitted json:  ~p", [Term]),
-	case validate_json(Term, InitialMap) of
-		{ok, Rec} ->
+	case validate_map(Term, InitialMap) of
+		{ok, {_DerJson, Rec}} ->
 			{ok, Rec2} = rpgb_data:save(Rec),
 			{Host, Port} = Ctx#ctx.hostport,
-			Location = rpgb:get_url("http", Host, Port, ["map", integer_to_list(Rec2#rpgb_rec_battlemap.id)]),
+			Location = make_location(Ctx, Rec2),
 			{ok, Req2} = case MapId of
 				undefined ->
 					cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1);
 				_ ->
 					{ok, Req1}
 			end,
-			JsonableRec = Rec2#rpgb_rec_battlemap{created = null, updated = null},
-			OutJson = jsx:to_json(JsonableRec:to_json([{<<"url">>, Location}])),
+			OutJson = jsx:to_json(Rec2:to_json([{<<"url">>, Location}])),
 			{ok, Req3} = cowboy_http_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
-		{error, Error} ->
-			?debug("Error:  ~p", [Error]),
-			{ok, Req2} = cowboy_http_req:set_resp_body(iolist_to_binary(io_lib:format("invalid data: ~p", [Error])), Req1),
-			{ok, Req3} = cowboy_http_req:reply(400, Req2),
+		{error, Status, ErrBody} ->
+			ErrBody2 = jsx:to_json(ErrBody),
+			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
+
+make_location(Ctx, Rec) ->
+	{Host, Port} = Ctx#ctx.hostport,
+	rpgb:get_url("http", Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
+
+validate_map(Json, InitMap) ->
+	ValidateFuns = [
+		fun scrub_disallowed/1,
+		fun check_blank_name/1,
+		fun check_name_conflict/1,
+		fun validate_json/1,
+		fun check_named_map/1
+	],
+	rpgb:bind({Json, InitMap}, ValidateFuns).
+
+check_named_map({Json, Map}) ->
+	MapName = Map#rpgb_rec_battlemap.name,
+	JsonName = proplists:get_value(<<"name">>, Json),
+	case {MapName, JsonName} of
+		{undefined, undefined} ->
+			{error, 422, <<"name cannot be blank.">>};
+		_ ->
+			{ok, {Json, Map}}
+	end.
+
+check_blank_name({Json, Map}) ->
+	case proplists:get_value(<<"name">>, Json) of
+		<<>> ->
+			{error, 422, <<"name cannot be blank.">>};
+		_ ->
+			{ok, {Json, Map}}
+	end.
+
+check_name_conflict({Json, Map}) ->
+	#rpgb_rec_battlemap{owner_id = Owner, name = MapName} = Map,
+	?error("map name:  ~p;  json:  ~p", [MapName, Json]),
+	case proplists:get_value(<<"name">>, Json) of
+		undefined ->
+			{ok, {Json, Map}};
+		MapName ->
+			{ok, {Json, Map}};
+		OtherName ->
+			Searched = rpgb_data:search(rpgb_rec_battlemap, [
+				{name, OtherName}, {owner_id, Owner}]),
+			case Searched of
+				{ok, []} ->
+					{ok, {Json, Map}};
+				_ ->
+					{error, 409, <<"you already have a map by that name.">>}
+			end
+	end.
+
+scrub_disallowed({Json, Map}) ->
+	{ok, Json2} = scrub_disallowed(Json),
+	{ok, {Json2, Map}};
 
 scrub_disallowed([{}]) ->
 	{ok, [{}]};
@@ -170,6 +229,16 @@ scrub_disallowed(Json, [Nope | Tail] = Nopes) ->
 		Json1 ->
 			scrub_disallowed(Json1, Nopes)
 	end.
+
+validate_json({Json, Map}) ->
+	case validate_json(Json, Map) of
+		{ok, Map2} ->
+			{ok, {Json, Map2}};
+		{error, {bad_color, Key}} ->
+			Body = iolist_to_binary(io_lib:format("invalid color for ~s.", [Key])),
+			Status = 422,
+			{eror, Status, Body}
+	end;
 
 validate_json(Json) ->
 	case rpgb_rec_battlemap:from_json(Json) of
@@ -232,13 +301,3 @@ generate_etag(Req, #ctx{map = Map} = Ctx) ->
 	Md5 = crypto:md5(Bin2),
 	Etag = rpgb_util:bin_to_hexstr(Md5),
 	{Etag, Req, Ctx}.
-
-bind(Last, []) ->
-	{ok, Last};
-bind(Last, [{M, F, A} | Tail]) ->
-	case erlang:apply(M, F, [Last | A]) of
-		{ok, Next} ->
-			bind(Next, Tail);
-		E ->
-			E
-	end.
