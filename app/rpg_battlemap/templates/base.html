@@ -16,7 +16,8 @@
 
 <body>
 
-	<div id="head">{% if user %}
+	<div id="head">
+		<h1 style="float:left;">RPG BattleMap</h1>{% if user %}
 		<a id="signoutlink" href="javascript:void()" class="persona-button">
 			<span>Welcome {{user.email}}! [Sign Out]</span>
 		</a>{% endif %}
