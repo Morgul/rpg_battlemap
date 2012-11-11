@@ -24,11 +24,12 @@
 					<h1>Maps I Own</h1>
 					{% for map in maps %}<p>
 						<a href="{{ map.url }}">{{ map.name }}</a>
+						<button data-map-url="{{ map.url }}" data-role="map-delete">X</button>
 					</p>{% empty %}<p>
 						None (yet)
 					</p>{% endfor %}
 					<p>
-						<form action="javascript:void(0)" id="newmap">
+						<form action="{{ map_create_url }}" id="newmap">
 							<input name="mapname" placeholder="Map Name" />
 							<input type="submit" name="New Map" value="New Map" />
 						</form>
@@ -41,11 +42,12 @@
 					<h1>Characters I Own</h1>
 					{% for character in characters %}<p>
 						<a href="{{ character.url }}">{{ character.name }}</a>
+						<button data-character-url="{{ character.url }}" data-role="character-delete">X</button>
 					</p>{% empty %}<p>
 						None (yet)
 					</p>{% endfor %}
 					<p>
-						<form action="javascript:void(0)" id="newcharacter">
+						<form action="{{ character_create_url }}" id="newcharacter">
 							<input name="charactername" placeholder="Character Name" />
 							<input type="submit" name="New Character" value="New Character" />
 						</form>
@@ -65,6 +67,26 @@
 	<script type="text/javascript" src="/contrib/jquery.js"></script>
 	<script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
 	<script type="text/javascript" src="/contrib/ember.js"></script>
+	<script type="text/javascript">
+		$('form#newmap').submit(function(ev){
+			var mapName = ev.target.mapname.value;
+			var createUrl = ev.target.action;
+			var defer = $.ajax({
+				url: createUrl,
+				type: 'put',
+				data: JSON.stringify({
+					name: mapName
+				}),
+				contentType: 'application/json'
+			});
+			defer.success(function(json, status, xhr){
+				var mapLocation = xhr.getResponseHeader('Location');
+				window.location.href = mapLocation;
+				return true;
+			});
+			return false;
+		})
+	</script>
 	{% endblock %}
 {% comment %}
 {# -*- vim: set ft=htmldjango: -- vim modeline -*- #}{% endcomment %}

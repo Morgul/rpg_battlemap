@@ -59,6 +59,14 @@ get_url(Proto, Host, Port, [$/ | Path]) ->
 	get_url(Proto, Host, Port, Path);
 get_url(Proto, Host, Port, <<$/, Path/binary>>) ->
 	get_url(Proto, Host, Port, Path);
+get_url(Req, Host, Port, Path) when is_tuple(Req) ->
+	Proto = case cowboy_http_req:transport(Req) of
+		{ok, cowboy_ssl_transport, _} ->
+			https;
+		_ ->
+			http
+	end,
+	get_url(Proto, Host, Port, Path);
 get_url("http", Host, 80, Path) ->
 	iolist_to_binary(io_lib:format("http://~s/~s", [Host, Path]));
 get_url("https", Host, 443, Path) ->

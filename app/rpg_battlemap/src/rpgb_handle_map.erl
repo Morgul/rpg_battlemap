@@ -100,7 +100,7 @@ content_types_accepted(Req, Ctx) ->
 	{Types, Req, Ctx}.
 
 to_json(Req, #ctx{map = Map} = Ctx) ->
-	Url = make_location(Ctx, Map),
+	Url = make_location(Req, Ctx, Map),
 	% TODO layers, combatants, zones, and participants
 	Json = Map:to_json([{url, Url}]),
 	{jsx:to_json(Json), Req, Ctx}.
@@ -135,7 +135,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 		{ok, {_DerJson, Rec}} ->
 			{ok, Rec2} = rpgb_data:save(Rec),
 			{Host, Port} = Ctx#ctx.hostport,
-			Location = make_location(Ctx, Rec2),
+			Location = make_location(Req, Ctx, Rec2),
 			{ok, Req2} = case MapId of
 				undefined ->
 					cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1);
@@ -152,9 +152,9 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			{halt, Req3, Ctx}
 	end.
 
-make_location(Ctx, Rec) ->
+make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	rpgb:get_url("http", Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
+	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
 
 validate_map(Json, InitMap) ->
 	ValidateFuns = [

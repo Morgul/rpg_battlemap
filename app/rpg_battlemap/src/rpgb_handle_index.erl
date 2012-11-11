@@ -25,7 +25,7 @@ handle(Req, {Host, Port} = Ctx) ->
 			{ok, OutMaps} = rpgb_data:search(rpgb_rec_battlemap, [
 				{owner_id, User#rpgb_rec_user.id}
 			]),
-			{ok, OutChars} = rpgb_data:search(rpgb_rec_battlemap, [
+			{ok, OutChars} = rpgb_data:search(rpgb_rec_character, [
 				{owner_id, User#rpgb_rec_user.id}
 			]),
 			{ok, AllMaps} = rpgb_data:search(rpgb_rec_battlemap, []),
