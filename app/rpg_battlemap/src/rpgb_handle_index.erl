@@ -18,7 +18,7 @@ handle(Req, {Host, Port} = Ctx) ->
 	LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
 	MapCreateUrl = rpgb:get_url(Req, ["map"]),
 	CharacterCreateUrl = rpgb:get_url(Req, ["character"]),
-	{Maps, Characters, ParticipantMaps} = case User of
+	{NoUrlMaps, NoUrlCharacters, NoUrlParticipantMaps} = case User of
 		undefined ->
 			{[], [], []};
 		_ ->
@@ -33,6 +33,9 @@ handle(Req, {Host, Port} = Ctx) ->
 				lists:member(User#rpgb_rec_user.id, M#rpgb_rec_battlemap.participant_ids)],
 			{OutMaps, OutChars, OutParticipantMaps}
 	end,
+	Maps = add_map_urls(NoUrlMaps, Req),
+	Characters =  add_character_urls(NoUrlCharacters, Req),
+	ParticipantMaps = add_map_urls(NoUrlParticipantMaps, Req),
 	rpgb:refresh_templates(index_dtl),
 	{ok, Output} = index_dtl:render([
 		{user, User}, {login_link, LoginLink}, {logout_link, LogoutLink},
@@ -44,3 +47,29 @@ handle(Req, {Host, Port} = Ctx) ->
 
 terminate(Req, Ctx) ->
 	ok.
+
+add_map_urls(Maps, Req) ->
+	add_map_urls(Maps, Req, []).
+
+add_map_urls([], _Req, Acc) ->
+	lists:reverse(Acc);
+
+add_map_urls([Map | Tail], Req, Acc) ->
+	Props = Map:to_json([fun(Json, Rec) ->
+		Url = rpgb:get_url(Req, ["map", integer_to_list(Map#rpgb_rec_battlemap.id)]),
+		[{url, Url} | Json]
+	end ]),
+	add_map_urls(Tail, Req, [Props | Acc]).
+
+add_character_urls(Characters, Req) ->
+	add_character_urls(Characters, Req, []).
+
+add_character_urls([], _Req, Acc) ->
+	lists:reverse(Acc);
+
+add_character_urls([Character | Tail], Req, Acc) ->
+	Props = Character:to_json([fun(Json, Rec) ->
+		Url = rpgb:get_url(Req, ["character", integer_to_list(Character#rpgb_rec_character.id)]),
+		[{url, Url} | Json]
+	end ]),
+	add_character_urls(Tail, Req, [Props | Acc]).

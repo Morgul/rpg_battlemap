@@ -24,7 +24,7 @@
 					<h1>Maps I Own</h1>
 					{% for map in maps %}<p>
 						<a href="{{ map.url }}">{{ map.name }}</a>
-						<button data-map-url="{{ map.url }}" data-role="map-delete">X</button>
+						<button data-mapurl="{{ map.url }}" data-role="map-delete">X</button>
 					</p>{% empty %}<p>
 						None (yet)
 					</p>{% endfor %}
@@ -42,7 +42,7 @@
 					<h1>Characters I Own</h1>
 					{% for character in characters %}<p>
 						<a href="{{ character.url }}">{{ character.name }}</a>
-						<button data-character-url="{{ character.url }}" data-role="character-delete">X</button>
+						<button data-characterUrl="{{ character.url }}" data-role="character-delete">X</button>
 					</p>{% empty %}<p>
 						None (yet)
 					</p>{% endfor %}
@@ -85,7 +85,18 @@
 				return true;
 			});
 			return false;
-		})
+		});
+
+		$('[data-role="map-delete"]').on('click', function(ev){
+			var deleteUrl = ev.target.dataset.mapurl;
+			var defer = $.ajax({
+				url: deleteUrl,
+				type: 'delete'
+			});
+			defer.success(function(){
+				window.location.reload();
+			});
+		});
 	</script>
 	{% endblock %}
 {% comment %}
