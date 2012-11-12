@@ -23,7 +23,7 @@ init(_Protos, Req, _HostPort) ->
 rest_init(Req, HostPort) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	{Path, Req2} = cowboy_http_req:path(Req1),
-	{CharId, Req3} = cowboy_http_req:binding(mapid, Req2),
+	{CharId, Req3} = cowboy_http_req:binding(characterid, Req2),
 	CharId1 = case CharId of
 		undefined ->
 			undefined;

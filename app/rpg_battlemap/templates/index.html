@@ -97,6 +97,34 @@
 				window.location.reload();
 			});
 		});
+
+		$('form#newcharacter').submit(function(ev){
+			var characterName = ev.target.charactername.value;
+			var createUrl = ev.target.action;
+			var defer = $.ajax({
+				url: createUrl,
+				type: 'put',
+				data: JSON.stringify({
+					name: characterName
+				}),
+				contentType: 'application/json'
+			});
+			defer.success(function(){
+				window.location.reload();
+			});
+			return false;
+		});
+
+		$('[data-role="character-delete"]').on('click', function(ev){
+			var deleteUrl = ev.target.dataset.characterurl;
+			var defer = $.ajax({
+				url: deleteUrl,
+				type: 'delete'
+			});
+			defer.success(function(){
+				window.location.reload();
+			});
+		});
 	</script>
 	{% endblock %}
 {% comment %}
