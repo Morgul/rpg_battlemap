@@ -1,10 +1,10 @@
--module(rpgb_handle_map_tests).
+-module(rpgb_handle_character_tests).
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -include("rpg_battlemap.hrl").
 
--define(create_url, "http://localhost:9093/map").
+-define(create_url, "http://localhost:" ++ integer_to_list(rpgb_test_util:get_port(?MODULE)) ++ "/character").
 -define(cookie, begin
 	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
 	{"Cookie", binary_to_list(Cookie)}
@@ -31,12 +31,12 @@ browser_test_() -> {setup, fun() ->
 	fun(_) -> [
 
 		{"statem", timeout, 60000, fun() ->
-			?assert(proper:quickcheck(?MODULE:prop_map_statem()))
+			?assert(proper:quickcheck(?MODULE:prop_character_statem()))
 		end}
 
 	] end}.
 
-prop_map_statem() ->
+prop_character_statem() ->
 	?FORALL(Cmds, commands(?MODULE), begin
 		{Hist, State, Res} = run_commands(?MODULE, Cmds),
 		?WHENFAIL(?debugFmt("\n==========================\n== proper check failed! ==\n==========================\n== Hstory ==\n~p\n\n== State ==\n~p\n\n== Result ==\n~p\n", [Hist, State, Res]),
@@ -53,20 +53,20 @@ initial_state() ->
 
 command(#state{url = undefined} = State) ->
 	oneof([
-		{call, ?MODULE, bad_user_create, [rpgb_prop:g_mapjson(), State]},
-		{call, ?MODULE, create_blank_name, [rpgb_prop:g_mapjson(), State]},
-		{call, ?MODULE, create_missing_name, [?SUCHTHAT(X, rpgb_prop:g_mapjson(), begin proplists:get_value(name, X) == undefined end), State]},
-		{call, ?MODULE, create_map, [?SUCHTHAT(X, rpgb_prop:g_mapjson(), begin proplists:get_value(name, X) =/= undefined end), State]}
+		{call, ?MODULE, bad_user_create, [rpgb_prop:g_characterjson(), State]},
+		{call, ?MODULE, create_blank_name, [rpgb_prop:g_characterjson(), State]},
+		{call, ?MODULE, create_missing_name, [?SUCHTHAT(X, rpgb_prop:g_characterjson(), begin proplists:get_value(name, X) == undefined end), State]},
+		{call, ?MODULE, create_character, [?SUCHTHAT(X, rpgb_prop:g_characterjson(), begin proplists:get_value(name, X) =/= undefined end), State]}
 	]);
 command(State) ->
 	frequency([
 		{9, {call, ?MODULE, simple_get, [State]}},
 		{9, {call, ?MODULE, bad_user_destroy, [State]}},
-		{9, {call, ?MODULE, create_name_conflict, [rpgb_prop:g_mapjson(), State]}},
-		{9, {call, ?MODULE, update_map, [rpgb_prop:g_mapjson(), State]}},
-		{9, {call, ?MODULE, bad_user_update, [rpgb_prop:g_mapjson(), State]}},
-		{9, {call, ?MODULE, update_blank_name, [rpgb_prop:g_mapjson(), State]}},
-		{1, {call, ?MODULE, destroy_map, [State]}}
+		{9, {call, ?MODULE, create_name_conflict, [rpgb_prop:g_character(), State]}},
+		{9, {call, ?MODULE, update_character, [rpgb_prop:g_character(), State]}},
+		{9, {call, ?MODULE, bad_user_update, [rpgb_prop:g_character(), State]}},
+		{9, {call, ?MODULE, update_blank_name, [rpgb_prop:g_charaacter(), State]}},
+		{1, {call, ?MODULE, destroy_character, [State]}}
 	]).
 
 %% =======================================================

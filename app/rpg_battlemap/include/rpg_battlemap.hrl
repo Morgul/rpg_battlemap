@@ -87,9 +87,10 @@
 -record(rpgb_rec_character, {
   id :: 'undefined' | pos_integer(),
   owner_id :: pos_integer(),
+	name :: binary(),
   color = <<"green">> :: binary(),
-  portait_image :: 'undefined' | binary(),
-  token_image :: 'undefined' | binary(),
+  portait_image_url :: 'undefined' | binary(),
+  token_image_url :: 'undefined' | binary(),
   size = 1 :: pos_integer(),
 	created :: time(),
 	updated :: time()

@@ -5,7 +5,8 @@
 -export([mecked_data/1]).
 -export([get_port/1]).
 -export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
-	create_authed_session/0, create_authed_session/1, create_authed_session/2]).
+	create_authed_session/0, create_authed_session/1,
+	create_authed_session/2, assert_body/2]).
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -139,4 +140,39 @@ get_port(rpgb_handle_default_tests) -> 9091;
 get_port(rpgb_handle_account_tests) -> 9092;
 get_port(rpgb_handle_map_tests) -> 9093;
 get_port(rpgb_handle_index_tests) -> 9094;
-get_port(rpgb_handle_combatant_tests) -> 9095.
+get_port(rpgb_handle_combatant_tests) -> 9095;
+get_port(rpgb_handle_character_tests) -> 9096.
+
+assert_body(Json, Body) when is_list(Body) ->
+	assert_body(Json, list_to_binary(Body));
+
+assert_body(Json, Body) ->
+	Json1 = binary_keys(Json),
+	BodyJson = jsx:to_term(Body),
+	Json2 = lists:sort(Json1),
+	BodyJson1 = lists:sort(BodyJson),
+	match_keys(Json2, BodyJson1).
+
+binary_keys([{}]) ->
+	[];
+
+binary_keys(L) ->
+	binary_keys(L, []).
+
+binary_keys([], Acc) ->
+	lists:reverse(Acc);
+
+binary_keys([{K, V} | Tail], Acc) when is_atom(K) ->
+	binary_keys(Tail, [{list_to_binary(atom_to_list(K)), V} | Acc]);
+
+binary_keys([{K, _} = H | Tail], Acc) when is_binary(K) ->
+	binary_keys(Tail, [H | Acc]).
+
+match_keys([], _) ->
+	true;
+match_keys(Remaining, []) ->
+	Remaining;
+match_keys([{Key, Val} | ETail], [{Key, Val} | GTail]) ->
+	match_keys(ETail, GTail);
+match_keys(Expected, [_Got | Tail]) ->
+	match_keys(Expected, Tail).

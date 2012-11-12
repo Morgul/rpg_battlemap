@@ -3,7 +3,7 @@
 -include_lib("proper/include/proper.hrl").
 
 % higher level structurs
--export([g_mapjson/0, g_combatantjson/0]).
+-export([g_mapjson/0, g_combatantjson/0, g_characterjson/0]).
 % more nuts 'n' bolts
 -export([g_name/0, g_color/0, g_opacity/0, g_color_rgb/0,
 	g_color_rgba/0, g_256/0, uniquify/1, g_url/0]).
@@ -32,6 +32,15 @@ g_combatantjson() ->
 		{size, pos_integer()},
 		{aura_size, non_neg_integer()},
 		{aura_color, oneof([null, g_color()])}
+	])), uniquify(X)).
+
+g_characterjson() ->
+	?LET(X, list(oneof([
+		{name, g_name()},
+		{color, g_color()},
+		{portrait_image_url, g_url()},
+		{token_image_url, g_url()},
+		{size, pos_integer()}
 	])), uniquify(X)).
 
 %% nuts n bolts

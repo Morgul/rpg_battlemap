@@ -34,7 +34,7 @@ rest_init(Req, HostPort) ->
 			try list_to_integer(binary_to_list(MapId)) of
 				N -> N
 			catch
-				'ERROR':{badarg_} ->
+				'ERROR':{badarg, _} ->
 					<<"bad map id, will 404 later">>
 			end
 	end,
@@ -237,7 +237,7 @@ validate_json({Json, Map}) ->
 		{error, {bad_color, Key}} ->
 			Body = iolist_to_binary(io_lib:format("invalid color for ~s.", [Key])),
 			Status = 422,
-			{eror, Status, Body}
+			{error, Status, Body}
 	end;
 
 validate_json(Json) ->
@@ -296,7 +296,7 @@ generate_etag(Req, #ctx{mapid = undefined} = Ctx) ->
 	{undefined, Req, Ctx};
 generate_etag(Req, #ctx{map = Map} = Ctx) ->
 	Bin = jsx:to_json(Map:to_json()),
-	Updated = Map#rpgb_rec_battlemap.created,
+	Updated = Map#rpgb_rec_battlemap.updated,
 	Bin2 = term_to_binary({Bin, Updated}),
 	Md5 = crypto:md5(Bin2),
 	Etag = rpgb_util:bin_to_hexstr(Md5),
