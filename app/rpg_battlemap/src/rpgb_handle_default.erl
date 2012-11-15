@@ -25,7 +25,13 @@ handle(Req, {Host, Port}) ->
 		_ ->
 			Path
 	end,
-	File = filename:join([PrivDir, "www", Path1]),
+	File = case Path1 of
+		<<"contrib/bullet.js">> ->
+			BulletPriv = code:priv_dir(bullet),
+			filename:join(BulletPriv, <<"bullet.js">>);
+		_ ->
+			filename:join([PrivDir, "www", Path1])
+	end,
 	IsFile = filelib:is_file(File),
 	if
 		IsFile ->
