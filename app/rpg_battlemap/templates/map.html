@@ -5,18 +5,16 @@
 {% block content %}
 
 <script type="text/x-handlebars" data-template-name="map">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" {% templatetag openvariable %} bindStyle background-color="content.background_color" {% templatetag closevariable %}>
 	<defs>
 		<pattern x="0" y="0" width="512" height="512" id="gridPattern" patternUnits="userSpaceOnUse">{% for patternInfo in pattern_helper %}
 			<rect
 				x="{{ patternInfo.x }}"
 				y="{{ patternInfo.y }}"
-				width="32" height="32"
+				width="32" height="32" fill-opacity="0"
 				{% templatetag openvariable %}bindAttr stroke="content.gridline_color"{% templatetag closevariable %}
 				{% templatetag openvariable %} bindAttr stroke-width="content.gridline_width" {% templatetag closevariable %}
-				{% comment %}
-				{% templatetag openvariable %} bindAttr stroke-opacity="map.grid_opacity" {% templatetag closevariable %} fill-opacity="0" />{% endcomment %} />{% endfor %}
-
+				{% templatetag openvariable %} bindAttr stroke-opacity="map.grid_opacity" {% templatetag closevariable %} />{% endfor %}
 		</pattern>
 	</defs>
 
@@ -40,6 +38,96 @@
 </script>
 <script type="text/javascript">
 var RPGB = Ember.Application.create({ });
+
+/****************************************************
+* Bind an attribute to a specific style tag
+****************************************************/
+
+Ember.Handlebars.registerHelper('bindStyle', function(options) {
+  var fmt = Ember.String.fmt;
+  var attrs = options.hash;
+
+  Ember.assert("You must specify at least one hash argument to bindStyle", !!Ember.keys(attrs).length);
+
+  var view = options.data.view;
+  var ret = [];
+  var ctx = this;
+
+  // Generate a unique id for this element. This will be added as a
+  // data attribute to the element so it can be looked up when
+  // the bound property changes.
+  var dataId = ++jQuery.uuid;
+
+  var attrKeys = Ember.keys(attrs);
+
+  // For each attribute passed, create an observer and emit the
+  // current value of the property as an attribute.
+  attrKeys.forEach(function(attr) {
+    var property = attrs[attr];
+
+    Ember.assert(fmt("You must provide a String for a bound attribute, not %@", [property]), typeof property === 'string');
+
+    var value = Em.get(ctx, property);
+
+    Ember.assert(fmt("Attributes must be numbers, strings or booleans, not %@", [value]), value == null || typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean');
+
+    var observer, invoker;
+
+    observer = function observer() {
+      var result = Em.get(ctx, property);
+
+      Ember.assert(fmt("Attributes must be numbers, strings or booleans, not %@", [result]), result == null || typeof result === 'number' || typeof result === 'string' || typeof result === 'boolean');
+
+      var elem = view.$("[data-bindAttr-" + dataId + "='" + dataId + "']");
+
+      // If we aren't able to find the element, it means the element
+      // to which we were bound has been removed from the view.
+      // In that case, we can assume the template has been re-rendered
+      // and we need to clean up the observer.
+      if (elem.length === 0) {
+        Ember.removeObserver(ctx, property, invoker);
+        return;
+      }
+
+      var currentValue = elem.css(attr);
+
+      if (currentValue !== result) {
+        elem.css(attr, result);
+      }
+    };
+
+    invoker = function() {
+      Ember.run.once(observer);
+    };
+
+    // Add an observer to the view for when the property changes.
+    // When the observer fires, find the element using the
+    // unique data id and update the attribute to the new value.
+    Ember.addObserver(ctx, property, invoker);
+
+    // Use the attribute's name as the value when it is YES
+    if (value === true) {
+      value = attr;
+    }
+
+    // Do not add the attribute when the value is false
+    if (value !== false) {
+			if(typeof value === 'number'){
+      	ret.push('style="'+attr+':'+value+'px;"');
+			} else {
+      	ret.push('style="'+attr+':'+value+';"');
+			}
+    }
+  }, this);
+
+  // Add the unique identifier
+  ret.push('data-bindAttr-' + dataId + '="' + dataId + '"');
+  return new Ember.Handlebars.SafeString(ret.join(' '));
+});
+
+/****************************************************
+* A base object to build auto commiting objects upon.
+****************************************************/
 
 RPGB.RestObject = Ember.Object.extend({
 	all: [],
