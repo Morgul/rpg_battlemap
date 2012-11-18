@@ -6,20 +6,28 @@
 -export([get_routes/0]).
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
 	forbidden/2, content_types_provided/2, to_json/2, to_html/2,
-	content_types_accepted/2, from_json/2, delete_resource/2]).
+	content_types_accepted/2, from_json/2, delete_resource/2,
+	generate_etag/2]).
 
 -record(ctx, { hostport, session, mapid, map}).
 
 get_routes() ->
 	[
 		[<<"map">>],
-		[<<"map">>, mapid]
+		[<<"map">>, mapid],
+		{[<<"map">>, mapid, <<"ws">>], []}
 	].
 
 %				{[<<"maps">>], rpgb_handle_maps, HP},
 %				{[<<"maps">>, map_id], rpgb_handle_map, HP},
 %				{[<<"maps">>, map_id, property], rpgb_handle_map, {host, Port}},
+init(Protos, Req, [HostPort | Opts]) ->
+	Opts2 = [{hostport, HostPort}, {handler, rpgb_handle_map_websocket} | Opts],
+	?info("websocket initialization"),
+	bullet_handler:init(Protos, Req, Opts2);
+
 init(_Protos, Req, _HostPort) ->
+	?info("usual map stuff"),
 	{upgrade, protocol, cowboy_http_rest}.
 
 rest_init(Req, HostPort) ->
@@ -100,13 +108,22 @@ content_types_accepted(Req, Ctx) ->
 	{Types, Req, Ctx}.
 
 to_json(Req, #ctx{map = Map} = Ctx) ->
-	Url = make_location(Req, Ctx, Map),
-	% TODO layers, combatants, zones, and participants
-	Json = Map:to_json([{url, Url}]),
+	Json = make_json(Req, Ctx, Map),
 	{jsx:to_json(Json), Req, Ctx}.
 
+to_html(Req, #ctx{map = undefined} = Ctx) ->
+	{<<"html">>, Req, Ctx};
+
 to_html(Req, Ctx) ->
-	{<<"html">>, Req, Ctx}.
+	rpgb:refresh_templates(map_dtl),
+	Json = make_json(Req, Ctx, Ctx#ctx.map),
+	User = rpgb_session:get_user(Ctx#ctx.session),
+	PatternHelper = [begin
+		[{x, Row * 32}, {y, Col * 32}]
+	end || Row <- lists:seq(0, 15), Col <- lists:seq(0, 15)],
+	{ok, Output} = map_dtl:render([{user, User}, {map, Json},
+		{pattern_helper, PatternHelper}, {map_json, jsx:to_json(Json)}]),
+	{Output, Req, Ctx}.
 
 from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 	#ctx{session = Session} = Ctx,
@@ -151,6 +168,12 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
+
+make_json(Req, Ctx, Map) ->
+	<<"http", RestUrl/binary>> = Url = make_location(Req, Ctx, Map),
+	WebSocket = <<"ws", RestUrl/binary, "/ws">>,
+	% TODO layers, combatants, zones, and participants
+	Map:to_json([{url, Url},{websocketUrl, WebSocket}]).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
@@ -300,4 +323,4 @@ generate_etag(Req, #ctx{map = Map} = Ctx) ->
 	Bin2 = term_to_binary({Bin, Updated}),
 	Md5 = crypto:md5(Bin2),
 	Etag = rpgb_util:bin_to_hexstr(Md5),
-	{Etag, Req, Ctx}.
+	{{weak, list_to_binary(Etag)}, Req, Ctx}.

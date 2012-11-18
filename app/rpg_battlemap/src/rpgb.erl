@@ -128,6 +128,9 @@ get_routes(HP, [Mod | Tail], Acc) ->
 make_route_tuple(_HP, _Mod, [], Acc) ->
 	Acc;
 
+make_route_tuple(HP, Mod, [{Route, Opts} | Tail], Acc) ->
+	Tuple = {Route, Mod, [HP | Opts]},
+	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]);
 make_route_tuple(HP, Mod, [Route | Tail], Acc) ->
 	Tuple = {Route, Mod, HP},
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]).

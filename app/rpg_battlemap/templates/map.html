@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %} - {{ map.name }} {% endblock %}
+
+{% block content %}
+
+<script type="text/x-handlebars" data-template-name="map">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1">
+	<defs>
+		<pattern x="0" y="0" width="512" height="512" id="gridPattern" patternUnits="userSpaceOnUse">{% for patternInfo in pattern_helper %}
+			<rect
+				x="{{ patternInfo.x }}"
+				y="{{ patternInfo.y }}"
+				width="32" height="32"
+				{% templatetag openvariable %}bindAttr stroke="content.gridline_color"{% templatetag closevariable %}
+				{% templatetag openvariable %} bindAttr stroke-width="content.gridline_width" {% templatetag closevariable %}
+				{% comment %}
+				{% templatetag openvariable %} bindAttr stroke-opacity="map.grid_opacity" {% templatetag closevariable %} fill-opacity="0" />{% endcomment %} />{% endfor %}
+
+		</pattern>
+	</defs>
+
+	<rect x="0" y="0" width="100%" height="100%" stroke-opacity="0" fill="url(#gridPattern)" style="pointer-events:none;" />
+</svg>
+</script>
+
+<!--<script type="text/x-handlebars">
+{% templatetag openvariable %} view RPGB.MapView mapBinding="RPGB.mapController.map" {% templatetag closevariable %}
+</script>-->
+
+{% endblock %}
+
+{% block page_scripts %}
+
+<script type="text/javascript" src="/contrib/bullet.js"></script>
+<script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
+<script type="text/javascript" src="/contrib/ember.js"></script>
+<script id="mapJson" type="application/json">
+{{ map_json }}
+</script>
+<script type="text/javascript">
+var RPGB = Ember.Application.create({ });
+
+RPGB.RestObject = Ember.Object.extend({
+	all: [],
+	_lockedCommits: 0,
+
+	find: function(){
+		if(! allUrl){
+			return this.all;
+		}
+
+		var thisRef = this;
+		var defer = $.ajax(allUrl);
+		defer.success(function(data){
+			var dataObjs = data.map(function(item){
+				return thisRef.prototype.create(itme);
+			});
+			while(this.all.length){
+				thisRef.all.removeAt(0);
+			}
+			thisRef.all.addObjects(dataObjs);
+			return true;
+		});
+
+		return this.all;
+	},
+
+	load: function(url){
+		var obj = this.prototype.create({
+			'url': url
+		});
+
+		var defer = $.ajax(url, {
+			context: obj
+		});
+		defer.success(function(data){
+			var prop;
+			for(prop in data){
+				this.set(prop, data[prop]);
+			}
+		});
+		return obj;
+	},
+
+	setUnknownProperty: function(key, value){
+		console.log('boom!', arguments);
+		var thisRef = this;
+		this[key] = value;
+		Ember.addObserver(thisRef, key, thisRef, 'propertyDidChange');
+		this.propertyWillChange(this, key);
+	},
+
+	propertyDidChange: function(object, key){
+		console.log('prop did change', arguments);
+		if(this._lockedCommits){
+			return;
+		}
+
+		dataObj = {};
+		dataObj[key] = object.get(key);
+
+		if(this.webSocket){
+			this.webSocket.send(JSON.stringify({
+				'type':this.type,
+				'id':this.id,
+				action:'update',
+				'payload': dataObj
+			}));
+			return;
+		}
+		
+		if(this.url) {
+			var deferred = $.ajax(this.url, {
+				'contentType':'application/json',
+				'context':this,
+				data:JSON.stringify(dataObj),
+				dataType: 'application/json',
+				type:'put'
+			});
+			return;
+		}
+
+		console.log('no remote connection set', this);
+	},
+
+	lockCommits: function(){
+		this._lockedCommits++;
+	},
+
+	unlockCommits: function(){
+		if(this._lockedCommits){
+			this._lockedCommits--;
+		}
+	}
+});
+
+// base grid mvc
+
+RPGB.MapView = Ember.View.extend({
+	templateName: 'map',
+	content: null,
+	burp: 'pinkle',
+
+	init: function(){
+		console.log('view init', this, arguments);
+		window.mapViewThing = this;
+	}
+});
+
+/***
+* code that does stuff
+***/
+
+RPGB.mapController = RPGB.RestObject.create({});
+
+var mapJson = JSON.parse($('#mapJson').text());
+var prop;
+RPGB.mapController.lockCommits();
+for(prop in mapJson){
+	RPGB.mapController.set(prop, mapJson[prop]);
+}
+RPGB.mapController.unlockCommits();
+
+RPGB.currentMapView = RPGB.MapView.create({
+	content: RPGB.mapController
+});
+
+RPGB.currentMapView.appendTo('#main');
+
+</script>
+
+{% endblock %}
+{% comment %}
+{# -*- vim: set ft=htmldjango: -- vim modeline -*- #}{% endcomment %}
