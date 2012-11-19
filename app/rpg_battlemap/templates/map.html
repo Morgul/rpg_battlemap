@@ -13,7 +13,7 @@
 	<defs>
 		<pattern x="0" y="0" width="512" height="512" id="gridPattern"
 			patternUnits="userSpaceOnUse"
-			{% templatetag openvariable %}bindXMLAttr patternTransform="content.transformString"{% templatetag closevariable %}>{% for patternInfo in pattern_helper %}
+			{% templatetag openvariable %}bindXMLAttr patternTransform="transformString"{% templatetag closevariable %}>{% for patternInfo in pattern_helper %}
 			<rect
 				x="{{ patternInfo.x }}"
 				y="{{ patternInfo.y }}"
@@ -33,6 +33,7 @@
 
 {% block page_scripts %}
 
+<script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
 <script type="text/javascript" src="/contrib/bullet.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
 <script type="text/javascript" src="/contrib/ember.js"></script>
@@ -319,6 +320,13 @@ RPGB.MapView = Ember.View.extend({
 	templateName: 'map',
 	content: null,
 	viewHeight: '100%',
+	zoom: 1,
+	panX: 0,
+	panY: 0,
+
+	transformString: function(){
+		return 'translate(' + this.get('panX') + ' ' + this.get('panY') + ') scale(' + this.get('zoom') + ')';
+	}.property('zoom','panX','panY'),
 
 	init: function(){
 		window.mapViewThing = this;
@@ -330,6 +338,26 @@ RPGB.MapView = Ember.View.extend({
 
 	didInsertElement: function(){
 		this.windowResized();
+		// bind events
+		var thisRef = this;
+		this.$().mousewheel(function(ev, delta){
+			if(isNaN(delta)){
+				delta = ev.originalEvent.wheelDelta;
+			}
+			if(delta > 0){
+				delta = 0.1;
+			} else {
+				delta = -0.1;
+			}
+			var oldZoom = thisRef.get('zoom');
+			var newZoom = oldZoom + delta;
+			if(newZoom < 0.1){
+				newZoom = 0.1;
+			} else if(newZoom > 3){
+				newZoom = 3;
+			}
+			thisRef.set('zoom', newZoom);
+		});
 	},
 
 	windowResized: function(){
