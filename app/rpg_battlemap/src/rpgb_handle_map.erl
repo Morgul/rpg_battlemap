@@ -135,7 +135,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 				id = undefined,
 				owner_id = User#rpgb_rec_user.id,
 				participant_ids = [],
-				top_layer_id = undefined,
+				bottom_layer_id = undefined,
 				first_combatant_id = [],
 				created = os:timestamp(),
 				updated = os:timestamp()
@@ -153,13 +153,17 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			{ok, Rec2} = rpgb_data:save(Rec),
 			{Host, Port} = Ctx#ctx.hostport,
 			Location = make_location(Req, Ctx, Rec2),
-			{ok, Req2} = case MapId of
+			{ok, Req2, Rec3} = case MapId of
 				undefined ->
-					cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1);
+					{ok, OutReq} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+					LayerRec = #rpgb_rec_layer{battlemap_id = Rec2#rpgb_rec_battlemap.id, name = <<"Bottom Layer">>},
+					{ok, LayerRec2} = rpgb_data:save(LayerRec),
+					{ok, OutRec} = rpgb_data:save(Rec2#rpgb_rec_battlemap{bottom_layer_id = LayerRec2#rpgb_rec_layer.id}),
+					{ok, OutReq, OutRec};
 				_ ->
-					{ok, Req1}
+					{ok, Req1, Rec2}
 			end,
-			OutJson = jsx:to_json(Rec2:to_json([{<<"url">>, Location}])),
+			OutJson = jsx:to_json(make_json(Req2, Ctx, Rec3)),
 			{ok, Req3} = cowboy_http_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
 		{error, Status, ErrBody} ->
@@ -173,11 +177,25 @@ make_json(Req, Ctx, Map) ->
 	<<"http", RestUrl/binary>> = Url = make_location(Req, Ctx, Map),
 	WebSocket = <<"ws", RestUrl/binary, "/ws">>,
 	% TODO layers, combatants, zones, and participants
-	Map:to_json([{url, Url},{websocketUrl, WebSocket}]).
+	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, fun make_layer_json/2]).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
 	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
+
+make_layer_json(Json, Map) ->
+	Layers = get_layers(Map),
+	LayersJson = [Layer:to_json() || Layer <- Layers],
+	[{<<"layers">>, LayersJson} | Json].
+
+get_layers(#rpgb_rec_battlemap{bottom_layer_id = LayerId}) ->
+	get_layers(LayerId, []).
+
+get_layers(undefined, Acc) ->
+	lists:reverse(Acc);
+get_layers(Id, Acc) ->
+	{ok, Layer} = rpgb_data:get_by_id(rpgb_rec_layer, Id),
+	get_layers(Layer#rpgb_rec_layer.next_layer_id, [Layer | Acc]).
 
 validate_map(Json, InitMap) ->
 	ValidateFuns = [
@@ -236,7 +254,7 @@ scrub_disallowed([{}]) ->
 scrub_disallowed(Json) ->
 	Disallowed = [<<"id">>, <<"owner_id">>, <<"created">>, <<"updated">>,
 		<<"participant_ids">>, <<"zoom">>, <<"translate_x">>,
-		<<"translate_y">>, <<"grid_spacing">>, <<"top_layer_id">>,
+		<<"translate_y">>, <<"grid_spacing">>, <<"bottom_layer_id">>,
 		<<"first_combatant_id">>],
 	Disallowed1 = ordsets:from_list(Disallowed),
 	Json1 = ordsets:from_list(Json),

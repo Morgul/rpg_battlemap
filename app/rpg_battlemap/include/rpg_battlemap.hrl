@@ -34,8 +34,8 @@
 	background_color = <<"gray">> :: binary(),
 	gridline_color = <<"black">> :: binary(),
 	grid_opacity = 0.5 :: float(),
-	top_layer_id :: [pos_integer()],
-	first_combatant_id = [] :: [pos_integer()],
+	bottom_layer_id :: pos_integer(),
+	first_combatant_id :: pos_integer(),
 	created :: time(),
 	updated :: time()
 }).

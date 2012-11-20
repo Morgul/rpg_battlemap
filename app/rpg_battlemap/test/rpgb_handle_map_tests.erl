@@ -202,6 +202,10 @@ postcondition(_State, {call, _, create_map, [Json, _InState]}, {ok, "201", Heads
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	?assertEqual(list_to_binary(Location), proplists:get_value(<<"url">>, BodyJson)),
 	?assert(rpgb_test_util:assert_body(Json, Body)),
+	Layers = proplists:get_value(<<"layers">>, BodyJson),
+	?assertMatch([[{_, _} | _]], Layers),
+	[BottomLayer] = Layers,
+	?assertEqual(<<"Bottom Layer">>, proplists:get_value(<<"name">>, BottomLayer)),
 	true;
 
 postcondition(_State, {call, _, bad_user_create, _}, {ok, "401", _Heads, _Body}) ->
