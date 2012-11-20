@@ -17,6 +17,27 @@ body
 	padding: 2px;
 }
 
+#toolbar h3 {
+	width: 10em;
+	text-align: center;
+	box-shadow: inset 0 0 10px 2px gray;
+	vertical-align: middle;
+	margin-bottom: 0;
+}
+#toolbar span {
+	width: 10em;
+	position: absolute;
+	padding: 0.5em;
+	border: solid gray;
+	background-color: white;
+}
+#toolbar label {
+	display: block;
+}
+#toolbar input {
+	width: 90%;
+}
+
 /*.login
 {
 	margin: 0 auto;

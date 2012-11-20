@@ -4,6 +4,36 @@
 
 {% block content %}
 
+<div id="toolbar"></div>
+
+<script type="text/x-handlebars" data-template-name="gridSettings">
+<h3 {% templatetag openvariable %}action "toggleShowProperties" {% templatetag closevariable %}>Grid</h3>
+<span {% templatetag openvariable %}bindStyle display="showProperties"{% templatetag closevariable %}>
+
+	<p>
+		<label>Grid Lines</label>
+		<input type="color"
+			{% templatetag openvariable %} bindAttr value="content.gridline_color" {% templatetag closevariable %}
+			{% templatetag openvariable %} action "gridlineColorChange" on="change" {% templatetag closevariable %}/>
+	</p>
+
+	<p>
+		<label>Line Opacity</label>
+		<input type="number" step="0.1" min="0.0" max="1.0" 
+			{% templatetag openvariable %} bindAttr value="content.grid_opacity" {% templatetag closevariable %}
+			{% templatetag openvariable %} action "gridOpacityChange" on="change" {% templatetag closevariable %}/>
+	</p>
+
+	<p>
+		<label>Background</label>
+		<input type="color"
+			{% templatetag openvariable %} bindAttr value="content.background.color" {% templatetag closevariable %}
+			{% templatetag openvariable %} action "backgroundColorChange" on="change" {% templatetag closevariable %}/>
+	</p>
+
+</span>
+</script>
+
 <script type="text/x-handlebars" data-template-name="map">
 <svg
 	xmlns="http://www.w3.org/2000/svg" version="1.1"
@@ -20,7 +50,7 @@
 				width="32" height="32" fill-opacity="0"
 				{% templatetag openvariable %}bindAttr stroke="content.gridline_color"{% templatetag closevariable %}
 				{% templatetag openvariable %} bindAttr stroke-width="content.gridline_width" {% templatetag closevariable %}
-				{% templatetag openvariable %} bindAttr stroke-opacity="map.grid_opacity" {% templatetag closevariable %} />{% endfor %}
+				{% templatetag openvariable %} bindAttr stroke-opacity="content.grid_opacity" {% templatetag closevariable %} />{% endfor %}
 		</pattern>
 	</defs>
 
@@ -313,6 +343,32 @@ RPGB.RestObject = Ember.Object.extend({
 	}
 });
 
+RPGB.GridPropertiesView = Ember.View.extend({
+	templateName: 'gridSettings',
+	content: null,
+	showProperties: 'none',
+
+	toggleShowProperties: function(){
+		if(this.get('showProperties') == 'none'){
+			this.set('showProperties', 'block');
+		} else {
+			this.set('showProperties', 'none');
+		}
+	},
+
+	backgroundColorChange: function(ev){
+		this.set('content.background_color', ev.target.value);
+	},
+
+	gridOpacityChange: function(ev){
+		this.set('content.grid_opacity', parseFloat(ev.target.value));
+	},
+
+	gridlineColorChange: function(ev){
+		this.set('content.gridline_color', ev.target.value);
+	}
+});
+
 // base grid mvc
 
 RPGB.MapView = Ember.View.extend({
@@ -408,7 +464,7 @@ RPGB.MapView = Ember.View.extend({
 	windowResized: function(){
 		var headerHeight = $('#head').height();
 		var toolbarHeight = $('#tools').height();
-		var guessHeight = window.innerHeight - (headerHeight + toolbarHeight + 28 + 5);
+		var guessHeight = window.innerHeight - (headerHeight + toolbarHeight + 28 + 20);
 		this.set('viewHeight', guessHeight + 'px');
 	},
 
@@ -431,10 +487,15 @@ for(prop in mapJson){
 }
 RPGB.mapController.unlockCommits();
 
+RPGB.currentGridView = RPGB.GridPropertiesView.create({
+	content: RPGB.mapController
+});
+
 RPGB.currentMapView = RPGB.MapView.create({
 	content: RPGB.mapController
 });
 
+RPGB.currentGridView.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');
 
 </script>
