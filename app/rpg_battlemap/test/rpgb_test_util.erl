@@ -141,7 +141,8 @@ get_port(rpgb_handle_account_tests) -> 9092;
 get_port(rpgb_handle_map_tests) -> 9093;
 get_port(rpgb_handle_index_tests) -> 9094;
 get_port(rpgb_handle_combatant_tests) -> 9095;
-get_port(rpgb_handle_character_tests) -> 9096.
+get_port(rpgb_handle_character_tests) -> 9096;
+get_port(rpgb_handle_layer_tests) -> 9097.
 
 assert_body(Json, Body) when is_list(Body) ->
 	assert_body(Json, list_to_binary(Body));
