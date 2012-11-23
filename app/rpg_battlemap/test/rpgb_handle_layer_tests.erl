@@ -8,7 +8,7 @@
 -define(map_url(LayerId), ?map_url ++ "/" ++ integer_to_list(LayerId)).
 -define(layer_url, "http://localhost:9097/layer").
 -define(layer_url(LayerId), ?layer_url ++ "/" ++ integer_to_list(LayerId)).
--define(mapid, 9000),
+-define(mapid, 9000).
 -define(cookie, begin
 	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
 	{"Cookie", binary_to_list(Cookie)}
@@ -81,7 +81,7 @@ command(S) ->
 		{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_url(), g_existant(S)]},
 		{call, ?MODULE, update_blank_name, [g_next(S), g_url(), g_existant(S)]},
 		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), g_next(S), g_existant(S), g_url()]},
-		{call, ?MODULE, update_bad_reorder, [choose(90000, 100000), g_existant(S)]},
+		{call, ?MODULE, update_bad_reorder, [choose(90000, 100000), g_existant(S), g_url()]},
 		{call, ?MODULE, delete_bad_user, [g_url(), g_existant(S)]},
 		{call, ?MODULE, delete_last_layer, [g_url(), g_existant(S)]},
 		{call, ?MODULE, delete, [g_url(), g_existant(S)]}
@@ -179,49 +179,114 @@ unwind(Nacc, [H | T]) ->
 %% =======================================================
 
 create_bad_user(Name, Next, UrlType) ->
-	false.
+	Json = make_json(Name, Next, UrlType),
+	Url = case_url_type(UrlType, []),
+	ibrowse:send_req(Url, [?badcookie, ?accepts, ?contenttype], put, Json).
 
 create_blank_name(Next, UrlType) ->
-	false.
+	Json = make_json(<<>>, Next, UrlType),
+	Url = case_url_type(UrlType, []),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 create_name_conflict(Next, Existant, UrlType) ->
-	false.
+	Name = proplists:get_value(<<"name">>, Existant),
+	Json = make_json(Name, Next, UrlType),
+	Url = case_url_type(UrlType, []),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 create_missing_map_id(Name, Next) ->
-	false.
+	Json = make_json(Name, Next, undefined),
+	ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 create_bad_map_id(Name, Next, MapId, UrlType) ->
-	false.
+	Json = make_json(Name, Next, MapId),
+	Url = case_url_type(UrlType, []),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 create(Name, Next, UrlType) ->
-	false.
+	Json = make_json(Name, Next, UrlType),
+	Url = case_url_type(UrlType, []),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 get_layers() ->
-	false.
+	ibrowse:send_req(?map_url, [?cookie, ?accepts, ?contenttype], get, []).
 
 get_a_layer(UrlType, Layer) ->
-	false.
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], get, []).
 
 update_bad_user(Name, Next, UrlType, Layer) ->
-	false.
+	Url = case_url_type(UrlType, Layer),
+	Json = make_json(Name, Next),
+	ibrowse:send_req(Url, [?badcookie, ?accepts, ?contenttype], put, Json).
 
 update_blank_name(Next, UrlType, Layer) ->
-	false.
+	Json = make_json(<<>>, Next),
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
 
 update(Name, Next, Layer, UrlType) ->
-	false.
+	Json = make_json(Name, Next),
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?contenttype, ?accepts, ?cookie], put, Json).
 
-update_bad_reorder(BadNext, Layer) ->
-	false.
+update_bad_reorder(BadNext, Layer, UrlType) ->
+	Json = make_json(undefined, BadNext),
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?contenttype, ?accepts, ?cookie], put, Json).
 
 delete_bad_user(UrlType, Layer) ->
-	false.
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?contenttype, ?badcookie, ?accepts], delete, []).
 
 delete_last_layer(UrlType, Layer) ->
-	false.
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?contenttype, ?cookie, ?accepts], delete, []).
 
 delete(UrlType, Layer) ->
-	false.
+	Url = case_url_type(UrlType, Layer),
+	ibrowse:send_req(Url, [?contenttype, ?cookie, ?accepts], delete, []).
+
+make_json(Name, Next) ->
+	jsx:to_json(make_json_(Name, Next)).
+
+make_json_(undefined, undefined) ->
+	[{}];
+make_json_(Name, undefined) ->
+	[{name, Name}];
+make_json_(undefined, Next) ->
+	[{next_layer_id, Next}];
+make_json_(Name, Next) ->
+	[{name, Name}, {next_layer_id, Next}].
+
+make_json(Name, Next, Type) ->
+	jsx:to_json(make_json_(Name, Next, Type)).
+
+make_json_(Name, Next, Type) ->
+	case {make_json(Name, Next), Type} of
+		{[{}], direct} ->
+			[{battlemap_id, 9000}];
+		{[{}], map} ->
+			[{}];
+		{Base, direct} ->
+			[{battlemap_id, 9000} | Base];
+		{Base, map} ->
+			Base
+	end.
+
+case_url_type(Type, Layer) ->
+	Id = case proplists:get_value(<<"id">>, Layer) of
+		undefined ->
+			[];
+		Int ->
+			integer_to_list(Int)
+	end,
+	case Type of
+		direct ->
+			?layer_url ++ "/" ++ Id;
+		map ->
+			?map_url ++ "/" ++ Id
+	end.
 
 %% =======================================================
 %% postcondition
