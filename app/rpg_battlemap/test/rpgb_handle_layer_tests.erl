@@ -79,7 +79,7 @@ command(S) ->
 		%{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), S]},
 		{call, ?MODULE, create, [rpgb_prop:g_name(), g_next(S), S]},
 		{call, ?MODULE, get_layers, []},
-		%{call, ?MODULE, get_a_layer, [g_existant(S), S]},
+		{call, ?MODULE, get_a_layer, [g_existant(S), S]},
 		%{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
 		%{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
 		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]},
@@ -354,7 +354,15 @@ postcondition(Layers, {call, _, get_layers, _}, {ok, "200", _, Body}) ->
 postcondition(Layers, {call, _, get_a_layer, [ExistantN, _State]}, {ok, "200", _, Body}) ->
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	Existant = lists:nth(ExistantN, Layers),
-	assert_layer(Existant, BodyJson),
+	Expected = if
+		ExistantN == length(Layers) ->
+			proplists:delete(<<"next_layer_id">>, Existant);
+		true ->
+			Next = lists:nth(ExistantN + 1, Layers),
+			NextId = proplists:get_value(<<"id">>, Next),
+			[{<<"next_layer_id">>, NextId} | proplists:delete(<<"next_layer_id">>, Existant)]
+	end,
+	assert_layer(Expected, BodyJson),
 	true;
 
 postcondition(_Layers, {call, _, update_bad_user, _}, {ok, "403", _, _}) ->
