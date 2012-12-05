@@ -73,19 +73,19 @@ initial_state() ->
 
 command(S) ->
 	oneof([
-		%{call, ?MODULE, create_bad_user, [rpgb_prop:g_name(), g_next(S), S]},
-		%{call, ?MODULE, create_blank_name, [g_next(S), S]},
-		%{call, ?MODULE, create_name_conflict, [g_existant(S), g_next(S), S]},
-		%{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), S]},
+		{call, ?MODULE, create_bad_user, [rpgb_prop:g_name(), g_next(S), S]},
+		{call, ?MODULE, create_blank_name, [g_next(S), S]},
+		{call, ?MODULE, create_name_conflict, [g_existant(S), g_next(S), S]},
+		{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), S]},
 		{call, ?MODULE, create, [rpgb_prop:g_name(), g_next(S), S]},
 		{call, ?MODULE, get_layers, []},
 		{call, ?MODULE, get_a_layer, [g_existant(S), S]},
-		%{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
-		%{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
+		{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
+		{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
 		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]},
-		%{call, ?MODULE, update_bad_reorder, [oneof([self, choose(90000, 100000)]), g_existant(S), S]},
-		%{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
-		%{call, ?MODULE, delete_last_layer, [g_existant(S), S]},
+		{call, ?MODULE, update_bad_reorder, [oneof([self, choose(90000, 100000)]), g_existant(S), S]},
+		{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
+		{call, ?MODULE, delete_last_layer, [g_existant(S), S]},
 		{call, ?MODULE, delete, [g_existant(S), S]}
 	]).
 
