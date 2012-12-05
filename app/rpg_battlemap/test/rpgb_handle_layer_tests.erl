@@ -82,11 +82,11 @@ command(S) ->
 		%{call, ?MODULE, get_a_layer, [g_existant(S), S]},
 		%{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
 		%{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
-		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]}
+		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]},
 		%{call, ?MODULE, update_bad_reorder, [oneof([self, choose(90000, 100000)]), g_existant(S), S]},
 		%{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
 		%{call, ?MODULE, delete_last_layer, [g_existant(S), S]},
-		%{call, ?MODULE, delete, [g_existant(S), S]}
+		{call, ?MODULE, delete, [g_existant(S), S]}
 	]).
 
 g_existant([]) ->
