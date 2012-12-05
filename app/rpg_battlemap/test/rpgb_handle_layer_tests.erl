@@ -4,10 +4,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("rpg_battlemap.hrl").
 
--define(map_url, "http://localhost:9097/map/9000/layers").
--define(map_url(LayerId), ?map_url ++ "/" ++ integer_to_list(LayerId)).
--define(layer_url, "http://localhost:9097/layer").
--define(layer_url(LayerId), ?layer_url ++ "/" ++ integer_to_list(LayerId)).
+-define(layer_url, "http://localhost:9097/map/9000/layers").
+-define(layer_url(LayerId), if is_integer(LayerId) -> ?layer_url ++ "/" ++ integer_to_list(LayerId); true -> binary_to_list(proplists:get_value(<<"url">>, LayerId)) end).
 -define(mapid, 9000).
 -define(cookie, begin
 	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
@@ -41,8 +39,10 @@ browser_test_() -> {setup, fun() ->
 prop_map_statem() ->
 	?FORALL(Cmds, commands(?MODULE), begin
 		{Hist, State, Res} = run_commands(?MODULE, Cmds),
-		?WHENFAIL(?debugFmt("\n==========================\n== proper check failed! ==\n==========================\n== Hstory ==\n~p\n\n== State ==\n~p\n\n== Result ==\n~p\n", [Hist, State, Res]),
-			Res == ok)
+		?WHENFAIL(begin
+			{ok, InDb} = rpgb_data:search(rpgb_rec_layer, []),
+			?debugFmt("\n==========================\n== proper check failed! ==\n==========================\n== Hstory ==\n~p\n\n== State ==\n~p\n\n== Result ==\n~p\n\n== In Database ==\n~p\n", [Hist, State, Res, InDb])
+		end, Res == ok)
 	end).
 
 %% =======================================================
@@ -53,69 +53,83 @@ initial_state() ->
 	rpgb_data:reset(),
 	{ok, Session} = rpgb_session:get(<<"sessionid">>),
 	User = rpgb_session:get_user(Session),
-	Map = #rpgb_rec_battlemap{
-		id = 9000,
-		owner_id = User#rpgb_rec_user.id
-	},
-	{ok, Map} = rpgb_data:save(Map),
 	Layer = #rpgb_rec_layer{name = <<"first layer">>, battlemap_id = 9000},
 	{ok, Layer1} = rpgb_data:save(Layer),
+	Map = #rpgb_rec_battlemap{
+		id = 9000,
+		owner_id = User#rpgb_rec_user.id,
+		bottom_layer_id = Layer1#rpgb_rec_layer.id
+	},
+	{ok, Map} = rpgb_data:save(Map),
 	Json = [
 		{<<"id">>, Layer1#rpgb_rec_layer.id},
 		{<<"name">>, <<"first layer">>},
-		{<<"url">>, ?layer_url(Layer1#rpgb_rec_layer.id)},
+		{<<"url">>, list_to_binary(?layer_url(Layer1#rpgb_rec_layer.id))},
 		{<<"battlemap_id">>, 9000}
 	],
 	[Json].
 
 command(S) ->
 	oneof([
-		{call, ?MODULE, create_bad_user, [rpgb_prop:g_name(), g_next(S), g_url()]},
-		{call, ?MODULE, create_blank_name, [g_next(S), g_url()]},
-		{call, ?MODULE, create_name_conflict, [g_next(S), g_existant(S), g_url()]},
-		{call, ?MODULE, create_missing_map_id, [rpgb_prop:g_name(), g_next(S)]},
-		{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), g_url()]},
-		{call, ?MODULE, create, [rpgb_prop:g_name(), g_next(S), g_url()]},
-		{call, ?MODULE, get_layers, []},
-		{call, ?MODULE, get_a_layer, [g_url(), g_existant(S)]},
-		{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_url(), g_existant(S)]},
-		{call, ?MODULE, update_blank_name, [g_next(S), g_url(), g_existant(S)]},
-		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), g_next(S), g_existant(S), g_url()]},
-		{call, ?MODULE, update_bad_reorder, [choose(90000, 100000), g_existant(S), g_url()]},
-		{call, ?MODULE, delete_bad_user, [g_url(), g_existant(S)]},
-		{call, ?MODULE, delete_last_layer, [g_url(), g_existant(S)]},
-		{call, ?MODULE, delete, [g_url(), g_existant(S)]}
+		%{call, ?MODULE, create_bad_user, [rpgb_prop:g_name(), g_next(S), S]},
+		%{call, ?MODULE, create_blank_name, [g_next(S), S]},
+		%{call, ?MODULE, create_name_conflict, [g_existant(S), g_next(S), S]},
+		%{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), S]},
+		{call, ?MODULE, create, [rpgb_prop:g_name(), g_next(S), S]},
+		{call, ?MODULE, get_layers, []}
+		%{call, ?MODULE, get_a_layer, [g_existant(S), S]},
+		%{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
+		%{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
+		%{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]},
+		%{call, ?MODULE, update_bad_reorder, [oneof([self, choose(90000, 100000)]), g_existant(S), S]},
+		%{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
+		%{call, ?MODULE, delete_last_layer, [g_existant(S), S]},
+		%{call, ?MODULE, delete, [g_existant(S), S]}
 	]).
-
-g_url() ->
-	oneof([direct, map]).
 
 g_existant([]) ->
 	undefined;
 g_existant([Layer]) ->
-	Layer;
+	1;
 g_existant(Layers) ->
 	Max = length(Layers),
-	Nth = crypto:rand_uniform(1, Max),
-	lists:nth(Nth, Layers).
+	choose(1, Max).
 
-g_next(S) ->
-	oneof([undefined, g_existant(S)]).
+g_next([]) ->
+	undefined;
+g_next(Layers) ->
+	Max = length(Layers),
+	oneof([undefined, null, choose(1, Max)]).
+%g_existant(Layers) when is_tuple(Layers) ->
+%	{call, ?MODULE, oneof, [Layers]};
+%g_existant(Layers) ->
+%	oneof(Layers).
+	%Max = length(Layers),
+	%Nth = crypto:rand_uniform(1, Max),
+	%lists:nth(Nth, Layers).
+
+%g_next(S) ->
+%	?LET(X, oneof([null, g_existant(S)]), case X of
+%		null -> null;
+%		_ ->
+
+%	end).
 
 %% =======================================================
 %% preconditions
 %% =======================================================
 
 precondition(N, {call, _, delete_last_layer, _}) ->
-	if
-		length(N) == 1 -> true;
-		true -> false
-	end;
+	%?debugFmt("length of state:  ~p", [length(N)]),
+	length(N) == 1;
 precondition(N, {call, _, delete, _}) ->
-	if
-		length(N) > 1 -> true;
-		true -> false
-	end;
+	length(N) > 1;
+precondition(_N, {call, _, update, [_Name, Next, Next, _State]}) ->
+	false;
+%precondition(_N, {call, _, update, [_, 0, _, _]}) ->
+%	true;
+%precondition(S, {call, _, update, [_Name, Next, Existant, _]}) ->
+%	not ( proplists:get_value(<<"id">>, Existant) =:= proplists:get_value(<<"next_layer_id">>, Next) );
 precondition(N,_) ->
 	length(N) >= 1.
 
@@ -123,236 +137,258 @@ precondition(N,_) ->
 %% next_state
 %% =======================================================
 
-next_state(State, {ok, _, _, _} = Res, {call, _, create, _}) ->
+next_state(State, {ok, _, _, _} = Res, {call, _, create, [_Name, Next, _S]}) ->
 	LayerJson = decode_json_body(Res),
-	insert_layer(LayerJson, State);
+	insert_layer(LayerJson, Next, State);
 
-next_state(State, Res, {call, _, create, _}) ->
-	{call, ?MODULE, insert_layer, [
-		{call, ?MODULE, decode_json_body, [Res]},
-	State]};
+next_state(State, Res, {call, _, create, [_Name, Next, _S]}) ->
+	insert_layer({call, ?MODULE, decode_json_body, [Res]}, Next, State);
+	%insert_layer(Res, Next, State);
 
-next_state(State, {ok, _, _, _} = Res, {call, _, delete, [_UrlType, Layer]}) ->
-	lists:delete(Layer, State);
+%next_state(State, Res, {call, _, create, _}) ->
+%	{call, ?MODULE, insert_layer, [
+%		{call, ?MODULE, decode_json_body, [Res]},
+%	State]};
 
-next_state(State, Res, {call, _, delete, [_UrlType, Existant]}) ->
-	{call, lists, delete, [Existant, State]};
+next_state(State, _Res, {call, _, delete, [Nth, _State]}) ->
+	delete_layer(Nth, State);
 
-next_state(State, {ok, _, _, _} = Res, {call, _, update, [_UrlType, Existant]}) ->
+%next_state(State, Res, {call, _, delete, [_UrlType, Existant]}) ->
+%	{call, lists, delete, [Existant, State]};
+
+next_state(State, {ok, _, _, _} = Res, {call, _, update, [Name, Next, Updating, _State]}) ->
+	{Head, [_Old | Tail]} = lists:split(Updating - 1, State),
+	State1 = Head ++ [tombstone] ++ Tail,
 	LayerJson = decode_json_body(Res),
-	List = lists:delete(Existant, State),
-	insert_layer(LayerJson, List);
+	State2 = case Next of
+		undefined ->
+			Head ++ [LayerJson] ++ Tail;
+		null ->
+			Head ++ Tail ++ [LayerJson];
+		_ ->
+			{H2, T2} = lists:split(Next - 1, State1),
+			H2 ++ [LayerJson] ++ T2
+	end,
+	lists:delete(tombstone, State2);
 
-next_state(State, Res, {call, _, update, [_UrlType, Existant]}) ->
-	{call, ?MODULE, insert_layer, [{call, ?MODULE, decode_json_body, [Res]}, {call, lists, delete, [Existant, State]}]};
-next_state(State, _Res, _Call) ->
+%next_state(State, Res, {call, _, update, [_UrlType, Existant]}) ->
+%	{call, ?MODULE, insert_layer, [{call, ?MODULE, decode_json_body, [Res]}, {call, lists, delete, [Existant, State]}]};
+next_state(State, Res, Call) ->
+	%?debugFmt("~n=== NOOP next state ===~n = State =~n~p~n = Res =~n~p~n = Call =~n~p", [State, Res, Call]),
 	State.
 
 decode_json_body({ok, _, _, Body}) ->
 	jsx:to_term(list_to_binary(Body)).
 
-insert_layer(Layer, LayerList) ->
-	case proplists:get_value(<<"next_layer_id">>, Layer) of
-		undefined ->
-			LayerList ++ [Layer];
-		NextId ->
-			insert_layer(NextId, Layer, LayerList, [])
-	end.
+insert_layer(Layer, Next, List) when is_atom(Next) ->
+	List ++ [Layer];
+insert_layer(Layer, Next, List) ->
+	{Head, Tail} = lists:split(Next - 1, List),
+	Head ++ [Layer] ++ Tail.
 
-insert_layer(_Needle, _Layer, [], _Backup) ->
-	erlang:error(badarg);
-insert_layer(Needle, Layer, [MaybeNext | Tail] = LayerList, Backup) ->
-	case proplists:get_value(<<"id">>, MaybeNext) of
-		Needle ->
-			unwind([Layer | LayerList], Backup);
-		_NotNeedle ->
-			insert_layer(Needle, Layer, Tail, [MaybeNext | Backup])
-	end.
+delete_layer(Nth, List) ->
+	{Head, [_Nix | Tail]} = lists:split(Nth -1, List),
+	Head ++ Tail.
 
-unwind(Nacc, []) ->
-	Nacc;
-unwind(Nacc, [H | T]) ->
-	unwind([H | Nacc], T).
+%insert_layer_before(Obj, BeforeObj, List) when is_atom(BeforeObj) ->
+%	List ++ [Obj];
+%insert_layer_before(Obj, BeforeObj, List) ->
+%	insert_layer_before(Obj, BeforeObj, List, []).
+
+%insert_layer_before(Obj, BeforeObj, [BeforeObj | Tail], Wound) ->
+%	unwind([Obj, BeforeObj | Tail], Wound);
+%insert_layer_before(Obj, BeforeObj, [Head | Tail], Wound) ->
+%	insert_layer_before(Obj, BeforeObj, Tail, [Head | Wound]).
+
+%unwind(Nacc, []) ->
+%	Nacc;
+%unwind(Nacc, [H | T]) ->
+%	unwind([H | Nacc], T).
 
 %% =======================================================
 %% tests proper
 %% =======================================================
 
-create_bad_user(Name, Next, UrlType) ->
-	Json = make_json(Name, Next, UrlType),
-	Url = case_url_type(UrlType, []),
-	ibrowse:send_req(Url, [?badcookie, ?accepts, ?contenttype], put, Json).
+create_bad_user(Name, Next, State) ->
+	Json = make_json(Name, Next, State),
+	ibrowse:send_req(?layer_url, [?badcookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-create_blank_name(Next, UrlType) ->
-	Json = make_json(<<>>, Next, UrlType),
-	Url = case_url_type(UrlType, []),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
+create_blank_name(Next, State) ->
+	Json = make_json(<<>>, Next, State),
+	ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-create_name_conflict(Next, Existant, UrlType) ->
-	Name = proplists:get_value(<<"name">>, Existant),
-	Json = make_json(Name, Next, UrlType),
-	Url = case_url_type(UrlType, []),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
+create_name_conflict(Existant, Next, State) ->
+	ExistantObj = lists:nth(Existant, State),
+	Name = proplists:get_value(<<"name">>, ExistantObj),
+	Json = make_json(Name, Next, State),
+	ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-create_missing_map_id(Name, Next) ->
-	Json = make_json(Name, Next, undefined),
-	ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], put, Json).
+create_bad_map_id(Name, Next, MapId, State) ->
+	Json = make_json(Name, Next, State),
+	Url = "http://localhost:9097/map/" ++ integer_to_list(MapId) ++ "/layers",
+	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-create_bad_map_id(Name, Next, MapId, UrlType) ->
-	Json = make_json(Name, Next, MapId),
-	Url = case_url_type(UrlType, []),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
-
-create(Name, Next, UrlType) ->
-	Json = make_json(Name, Next, UrlType),
-	Url = case_url_type(UrlType, []),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
+create(Name, Next, State) ->
+	Json = make_json(Name, Next, State),
+	Out = ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)),
+	TestFun = fun() ->
+			{ok, Gots} = rpgb_data:search(rpgb_rec_layer, [{battlemap_id, 9000}]),
+			length(Gots) == ( length(State) + 1 )
+	end,
+	rpgb_test_util:wait_until(TestFun),
+	Out.
 
 get_layers() ->
-	ibrowse:send_req(?map_url, [?cookie, ?accepts, ?contenttype], get, []).
+	ibrowse:send_req(?layer_url, [?cookie, ?accepts, ?contenttype], get, []).
 
-get_a_layer(UrlType, Layer) ->
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], get, []).
+get_a_layer(LayerNth, State) ->
+	Layer = lists:nth(LayerNth, State),
+	Url = proplists:get_value(<<"url">>, Layer),
+	ibrowse:send_req(binary_to_list(Url), [?cookie, ?accepts, ?contenttype], get, []).
 
-update_bad_user(Name, Next, UrlType, Layer) ->
-	Url = case_url_type(UrlType, Layer),
-	Json = make_json(Name, Next),
-	ibrowse:send_req(Url, [?badcookie, ?accepts, ?contenttype], put, Json).
+update_bad_user(Name, Next, ExistantN, State) ->
+	Existant = lists:nth(ExistantN, State),
+	Json = make_json(Name, Next, State),
+	ibrowse:send_req(?layer_url(Existant), [?badcookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-update_blank_name(Next, UrlType, Layer) ->
-	Json = make_json(<<>>, Next),
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, Json).
+update_blank_name(Next, ExistN, State) ->
+	Exist = lists:nth(ExistN, State),
+	Json = make_json(<<>>, Next, State),
+	ibrowse:send_req(?layer_url(Exist), [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
-update(Name, Next, Layer, UrlType) ->
-	Json = make_json(Name, Next),
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?contenttype, ?accepts, ?cookie], put, Json).
+update(Name, Next, LayerN, State) ->
+	Layer = lists:nth(LayerN, State),
+	Json = make_json(Name, Next, State),
+	ibrowse:send_req(?layer_url(Layer), [?contenttype, ?accepts, ?cookie], put, jsx:to_json(Json)).
 
-update_bad_reorder(BadNext, Layer, UrlType) ->
-	Json = make_json(undefined, BadNext),
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?contenttype, ?accepts, ?cookie], put, Json).
-
-delete_bad_user(UrlType, Layer) ->
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?contenttype, ?badcookie, ?accepts], delete, []).
-
-delete_last_layer(UrlType, Layer) ->
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?contenttype, ?cookie, ?accepts], delete, []).
-
-delete(UrlType, Layer) ->
-	Url = case_url_type(UrlType, Layer),
-	ibrowse:send_req(Url, [?contenttype, ?cookie, ?accepts], delete, []).
-
-make_json(Name, Next) ->
-	jsx:to_json(make_json_(Name, Next)).
-
-make_json_(undefined, undefined) ->
-	[{}];
-make_json_(Name, undefined) ->
-	[{name, Name}];
-make_json_(undefined, Next) ->
-	[{next_layer_id, Next}];
-make_json_(Name, Next) ->
-	[{name, Name}, {next_layer_id, Next}].
-
-make_json(Name, Next, Type) ->
-	jsx:to_json(make_json_(Name, Next, Type)).
-
-make_json_(Name, Next, Type) ->
-	case {make_json(Name, Next), Type} of
-		{[{}], direct} ->
-			[{battlemap_id, 9000}];
-		{[{}], map} ->
-			[{}];
-		{Base, direct} ->
-			[{battlemap_id, 9000} | Base];
-		{Base, map} ->
-			Base
-	end.
-
-case_url_type(Type, Layer) ->
-	Id = case proplists:get_value(<<"id">>, Layer) of
-		undefined ->
-			[];
-		Int ->
-			integer_to_list(Int)
+update_bad_reorder(BadNext, LayerN, State) ->
+	Layer = lists:nth(LayerN, State),
+	NextId = case BadNext of
+		self ->
+			proplists:get_value(<<"id">>, Layer);
+		_ ->
+			BadNext
 	end,
-	case Type of
-		direct ->
-			?layer_url ++ "/" ++ Id;
-		map ->
-			?map_url ++ "/" ++ Id
-	end.
+	Json = [{next_layer_id, NextId}],
+	ibrowse:send_req(?layer_url(Layer), [?contenttype, ?accepts, ?cookie], put, jsx:to_json(Json)).
+
+delete_bad_user(N, State) ->
+	Layer = lists:nth(N, State),
+	ibrowse:send_req(?layer_url(Layer), [?contenttype, ?badcookie, ?accepts], delete, []).
+
+delete_last_layer(LayerN, State) ->
+	Layer = lists:nth(LayerN, State),
+	ibrowse:send_req(?layer_url(Layer), [?contenttype, ?cookie, ?accepts], delete, []).
+
+delete(LayerN, Layers) ->
+	Layer = lists:nth(LayerN, Layers),
+	ibrowse:send_req(?layer_url(Layer), [?contenttype, ?cookie, ?accepts], delete, []).
+
+make_json(undefined, undefined, _) ->
+	[{}];
+make_json(Name, undefined, _) ->
+	[{name, Name}];
+make_json(undefined, null, _State) ->
+	[{next_layer_id, null}];
+make_json(Name, null, _State) ->
+	[{next_layer_id, null}, {name, Name}];
+make_json(undefined, Next, State) ->
+	Obj = lists:nth(Next, State),
+	NextId = proplists:get_value(<<"id">>, Obj),
+	[{next_layer_id, NextId}];
+make_json(Name, Next, State) ->
+	BaseJson = make_json(undefined, Next, State),
+	[{name, Name} | BaseJson].
+
+case_url_type(_,_) -> ok.
+make_json(_,_) -> ok.
 
 %% =======================================================
 %% postcondition
 %% =======================================================
 
-postcondition(_Layers, {call, _, create, [_UrlType, Name, NextId]}, {ok, "201", Heads, Body}) ->
+postcondition(_Layers, {call, _, create, [Name, NextId, _UrlType]}, {ok, "201", Heads, Body}) ->
 	Location = proplists:get_value("Location", Heads),
 	?assertNotEqual(undefined, Location),
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	?assertEqual(list_to_binary(Location), proplists:get_value(<<"url">>, BodyJson)),
 	?assertEqual(Name, proplists:get_value(<<"name">>, BodyJson)),
-	?assertEqual(NextId, proplists:get_value(<<"next_layer_id">>, BodyJson)),
 	true;
 
-postcondition(_Layers, {call, _, create_bad_user, _}, {ok, "400", _, _}) ->
+postcondition(_Layers, {call, _, create_bad_user, _}, {ok, "403", _, _}) ->
+	true;
+
+postcondition(_Layers, {call, _, create_blank_name, _}, {ok, "422", _, _}) ->
 	true;
 
 postcondition(_Layers, {call, _, create_name_conflict, _}, {ok, "409", _, _}) ->
 	true;
 
-postcondition(_Layers, {call, _, create_missing_map_id, _}, {ok, "412", _, _}) ->
+postcondition(_Layers, {call, _, create_missing_map_id, _}, {ok, "404", _, _}) ->
 	true;
 
-postcondition(_Layers, {call, _, create_bad_map_id, _}, {ok, "400", _, _}) ->
+postcondition(_Layers, {call, _, create_bad_map_id, _}, {ok, "404", _, _}) ->
 	true;
 
 postcondition(Layers, {call, _, get_layers, _}, {ok, "200", _, Body}) ->
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	assert_layer_list(Layers, BodyJson);
 
-postcondition(Layers, {call, _, get_a_layer, [_UrlType, Existant]}, {ok, "200", _, Body}) ->
+postcondition(Layers, {call, _, get_a_layer, [ExistantN, _State]}, {ok, "200", _, Body}) ->
 	BodyJson = jsx:to_term(list_to_binary(Body)),
-	assert_layer(Existant, BodyJson);
-
-postcondition(_Layers, {call, _, update_bad_user, _}, {ok, "400", _, _}) ->
+	Existant = lists:nth(ExistantN, Layers),
+	assert_layer(Existant, BodyJson),
 	true;
 
-postcondition(_Layers, {call, _, update_blank_name, _}, {ok, "412", _, _}) ->
+postcondition(_Layers, {call, _, update_bad_user, _}, {ok, "403", _, _}) ->
 	true;
 
-postcondition(_Layers, {call, _, update, [Name, NextId, Existant, _UrlType]}, {ok, "200", _, Body}) ->
+postcondition(_Layers, {call, _, update_blank_name, _}, {ok, "422", _, _}) ->
+	true;
+
+postcondition(Layers, {call, _, update, [Name, NextN, ExistantN, _State]}, {ok, "200", _, Body}) ->
 	BodyJson = jsx:to_term(list_to_binary(Body)),
-	Expected = update_existant([{<<"name">>, Name}, {<<"next_layer_id">>, NextId}], Existant),
-	assert_layer(Expected, BodyJson);
-
-postcondition(_Layers, {call, _, update_bad_reorder, _}, {ok, "412", _, _}) ->
+	Original = lists:nth(ExistantN, Layers),
+	Expected = case Name of
+		undefined ->
+			Original;
+		_ ->
+			[{<<"name">>, Name} | proplists:delete(<<"name">>, Original)]
+	end,
+	assert_layer(Expected, BodyJson),
 	true;
 
-postcondition(_Layers, {call, _, delete_bad_user, _}, {ok, "400", _, _}) ->
+postcondition(_Layers, {call, _, update_bad_reorder, _}, {ok, "422", _, _}) ->
 	true;
 
-postcondition(_Layers, {call, _, delete_last_layer, _}, {ok, "412", _, _}) ->
+postcondition(_Layers, {call, _, delete_bad_user, _}, {ok, "403", _, _}) ->
+	true;
+
+postcondition(_Layers, {call, _, delete_last_layer, _}, {ok, "422", _, _}) ->
 	true;
 
 postcondition(_Layers, {call, _, delete, _}, {ok, "204", _, _}) ->
 	true;
 
-postcondition(_Layers, _Call, _Res) ->
+postcondition(Layers, Call, Res) ->
+	?debugFmt("~n=== Postcondition fall through ===~n=== Layers:~n~p~n=== Call:~n~p~n=== Res:~n~p", [Layers, Call, Res]),
 	false.
 
 assert_layer_list(Expected, Got) ->
 	?assertEqual(length(Expected), length(Got)),
 	assert_layer_list_(Expected, Got).
 
+assert_layer_list_([], []) ->
+	true;
+assert_layer_list_([EHead, ENext | ETail], [GH | GT]) ->
+	EHead1 = proplists:delete(<<"next_layer_id">>, EHead),
+	NextId = proplists:get_value(<<"id">>, ENext),
+	EHead2 = [{<<"next_layer_id">>, NextId} | EHead1],
+	assert_layer(EHead2, GH),
+	assert_layer_list_([ENext | ETail], GT);
 assert_layer_list_([EH | ET], [GH | GT]) ->
-	assert_layer(EH, GH),
+	EH1 = proplists:delete(<<"next_layer_id">>, EH),
+	assert_layer(EH1, GH),
 	assert_layer_list_(ET, GT).
 
 assert_layer(Expected, Got) ->
@@ -366,4 +402,7 @@ update_existant([], Acc) ->
 
 update_existant([{K, V} | T], Acc) ->
 	Acc2 = proplists:delete(K, Acc),
-	update_existant(T, [{K, V} | Acc2]).
+	update_existant(T, [{K, V} | Acc2]);
+update_existant([Key | Tail], Acc) ->
+	Acc2 = proplists:delete(Key, Acc),
+	update_existant(Tail, Acc2).

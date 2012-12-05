@@ -4,6 +4,7 @@
 
 -export([mecked_data/1]).
 -export([get_port/1]).
+-export([wait_until/1, wait_until/2, wait_until/3]).
 -export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
 	create_authed_session/0, create_authed_session/1,
 	create_authed_session/2, assert_body/2]).
@@ -143,6 +144,23 @@ get_port(rpgb_handle_index_tests) -> 9094;
 get_port(rpgb_handle_combatant_tests) -> 9095;
 get_port(rpgb_handle_character_tests) -> 9096;
 get_port(rpgb_handle_layer_tests) -> 9097.
+
+wait_until(Fun) ->
+	wait_until(Fun, 10, 100).
+
+wait_until(Fun, Iters) ->
+	wait_until(Fun, Iters, 100).
+
+wait_until(Fun, 0, _Wait) ->
+	erlang:error(wait_expired);
+wait_until(Fun, Iter, Wait) ->
+	case Fun() of
+		true ->
+			true;
+		_ ->
+			timer:sleep(Wait),
+			wait_until(Fun, Iter - 1, Wait)
+	end.
 
 assert_body(Json, Body) when is_list(Body) ->
 	assert_body(Json, list_to_binary(Body));

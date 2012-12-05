@@ -44,7 +44,9 @@
   id :: 'undefined' | pos_integer(),
   name :: binary(),
   battlemap_id :: pos_integer(),
-  next_layer_id :: pos_integer()
+  next_layer_id :: pos_integer(),
+  created :: time(),
+  updated :: time()
 }).
 
 -record(rpgb_rec_zone, {
