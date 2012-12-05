@@ -175,8 +175,10 @@ from_json(Req, #ctx{mapid = MapId, map = Map, layer = InitL} = Ctx) ->
 		{ok, {_DerJson, Rec}} ->
 			remove_layer(Map, InitialLayer),
 			{ok, Rec3} = rpgb_data:save(Rec),
-			Rec4 = insert_layer(Map, Rec3),
-			Ctx2 = Ctx#ctx{layer = Rec4},
+			{ok, Map2} = rpgb_data:get_by_id(rpgb_rec_battlemap, Map#rpgb_rec_battlemap.id),
+			Rec4 = insert_layer(Map2, Rec3),
+			Map3 = rpgb_data:get_by_id(rpgb_rec_battlemap, Map2#rpgb_rec_battlemap.id),
+			Ctx2 = Ctx#ctx{layer = Rec4, map = Map3},
 			{OutBody, Req2, Ctx3} = to_json(Req1, Ctx2),
 			{ok, Req3} = cowboy_http_req:set_resp_body(OutBody, Req2),
 			{true, Req3, Ctx3};
@@ -335,13 +337,21 @@ remove_layer(#rpgb_rec_battlemap{bottom_layer_id = Id} = Map, #rpgb_rec_layer{id
 	{ok, _Map3} = rpgb_data:save(Map2),
 	Layer;
 remove_layer(_Map, #rpgb_rec_layer{id = Id, next_layer_id = NextId} = Layer) ->
-	{ok, [PrevLayer | _]} = rpgb_data:search(rpgb_rec_layer, [{next_layer_id, Id}]),
-	PrevLayer2 = PrevLayer#rpgb_rec_layer{next_layer_id = NextId},
-	rpgb_data:save(PrevLayer2),
+	case rpgb_data:search(rpgb_rec_layer, [{next_layer_id, Id}]) of
+		{ok, []} ->
+			ok;
+		{ok, [PrevLayer | _]} ->
+			PrevLayer2 = PrevLayer#rpgb_rec_layer{next_layer_id = NextId},
+			rpgb_data:save(PrevLayer2)
+	end,
 	Layer.
 
 insert_layer(_Map, #rpgb_rec_layer{id = undefined}) ->
 	erlang:error(badarg);
+insert_layer(#rpgb_rec_battlemap{bottom_layer_id = undefined} = Map, Layer) ->
+	Map2 = Map#rpgb_rec_battlemap{bottom_layer_id = Layer#rpgb_rec_layer.id},
+	rpgb_data:save(Map2),
+	Layer;
 insert_layer(#rpgb_rec_battlemap{bottom_layer_id = NextId} = Map, #rpgb_rec_layer{next_layer_id = NextId, id = Id} = Layer) ->
 	Map2 = Map#rpgb_rec_battlemap{bottom_layer_id = Id},
 	rpgb_data:save(Map2),
@@ -349,7 +359,11 @@ insert_layer(#rpgb_rec_battlemap{bottom_layer_id = NextId} = Map, #rpgb_rec_laye
 insert_layer(_Map, #rpgb_rec_layer{id = Id} = Layer) ->
 	NextId = Layer#rpgb_rec_layer.next_layer_id,
 	{ok, PrevLayers} = rpgb_data:search(rpgb_rec_layer, [{next_layer_id, NextId}]),
-	[PrevLayer | _] = [L || #rpgb_rec_layer{id = Lid} = L <- PrevLayers, Lid =/= Id],
-	PrevLayer2 = PrevLayer#rpgb_rec_layer{next_layer_id = Id},
-	rpgb_data:save(PrevLayer2),
+	case [L || #rpgb_rec_layer{id = Lid} = L <- PrevLayers, Lid =/= Id] of
+		[] ->
+			ok;
+		[PrevLayer | _] ->
+			PrevLayer2 = PrevLayer#rpgb_rec_layer{next_layer_id = Id},
+			rpgb_data:save(PrevLayer2)
+	end,
 	Layer.

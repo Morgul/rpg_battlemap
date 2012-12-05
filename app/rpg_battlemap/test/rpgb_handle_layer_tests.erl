@@ -40,7 +40,9 @@ prop_map_statem() ->
 	?FORALL(Cmds, commands(?MODULE), begin
 		{Hist, State, Res} = run_commands(?MODULE, Cmds),
 		?WHENFAIL(begin
-			{ok, InDb} = rpgb_data:search(rpgb_rec_layer, []),
+			{ok, Layers} = rpgb_data:search(rpgb_rec_layer, []),
+			{ok, Map} = rpgb_data:get_by_id(rpgb_rec_battlemap, 9000),
+			InDb = [Map | Layers],
 			?debugFmt("\n==========================\n== proper check failed! ==\n==========================\n== Hstory ==\n~p\n\n== State ==\n~p\n\n== Result ==\n~p\n\n== In Database ==\n~p\n", [Hist, State, Res, InDb])
 		end, Res == ok)
 	end).
@@ -76,11 +78,11 @@ command(S) ->
 		%{call, ?MODULE, create_name_conflict, [g_existant(S), g_next(S), S]},
 		%{call, ?MODULE, create_bad_map_id, [rpgb_prop:g_name(), g_next(S), choose(9999, 19999), S]},
 		{call, ?MODULE, create, [rpgb_prop:g_name(), g_next(S), S]},
-		{call, ?MODULE, get_layers, []}
+		{call, ?MODULE, get_layers, []},
 		%{call, ?MODULE, get_a_layer, [g_existant(S), S]},
 		%{call, ?MODULE, update_bad_user, [rpgb_prop:g_name(), g_next(S), g_existant(S), S]},
 		%{call, ?MODULE, update_blank_name, [g_next(S), g_existant(S), S]},
-		%{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]},
+		{call, ?MODULE, update, [oneof([undefined, rpgb_prop:g_name()]), oneof([undefined, g_next(S)]), g_existant(S), S]}
 		%{call, ?MODULE, update_bad_reorder, [oneof([self, choose(90000, 100000)]), g_existant(S), S]},
 		%{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
 		%{call, ?MODULE, delete_last_layer, [g_existant(S), S]},
@@ -156,20 +158,35 @@ next_state(State, _Res, {call, _, delete, [Nth, _State]}) ->
 %next_state(State, Res, {call, _, delete, [_UrlType, Existant]}) ->
 %	{call, lists, delete, [Existant, State]};
 
-next_state(State, {ok, _, _, _} = Res, {call, _, update, [Name, Next, Updating, _State]}) ->
+next_state(State, Res, {call, _, update, [_Name, null, Updating, _State]}) ->
+	{Head, [_Old | Tail]} = lists:split(Updating -1, State),
+	Head ++ Tail ++ [{call, ?MODULE, decode_json_body, [Res]}];
+next_state(State, Res, {call, _, update, [_Name, undefined, Updating, _State]}) ->
 	{Head, [_Old | Tail]} = lists:split(Updating - 1, State),
-	State1 = Head ++ [tombstone] ++ Tail,
-	LayerJson = decode_json_body(Res),
-	State2 = case Next of
-		undefined ->
-			Head ++ [LayerJson] ++ Tail;
-		null ->
-			Head ++ Tail ++ [LayerJson];
-		_ ->
-			{H2, T2} = lists:split(Next - 1, State1),
-			H2 ++ [LayerJson] ++ T2
-	end,
-	lists:delete(tombstone, State2);
+	Head ++ [{call, ?MODULE, decode_json_body, [Res]}] ++ Tail;
+next_state(State, Res, {call, _, update, [_Name, Next, Updating, _State]}) when Next < Updating ->
+	{Head, [_Old | Tail]} = lists:split(Updating - 1, State),
+	{Head2, Tail2} = lists:split(Next - 1, Head ++ Tail),
+	Head2 ++ [{call, ?MODULE, decode_json_body, [Res]}] ++ Tail2;
+next_state(State, Res, {call, _, update, [_Name, Next, Updating, _State]}) when Updating < Next ->
+	{Head, NextTail} = lists:split(Next - 1, State),
+	{Head2, [_Old | Middle]} = lists:split(Updating - 1, Head),
+	Head2 ++ Middle ++ [{call, ?MODULE, decode_json_body, [Res]}] ++ NextTail;
+
+%next_state(State, {ok, _, _, _} = Res, {call, _, update, [Name, Next, Updating, _State]}) ->
+%	{Head, [_Old | Tail]} = lists:split(Updating - 1, State),
+%	State1 = Head ++ [tombstone] ++ Tail,
+%	LayerJson = decode_json_body(Res),
+%	State2 = case Next of
+%		undefined ->
+%			Head ++ [LayerJson] ++ Tail;
+%		null ->
+%			Head ++ Tail ++ [LayerJson];
+%		_ ->
+%			{H2, T2} = lists:split(Next - 1, State1),
+%			H2 ++ [LayerJson] ++ T2
+%	end,
+%	lists:delete(tombstone, State2);
 
 %next_state(State, Res, {call, _, update, [_UrlType, Existant]}) ->
 %	{call, ?MODULE, insert_layer, [{call, ?MODULE, decode_json_body, [Res]}, {call, lists, delete, [Existant, State]}]};
@@ -355,7 +372,24 @@ postcondition(Layers, {call, _, update, [Name, NextN, ExistantN, _State]}, {ok, 
 		_ ->
 			[{<<"name">>, Name} | proplists:delete(<<"name">>, Original)]
 	end,
-	assert_layer(Expected, BodyJson),
+	Expected2 = case NextN of
+		null ->
+			proplists:delete(<<"next_layer_id">>, Expected);
+		undefined ->
+			if
+				ExistantN < length(Layers) ->
+					NextLayer = lists:nth(ExistantN + 1, Layers),
+					NextId = proplists:get_value(<<"id">>, NextLayer),
+					[{<<"next_layer_id">>, NextId} | proplists:delete(<<"next_layer_id">>, Expected)];
+				true ->
+					proplists:delete(<<"next_layer_id">>, Expected)
+			end;
+		_ ->
+			NextLayer = lists:nth(NextN, Layers),
+			NextId = proplists:get_value(<<"id">>, NextLayer),
+			[{<<"next_layer_id">>, NextId} | proplists:delete(<<"next_layer_id">>, Expected)]
+	end,
+	assert_layer(Expected2, BodyJson),
 	true;
 
 postcondition(_Layers, {call, _, update_bad_reorder, _}, {ok, "422", _, _}) ->
