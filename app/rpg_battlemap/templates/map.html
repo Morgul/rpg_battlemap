@@ -43,6 +43,7 @@
 <script type="text/javascript" src="/js/rpgb_core.js"></script>
 <script type="text/javascript" src="/js/rpgb_gridPropertiesView.js"></script>
 <script type="text/javascript" src="/js/rpgb_mapView.js"></script>
+<script type="text/javascript" src="/js/rpgb_layer_views.js"></script>
 <script id="mapJson" type="application/json">
 {{ map_json }}
 </script>
@@ -70,7 +71,12 @@ RPGB.currentMapView = RPGB.MapView.create({
 	content: RPGB.mapController
 });
 
+RPGB.layersToolbar = RPGB.LayerListView.create({
+	content: RPGB.mapController.get('layersTopToBottom')
+});
+
 RPGB.currentGridView.appendTo('#toolbar');
+RPGB.layersToolbar.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');
 
 </script>
