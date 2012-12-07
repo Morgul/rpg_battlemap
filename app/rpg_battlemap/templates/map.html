@@ -54,6 +54,56 @@
 ***/
 
 RPGB.mapController = RPGB.RestObject.create({});
+RPGB.layerController = Ember.ArrayController.create({
+	content: [],
+
+	topToBottom: function(){
+		return this.get('content').toArray().reverse();
+	}.property('content.@each'),
+
+	createLayer: function(layerArgs){
+		var layersUrl = this.get('map.layers_url');
+		$.ajax(layersUrl, {
+			'contentType':'application/json',
+			'context':this,
+			'data': JSON.stringify(layerArgs),
+			'type': 'put',
+			'success': function(newLayer){
+				console.log('new layer created', newLayer, arguments);
+				var layerObj = RPGB.RestObject.create(newLayer);
+				this.insertLayer(layerObj);
+			}
+		})
+		console.log('create layer', arguments);
+	},
+
+	insertLayer: function(layerObj){
+		if(! layerObj.get('next_layer_id')){
+			this.pushObject(layerObj);
+			return;
+		}
+
+		var insertBefore = 0;
+		var findCb = function(item, index){
+			if(item.get('id') == newLayer.next_layer_id){
+				insertBefore = index;
+				return true;
+			}
+			return false;
+		};
+		var found = this.find(findCb);
+		if(found == null){
+			this.reloadLayers();
+			return;
+		}
+		this.insertAt(insertBefore, layerObj);
+		return;
+	},
+
+	reloadLayers: function(){
+		console.log('oh crap');
+	}
+});
 
 var mapJson = JSON.parse($('#mapJson').text());
 var prop;
@@ -61,6 +111,19 @@ RPGB.mapController.lockCommits();
 for(prop in mapJson){
 	RPGB.mapController.set(prop, mapJson[prop]);
 }
+mapJson.layers.map(function(layerData){
+	var layerObj = RPGB.RestObject.create({});
+	layerObj.lockCommits();
+	layerObj.set('map', RPGB.mapController);
+	var layerProp;
+	for(layerProp in layerData){
+		layerObj.set(layerProp, layerData[layerProp]);
+	}
+	RPGB.layerController.pushObject(layerObj);
+	layerObj.unlockCommits();
+});
+RPGB.mapController.set('layers', RPGB.layerController);
+RPGB.layerController.set('map', RPGB.mapController);
 RPGB.mapController.unlockCommits();
 
 RPGB.currentGridView = RPGB.GridPropertiesView.create({
@@ -72,7 +135,7 @@ RPGB.currentMapView = RPGB.MapView.create({
 });
 
 RPGB.layersToolbar = RPGB.LayerListView.create({
-	content: RPGB.mapController.get('layersTopToBottom')
+	content: RPGB.layerController
 });
 
 RPGB.currentGridView.appendTo('#toolbar');

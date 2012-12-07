@@ -118,11 +118,14 @@ to_html(Req, Ctx) ->
 	rpgb:refresh_templates(map_dtl),
 	Json = make_json(Req, Ctx, Ctx#ctx.map),
 	User = rpgb_session:get_user(Ctx#ctx.session),
+	LayerUrl = make_location(Req, Ctx, Ctx#ctx.map),
+	LayerUrl2 = <<LayerUrl/binary, "/layers">>,
+	Json2 = [{layers_url, LayerUrl2} | Json],
 	PatternHelper = [begin
 		[{x, Row * 32}, {y, Col * 32}]
 	end || Row <- lists:seq(0, 15), Col <- lists:seq(0, 15)],
-	{ok, Output} = map_dtl:render([{user, User}, {map, Json},
-		{pattern_helper, PatternHelper}, {map_json, jsx:to_json(Json)}]),
+	{ok, Output} = map_dtl:render([{user, User}, {map, Json2},
+		{pattern_helper, PatternHelper}, {map_json, jsx:to_json(Json2)}]),
 	{Output, Req, Ctx}.
 
 from_json(Req, #ctx{mapid = MapId} = Ctx) ->

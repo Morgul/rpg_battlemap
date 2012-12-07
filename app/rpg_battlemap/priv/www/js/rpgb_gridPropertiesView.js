@@ -1,6 +1,6 @@
 Ember.TEMPLATES['gridSettings'] = Ember.Handlebars.compile(
 '<h3 {{ action "toggleShowProperties" }}>Grid</h3>' +
-'<span {{ bindStyle display="showProperties"}}>' +
+'<span {{ bindStyle display="showProperties"}} class="toolbarDropdown">' +
 
 	'<p>' +
 		'<label>Grid Lines</label>' +

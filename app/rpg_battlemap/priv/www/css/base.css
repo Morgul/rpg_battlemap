@@ -34,7 +34,7 @@ body
 	padding-top: .5em;
 	padding-bottom: .5em;
 }
-#toolbar span {
+span.toolbarDropdown {
 	width: 10em;
 	position: absolute;
 	padding: 0.5em;
