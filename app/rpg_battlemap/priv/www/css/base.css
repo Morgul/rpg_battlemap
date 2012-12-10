@@ -48,6 +48,26 @@ span.toolbarDropdown {
 	width: 90%;
 }
 
+.layerItem.selected {
+	box-shadow: inset 0 0 10px 2px blue;
+}
+
+.layerItem button{
+	width: 2em;
+	height: 2em;
+	margin-right: .5em;
+}
+
+.layerItem button.full {
+	background-color: black;
+}
+.layerItem button.half {
+	background-color: gray;
+}
+.layerItem button.none {
+	background-color: white;
+}
+
 /*.login
 {
 	margin: 0 auto;

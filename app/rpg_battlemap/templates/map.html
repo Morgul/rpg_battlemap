@@ -2,6 +2,9 @@
 
 {% block title %} - {{ map.name }} {% endblock %}
 
+{% block page_style %}
+<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
+{% endblock %}
 {% block content %}
 
 <div id="toolbar"></div>
@@ -36,10 +39,15 @@
 {% block page_scripts %}
 
 <script type="text/javascript" src="/contrib/jquery.mousewheel.min.js"></script>
+<!--<script type="text/javascript" src="/contrib/jquery-ui.min.js"></script>
 <script type="text/javascript" src="/contrib/bullet.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
-<script type="text/javascript" src="/contrib/ember.js"></script>
+<script type="text/javascript" src="/contrib/ember.js"></script>-->
+<script type="text/javascript" src="/contrib/jquery-ui-1.9pre.js"></script>
+<script type="text/javascript" src="/contrib/handlebars-1.0.0.beta.6.js"></script>
+<script type="text/javascript" src="/contrib/ember-1.0.pre.js"></script>
 <script type="text/javascript" src="/js/bind_extensions.js"></script>
+<script type="text/javascript" src="/contrib/jquery-ember-bridge.js"></script>
 <script type="text/javascript" src="/js/rpgb_core.js"></script>
 <script type="text/javascript" src="/js/rpgb_gridPropertiesView.js"></script>
 <script type="text/javascript" src="/js/rpgb_mapView.js"></script>
@@ -60,6 +68,32 @@ RPGB.layerController = Ember.ArrayController.create({
 	topToBottom: function(){
 		return this.get('content').toArray().reverse();
 	}.property('content.@each'),
+
+	_visibilityMode: 'selected',
+	visibilityMode: function(key, value){
+		if(arguments.length == 1){
+			return this._visibilityMode;
+		}
+
+		if(this._isVisibilityMode(value)){
+			this._visibilityMode = value;
+			this._setVisiblities();
+		}
+	}.property().cacheable(false),
+
+	_selectedLayer: null,
+	selected: function(key, value){
+		if(arguments.length == 1){
+			return this.objectAt(this._selectedLayer);
+		}
+
+		this._selectedLayer = this.indexOf(value);
+		this.forEach(function(item){
+			item.set('selected', false);
+		});
+		value.set('selected', true);
+		this._setVisiblities();
+	}.property('content.@each.selected').cacheable(false),
 
 	createLayer: function(layerArgs){
 		var layersUrl = this.get('map.layers_url');
@@ -100,8 +134,53 @@ RPGB.layerController = Ember.ArrayController.create({
 		return;
 	},
 
+	deleteLayer: function(layerObj){
+		var url = layerObj.get('url');
+		$.ajax(url, {
+			'type':'delete',
+			'context': this,
+			'success': function(){
+				this.removeObject(layerObj);
+			}
+		});
+	},
+
 	reloadLayers: function(){
 		console.log('oh crap');
+	},
+
+	_isVisibilityMode: function(mode){
+		var visiblityFunc = '_setVisibility_' + mode;
+		return this[visiblityFunc];
+	},
+
+	_setVisiblities: function(){
+		if(this._selectedLayer == null){
+			return;
+		}
+		(this._isVisibilityMode(this._visibilityMode)).call(this);
+	},
+
+	_setVisibility_custom: function(){
+		return;
+	},
+
+	_setVisibility_selected: function(){
+		var selected = this._selectedLayer;
+		this.forEach(function(item, index){
+			if(index == selected){
+				item.set('visibility', 'full');
+				return;
+			}
+			item.set('visibility', 'none');
+		});
+	},
+
+	_setVisibility_all_below: function(){
+		var selected = this._selectedLayer;
+		this.forEach(function(item, index){
+			item.set('selected', index <= selected);
+		});
 	}
 });
 
