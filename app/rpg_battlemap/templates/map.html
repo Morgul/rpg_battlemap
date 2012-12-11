@@ -134,6 +134,10 @@ RPGB.layerController = Ember.ArrayController.create({
 		return;
 	},
 
+	deleteSelectedLayer: function(){
+		this.deleteLayer(this.get('selected'));
+	},
+
 	deleteLayer: function(layerObj){
 		var url = layerObj.get('url');
 		$.ajax(url, {
@@ -189,14 +193,17 @@ var prop;
 RPGB.mapController.lockCommits();
 for(prop in mapJson){
 	RPGB.mapController.set(prop, mapJson[prop]);
+	RPGB.mapController.addRestfulProperty(prop);
 }
 mapJson.layers.map(function(layerData){
 	var layerObj = RPGB.RestObject.create({});
 	layerObj.lockCommits();
 	layerObj.set('map', RPGB.mapController);
 	var layerProp;
+	layerObj.set('url', mapJson.layers_url + '/' + layerData.id);
 	for(layerProp in layerData){
 		layerObj.set(layerProp, layerData[layerProp]);
+		layerObj.addRestfulProperty(layerProp);
 	}
 	RPGB.layerController.pushObject(layerObj);
 	layerObj.unlockCommits();

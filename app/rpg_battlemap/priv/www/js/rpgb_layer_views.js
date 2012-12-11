@@ -11,7 +11,7 @@ Ember.TEMPLATES['layerList'] = Ember.Handlebars.compile(
 '</p>' +
 
 '<p>' +
-	'<button {{action "deleteSelectedLayer"}}>Delete Selected</button>' +
+	'<button {{action "deleteSelectedLayer" target="content"}}>Delete Selected</button>' +
 '</p>' +
 
 '</span>');
