@@ -7,6 +7,7 @@ var RPGB = Ember.Application.create({ });
 RPGB.RestObject = Ember.Object.extend({
 	all: [],
 	_lockedCommits: 0,
+	_restProps: ['url'],
 
 	find: function(){
 		if(! allUrl){
@@ -41,9 +42,35 @@ RPGB.RestObject = Ember.Object.extend({
 			var prop;
 			for(prop in data){
 				this.set(prop, data[prop]);
+				this._restProps.push(prop);
 			}
 		});
 		return obj;
+	},
+
+	safeSet: function(key, value){
+		this.lockCommits();
+		this.set(key, value);
+		this.unlockCommits();
+	},
+
+	safeSetProperties: function(obj){
+		this.lockCommits();
+		this.setProperties(obj);
+		this.unlockCommits();
+	},
+
+	addRestfulProperty: function(propName){
+		if(this._restProps.indexOf(propName) == -1){
+			this._restProps.push(propName);
+		}
+	},
+
+	removeRestfulProperty: function(propName){
+		var ind = this._restProps.indexOf(propName);
+		if(ind > -1){
+			this._restProps.removeAt(ind);
+		}
 	},
 
 	setUnknownProperty: function(key, value){
@@ -54,8 +81,11 @@ RPGB.RestObject = Ember.Object.extend({
 	},
 
 	propertyDidChange: function(object, key){
-		console.log('prop did change', arguments);
 		if(this._lockedCommits){
+			return;
+		}
+
+		if(this._restProps.indexOf(key) == -1){
 			return;
 		}
 
