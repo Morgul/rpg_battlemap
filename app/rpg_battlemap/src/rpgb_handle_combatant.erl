@@ -157,10 +157,10 @@ from_json(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 					{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
 					{true, Req4, Ctx3};
 				N ->
-					{_Map1, Combatants} = make_combatants(N, Json, Rec),
-					Jsons = [make_json(C, Req, Ctx) || C <- Combatants],
-					{ok, Req1} = cowboy_http_req:set_resp_body(jsx:to_json(Jsons), Req),
-					{true, Req1, Ctx}
+					{Map1, Combatants} = make_combatants(N, Rec, Map),
+					Jsons = [make_json(Req, Ctx, C) || C <- Combatants],
+					{ok, Req2} = cowboy_http_req:set_resp_body(jsx:to_json(Jsons), Req1),
+					{true, Req2, Ctx}
 			end;
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
@@ -357,38 +357,38 @@ check_next_combatant_id({Json, Rec} = In) ->
 			end
 	end.
 
-make_combatants(Batch, Json, Rec) ->
-	NextId = proplists:get_value(<<"next_combatant_id">>, Json),
-	FixNext = case rpgb_data:search(rpgb_rec_combatant, [{next_combatant_id, NextId}]) of
-		{ok, [Prev | _]} ->
-			fun(NewNext) ->
-				Prev2 = Prev#rpgb_rec_combatant{next_combatant_id = NewNext#rpgb_rec_combatant.id},
-				{ok, Prev3} = rpgb_data:save(Prev2),
-				{ok, Map} = rpgb_data:get_by_id(rpgb_rec_battlemap, Rec#rpgb_rec_combatant.battlemap_id),
-				Map
-			end;
-		{ok, []} ->
-			fun(NewNext) ->
-				{ok, Map} = rpgb_data:get_by_id(rpgb_rec_battlemap, NewNext#rpgb_rec_combatant.battlemap_id),
-				Map2 = Map#rpgb_rec_battlemap{first_combatant_id = NewNext#rpgb_rec_combatant.id},
-				{ok, Map3} = rpgb_data:save(Map2),
-				Map3
-			end
-	end,
-	[Head | _] = Out = make_combatants(Batch, NextId, Rec, []),
-	Map = FixNext(Head),
-	{Map, Out}.
+make_combatants(N, Rec, Map) ->
+	DoneFun = make_done_fun(Rec, Map),
+	NextId = Rec#rpgb_rec_combatant.next_combatant_id,
+	make_combatants(N, NextId, Rec, DoneFun, []).
 
-make_combatants(Batch, _, _, Acc) when Batch < 1 ->
-	Acc;
+make_combatants(N, NextId, _Rec, DoneFun, Acc) when N < 1 ->
+	Map2 = DoneFun(NextId),
+	{Map2, Acc};
 
-make_combatants(Batch, NextId, Rec, Acc) ->
-	Name = iolist_to_binary(io_lib:format("~s ~b", [Rec#rpgb_rec_combatant.name, Batch])),
-	Rec2 = Rec#rpgb_rec_combatant{
-		name = Name, next_combatant_id = NextId
-	},
+make_combatants(N, NextId, Rec, DoneFun, Acc) ->
+	Name = make_name(Rec, N),
+	Rec2 = Rec#rpgb_rec_combatant{name = Name, next_combatant_id = NextId},
 	{ok, Rec3} = rpgb_data:save(Rec2),
-	make_combatants(Batch - 1, Rec3#rpgb_rec_combatant.id, Rec, [Rec3 | Acc]).
+	make_combatants(N - 1, Rec3#rpgb_rec_combatant.id, Rec, DoneFun, [Rec3 | Acc]).
+
+make_done_fun(#rpgb_rec_combatant{next_combatant_id = Id}, #rpgb_rec_battlemap{first_combatant_id = Id} = Map) ->
+	fun(NewFirst) ->
+		{ok, Map2} = rpgb_data:save(Map#rpgb_rec_battlemap{first_combatant_id = NewFirst}),
+		Map2
+	end;
+make_done_fun(#rpgb_rec_combatant{next_combatant_id = Id}, Map) ->
+	{ok, [Prev | _]} = rpgb_data:search(rpgb_rec_combatant, [{next_combatant_id, Id}]),
+	fun(NewNext) ->
+		{ok, _} = rpgb_data:save(Prev#rpgb_rec_combatant{next_combatant_id = NewNext}),
+		Map
+	end.
+
+make_name(#rpgb_rec_combatant{name = BaseName}, N) ->
+	make_name(BaseName, N);
+make_name(BaseName, N) ->
+	BinN = list_to_binary(integer_to_list(N)),
+	<<BaseName/binary, " ", BinN/binary>>.
 
 remove_combatant(#rpgb_rec_battlemap{first_combatant_id = Id} = Map, #rpgb_rec_combatant{id = Id} = Combatant) ->
 	{ok, Map2} = rpgb_data:save(Map#rpgb_rec_battlemap{first_combatant_id = Combatant#rpgb_rec_combatant.next_combatant_id}),

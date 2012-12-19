@@ -41,7 +41,8 @@ browser_test_() -> {setup, fun() ->
 			?_assertEqual([], splice([1], 1, 1, [])),
 			?_assertEqual([1,2,3], splice([1,3], 2, 0, [2])),
 			?_assertEqual([1,3], splice([1,2,3], 2, 1, [])),
-			?_assertEqual([1,a,3], splice([1,2,3], 2, 1, [a]))
+			?_assertEqual([1,a,3], splice([1,2,3], 2, 1, [a])),
+			?_assertEqual([1,2,3,4,5,6,7,8,9], splice([1,2,3,7,8,9], 4, 0, [4,5,6]))
 		]},
 
 		{"statem", timeout, 60000, fun() ->
@@ -89,7 +90,7 @@ initial_state() ->
 command(S) ->
 	oneof([
 		{call, ?MODULE, create, [?SUCHTHAT(X, g_combatant(), begin Name = proplists:get_value(<<"name">>, X), Name =/= undefined andalso Name =/= <<>> end), g_next(S), g_creator(), S]},
-		%{call, ?MODULE, create_batch, [g_combatant(), g_existant(S), g_creator(), choose(1, 20), S]},
+		{call, ?MODULE, create_batch, [?SUCHTHAT(X, g_combatant(), begin Name = proplists:get_value(<<"name">>, X), Name =/= undefined andalso Name =/= <<>> end), g_next(S), g_creator(), choose(1, 20), S]},
 		%{call, ?MODULE, create_bad_batch, [g_combatant(), g_existant(S), g_creator()]},
 		%{call, ?MODULE, create_bad_user, [g_combatant(), g_existant(S), S]},
 		%{call, ?MODULE, create_blank_name, [g_combatant(), g_existant(S), g_creator(), S]},
@@ -164,6 +165,15 @@ precondition(_, _) ->
 next_state(State, Res, {call, _, create, [Put, Next, _Creator, _State]}) ->
 	insert_at({call, ?MODULE, decode_res, [Res]}, Next, State);
 
+next_state(State, Res, {call, _, create_batch, [Put, Next, _Creator, Count, _S]}) ->
+	Calls = [{call, ?MODULE, decode_res_at, [Res, Nth]} || Nth <- lists:seq(1, Count)],
+	case Next of
+		Atom when is_atom(Atom) ->
+			State ++ Calls;
+		_ ->
+			splice(State, Next, 0, Calls)
+	end;
+
 next_state(State, Res, {call, _, update, [_Put, Nth, null, _Layer, _Creator, _S]}) ->
 	State2 = snip(Nth, State),
 	State2 ++ [{call, ?MODULE, decode_res, [Res]}];
@@ -206,6 +216,26 @@ create(Put, Next, Creator, State) ->
 	TestFun = fun() ->
 		{ok, Gots} = rpgb_data:search(rpgb_rec_combatant, [{battlemap_id, 9000}]),
 		length(Gots) == (length(State) + 1)
+	end,
+	rpgb_test_util:wait_until(TestFun),
+	Out.
+
+create_batch(Put, Next, Creator, Count, State) ->
+	SessCookie = case Creator of
+		partier ->
+			?participant;
+		owner ->
+			?cookie
+	end,
+	Json = make_json(Put, Next, State),
+	Json2 = case Json of
+		[{}] -> [{<<"batch">>, Count}];
+		_ -> [{<<"batch">>, Count} | Json]
+	end,
+	{ok, "200", _, Boody} = Out = ibrowse:send_req(?combatant_url, [SessCookie, ?accepts, ?contenttype], put, jsx:to_json(Json2)),
+	TestFun = fun() ->
+		{ok, Gots} = rpgb_data:search(rpgb_rec_combatant, [{battlemap_id, 9000}]),
+		length(Gots) == ( length(State) + Count)
 	end,
 	rpgb_test_util:wait_until(TestFun),
 	Out.
@@ -281,6 +311,14 @@ postcondition(State, {call, _, create, [Put, Next, Creator, _State]}, {ok, "201"
 	%Json = jsx:to_term(list_to_binary(Body)),
 	?assert(rpgb_test_util:assert_body(Put, Body)),
 	true;
+
+postcondition(State, {call, _, create_batch, [Put, Next, Creator, Batch, _State]}, {ok, "200", _, Body}) ->
+	BaseName = proplists:get_value(<<"name">>, Put),
+	Names = [begin Lint = list_to_binary(integer_to_list(N)), <<BaseName/binary, " ", Lint/binary>> end
+	|| N <- lists:seq(1, Batch)],
+	Puts = [[{<<"name">>, Name} | proplists:delete(<<"name">>, Put)] || Name <- Names],
+	Got = jsx:to_term(list_to_binary(Body)),
+	assert_batch(Puts, Got);
 
 postcondition(State, {call, _, get_a_combatant, [_Who, Nth, _State]}, {ok, "200", _, Body}) ->
 	Combatant = lists:nth(Nth, State),
@@ -399,6 +437,10 @@ insert_at(Insert, At, List) ->
 
 decode_res({ok, _Status, _Head, Body}) ->
 	jsx:to_term(list_to_binary(Body)).
+
+decode_res_at({ok, _State, _Head, Body}, Nth) ->
+	Json = jsx:to_term(list_to_binary(Body)),
+	lists:nth(Nth, Json).
 
 make_json(Base, undefined, _State) ->
 	Base;
