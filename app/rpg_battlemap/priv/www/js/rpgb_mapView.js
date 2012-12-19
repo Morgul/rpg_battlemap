@@ -12,6 +12,7 @@ RPGB.MapView = Ember.View.extend({
 	}.property('zoom','panX','panY'),
 
 	init: function(){
+		this._super();
 		window.mapViewThing = this;
 		var thisRef = this;
 		$(window).resize(function(){

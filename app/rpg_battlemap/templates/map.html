@@ -31,6 +31,13 @@
 
 	<rect x="0" y="0" width="100%" height="100%" stroke-opacity="0"
 		fill="url(#gridPattern)" style="pointer-events:none;" id="gridRect"/>
+
+	<g {% templatetag openvariable %}bindXMLAttr transform="transformString" {% templatetag closevariable %}>
+	{% templatetag openvariable %}#each content.layers{% templatetag closevariable %}
+		{% templatetag openvariable %}view RPGB.LayerItemSVGView tagName="g"{% templatetag closevariable %}
+	{% templatetag openvariable %}/each{% templatetag closevariable %}
+	</g>
+
 </svg>
 </script>
 
@@ -46,6 +53,7 @@
 <script type="text/javascript" src="/contrib/jquery-ui-1.9pre.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.0.beta.6.js"></script>
 <script type="text/javascript" src="/contrib/ember-1.0.pre.js"></script>
+<!--<script type="text/javascript" src="/contrib/ember.prod.js"></script>-->
 <script type="text/javascript" src="/js/bind_extensions.js"></script>
 <script type="text/javascript" src="/contrib/jquery-ember-bridge.js"></script>
 <script type="text/javascript" src="/js/rpgb_core.js"></script>

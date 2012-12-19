@@ -7,7 +7,7 @@
 -export([wait_until/1, wait_until/2, wait_until/3]).
 -export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
 	create_authed_session/0, create_authed_session/1,
-	create_authed_session/2, assert_body/2]).
+	create_authed_session/2, assert_body/2, match_keys/2]).
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -97,6 +97,13 @@ create_authed_session(SessionId) ->
 	},
 	{ok, User1} = rpgb_data:save(User),
 	create_authed_session(SessionId, User1).
+
+create_authed_session(SessionId, User) when is_binary(User) ->
+	UserRec = #rpgb_rec_user{
+		name = User
+	},
+	{ok, UserRec1} = rpgb_data:save(UserRec),
+	create_authed_session(SessionId, UserRec1);
 
 create_authed_session(SessionId, User) ->
 	{ok, Session} = rpgb_session:get_or_create(SessionId),

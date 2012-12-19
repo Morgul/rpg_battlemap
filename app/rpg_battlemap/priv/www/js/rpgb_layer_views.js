@@ -22,6 +22,8 @@ Ember.TEMPLATES['layerListItem'] = Ember.Handlebars.compile(
 	'{{ name }}'
 );
 
+Ember.TEMPLATES['layerSVG'] = Ember.Handlebars.compile('');
+
 RPGB.LayerListView = Ember.View.extend({
 	templateName: 'layerList',
 	content: null,
@@ -86,5 +88,14 @@ RPGB.LayerNameField = Ember.TextField.extend({
 	change: function(evt){
 		this.set('newName', evt.target.value);
 		return false;
+	}
+});
+
+RPGB.LayerItemSVGView = Ember.View.extend({
+	templateName: 'layerSVG',
+
+	init: function(){
+		this._super();
+		console.log('bing!');
 	}
 });
