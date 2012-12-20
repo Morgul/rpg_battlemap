@@ -59,7 +59,11 @@ g_name() ->
 
 g_url() ->
 	?LET({Proto, Domain, Path},
-		{oneof([<<"http">>, <<"https">>]), ?SUCHTHAT(X, list(integer(97, 122)), X =/= []), list(list(integer(97, 122)))},
+		{
+			oneof([<<"http">>, <<"https">>]),
+			?SUCHTHAT(X, list(integer(97, 122)), X =/= []),
+			?SUCHTHAT(PList, list( ?SUCHTHAT(PListList, list(integer(97, 122)), length(PListList) =< 10) ), length(PList) =< 10)
+		},
 		begin
 			PathBin = list_to_binary(string:join(Path, "/")),
 			DomainBin = list_to_binary(Domain),
