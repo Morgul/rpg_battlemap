@@ -91,7 +91,7 @@ command(S) ->
 	oneof([
 		{call, ?MODULE, create, [?SUCHTHAT(X, g_combatant(), begin Name = proplists:get_value(<<"name">>, X), Name =/= undefined andalso Name =/= <<>> end), g_next(S), g_creator(), S]},
 		{call, ?MODULE, create_batch, [?SUCHTHAT(X, g_combatant(), begin Name = proplists:get_value(<<"name">>, X), Name =/= undefined andalso Name =/= <<>> end), g_next(S), g_creator(), choose(1, 20), S]},
-		%{call, ?MODULE, create_bad_batch, [g_combatant(), g_existant(S), g_creator()]},
+		%{call, ?MODULE, create_bad_batch, [g_combatant(), g_next(S), g_bad_batch(), g_creator(), S]},
 		%{call, ?MODULE, create_bad_user, [g_combatant(), g_existant(S), S]},
 		%{call, ?MODULE, create_blank_name, [g_combatant(), g_existant(S), g_creator(), S]},
 		%{call, ?MODULE, create_bad_map_id, [g_combatant(), g_existant(S), g_creator(), S]},
@@ -107,6 +107,9 @@ command(S) ->
 		%{call, ?MODULE, delete_bad_user, [g_existant(S), S]},
 		{call, ?MODULE, delete, [g_existant(S), S]}
 	]).
+
+g_bad_batch() ->
+	oneof([null, <<"not int">>, false, true, choose(21, 10000000), choose(-100000000, 0)]).
 
 g_maybe_layer() ->
 	oneof([null, undefined, 3001, 3002, 3003]).
@@ -232,13 +235,29 @@ create_batch(Put, Next, Creator, Count, State) ->
 		[{}] -> [{<<"batch">>, Count}];
 		_ -> [{<<"batch">>, Count} | Json]
 	end,
-	{ok, "200", _, Boody} = Out = ibrowse:send_req(?combatant_url, [SessCookie, ?accepts, ?contenttype], put, jsx:to_json(Json2)),
+	{ok, Status, _, _} = Out = ibrowse:send_req(?combatant_url, [SessCookie, ?accepts, ?contenttype], put, jsx:to_json(Json2)),
+	case Status of
+		"200" ->
+			ok;
+		_ ->
+			?debugFmt("that res:  ~p", [Out]),
+			Status = "200"
+	end,
 	TestFun = fun() ->
 		{ok, Gots} = rpgb_data:search(rpgb_rec_combatant, [{battlemap_id, 9000}]),
 		length(Gots) == ( length(State) + Count)
 	end,
 	rpgb_test_util:wait_until(TestFun),
 	Out.
+
+create_bad_batch(Put, Next, Batch, Creator, State) ->
+	SessCookie = get_session_cookie(Creator),
+	Json = make_json(Put, Next, State),
+	Json2 = case Json of
+		[{}] -> [{<<"batch">>, Batch}];
+		_ -> [{<<"batch">>, Batch} | Json]
+	end,
+	ibrowse:send_req(?combatant_url, [SessCookie, ?accepts, ?contenttype], put, jsx:to_json(Json2)).
 
 update(Put, Nth, Next, LayerId, Who, State) ->
 	SessCookie = case Who of
@@ -320,6 +339,9 @@ postcondition(State, {call, _, create_batch, [Put, Next, Creator, Batch, _State]
 	Got = jsx:to_term(list_to_binary(Body)),
 	assert_batch(Puts, Got);
 
+postcondition(State, {call, _, create_bad_batch, _}, {ok, "422", _, _}) ->
+	true;
+
 postcondition(State, {call, _, get_a_combatant, [_Who, Nth, _State]}, {ok, "200", _, Body}) ->
 	Combatant = lists:nth(Nth, State),
 	NextId = if
@@ -371,6 +393,9 @@ postcondition(S,C,R) ->
 %% =======================================================
 %% Internal
 %% =======================================================
+
+get_session_cookie(partier) -> ?participant;
+get_session_cookie(owner) -> ?cookie.
 
 get_next_id(Nth, List) when length(List) =< 1 ->
 	null;

@@ -156,11 +156,16 @@ from_json(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 					{OutBody, Req3, Ctx3} = to_json(Req2, Ctx2),
 					{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
 					{true, Req4, Ctx3};
-				N ->
+				N when is_integer(N), 1 =< N, N =< 20 ->
 					{Map1, Combatants} = make_combatants(N, Rec, Map),
 					Jsons = [make_json(Req, Ctx, C) || C <- Combatants],
 					{ok, Req2} = cowboy_http_req:set_resp_body(jsx:to_json(Jsons), Req1),
-					{true, Req2, Ctx}
+					{true, Req2, Ctx};
+				_ ->
+					OutBody = io_lib:format("batch must be 1 to 20; you gave me ~p", [Batch]),
+					{ok, Req2} = cowboy_http_req:set_resp_body(OutBody, Req),
+					{ok, Req3} = cowboy_http_req:reply(422, Req2),
+					{halt, Req3, Ctx}
 			end;
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
