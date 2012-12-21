@@ -139,7 +139,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 				owner_id = User#rpgb_rec_user.id,
 				participant_ids = [],
 				bottom_layer_id = undefined,
-				first_combatant_id = [],
+				first_combatant_id = undefined,
 				created = os:timestamp(),
 				updated = os:timestamp()
 			};
@@ -180,7 +180,7 @@ make_json(Req, Ctx, Map) ->
 	<<"http", RestUrl/binary>> = Url = make_location(Req, Ctx, Map),
 	WebSocket = <<"ws", RestUrl/binary, "/ws">>,
 	% TODO layers, combatants, zones, and participants
-	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, fun make_layer_json/2]).
+	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, fun make_layer_json/2, first_combatant_id, fun make_combatant_json/2]).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
@@ -199,6 +199,20 @@ get_layers(undefined, Acc) ->
 get_layers(Id, Acc) ->
 	{ok, Layer} = rpgb_data:get_by_id(rpgb_rec_layer, Id),
 	get_layers(Layer#rpgb_rec_layer.next_layer_id, [Layer | Acc]).
+
+make_combatant_json(Json, Map) ->
+	Combatants = get_combatants(Map),
+	CombatantsJson = [Combatant:to_json() || Combatant <- Combatants],
+	[{<<"combatants">>, CombatantsJson} | Json].
+
+get_combatants(#rpgb_rec_battlemap{first_combatant_id = Id}) ->
+	get_combatants(Id, []).
+
+get_combatants(undefined, Acc) ->
+	lists:reverse(Acc);
+get_combatants(Id, Acc) ->
+	{ok, Combatant} = rpgb_data:get_by_id(rpgb_rec_combatant, Id),
+	get_combatants(Combatant#rpgb_rec_combatant.id, [Combatant | Acc]).
 
 validate_map(Json, InitMap) ->
 	ValidateFuns = [

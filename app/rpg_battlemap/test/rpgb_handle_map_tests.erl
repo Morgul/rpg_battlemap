@@ -204,6 +204,8 @@ postcondition(_State, {call, _, create_map, [Json, _InState]}, {ok, "201", Heads
 	?assert(rpgb_test_util:assert_body(Json, Body)),
 	Layers = proplists:get_value(<<"layers">>, BodyJson),
 	?assertMatch([[{_, _} | _]], Layers),
+	Combatants = proplists:get_value(<<"combatants">>, BodyJson),
+	?assertEqual([], Combatants),
 	[BottomLayer] = Layers,
 	?assertEqual(<<"Bottom Layer">>, proplists:get_value(<<"name">>, BottomLayer)),
 	true;
