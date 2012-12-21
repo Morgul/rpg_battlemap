@@ -10,12 +10,13 @@
 	generate_etag/2
 ]).
 
--record(ctx, { hostport, session, mapid, map, combatantid, combatant}).
+-record(ctx, { hostport, session, mapid, map, combatantid, combatant, layerid}).
 
 get_routes() ->
 	[
 		[<<"map">>, mapid, <<"combatants">>],
-		[<<"map">>, mapid, <<"combatants">>, combatantid]
+		[<<"map">>, mapid, <<"combatants">>, combatantid],
+		[<<"map">>, mapid, <<"layers">>, layerid, <<"combatants">>]
 	].
 
 init(_Protos, Req, _HostPort) ->
@@ -33,7 +34,7 @@ rest_init(Req, HostPort) ->
 				MapN ->
 					MapN
 			catch
-				'ERROR':{badarg, _} ->
+				'error':badarg ->
 					undefined
 			end
 	end,
@@ -45,17 +46,21 @@ rest_init(Req, HostPort) ->
 			try list_to_integer(binary_to_list(CombatantId)) of
 				CombatantN -> CombatantN
 			catch
-				'ERROR':{badarg, _} ->
+				'error':badarg ->
 					undefined
 			end
 	end,
-	{ok, Req4, #ctx{hostport = HostPort, session = Session, mapid = MapId1, combatantid = CombatantId1}}.
+	{LayerId, Req5} = cowboy_http_req:binding(layerid, Req4),
+	{ok, Req5, #ctx{hostport = HostPort, session = Session, mapid = MapId1, combatantid = CombatantId1, layerid = LayerId}}.
 
 %% ===============================
 %% restful steps
 %% ===============================
 
-allowed_methods(Req, #ctx{combatantid = CombatantId} = Ctx) when is_atom(CombatantId) ->
+allowed_methods(Req, #ctx{layerid = LayerId} = Ctx) when LayerId =/= undefined ->
+	{['GET', 'HEAD'], Req, Ctx};
+
+allowed_methods(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 	{['GET', 'PUT', 'HEAD'], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
@@ -80,6 +85,14 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 			{not Out, Req, Ctx#ctx{map = Map}}
 	end.
 
+resource_exists(Req, #ctx{layerid = LayerId} = Ctx) when LayerId =/= undefined ->
+	#ctx{mapid = MapId} = Ctx,
+	case rpgb_data:search(rpgb_rec_layer, [{battlemap_id, MapId},{id,LayerId}]) of
+		{ok, []} ->
+			{false, Req, Ctx};
+		_ ->
+			{true, Req, Ctx}
+	end;
 resource_exists(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 	case cowboy_http_req:method(Req) of
 		{'PUT', Req2} ->
@@ -101,7 +114,7 @@ delete_resource(Req, Ctx) ->
 	if
 		User#rpgb_rec_user.id =/= Combatant#rpgb_rec_combatant.owner_id ->
 			{ok, Req2} = cowboy_http_req:set_resp_body(<<"only owner can delete">>, Req),
-			{ok, Req3} = cowboy_http_req:reply(400, Req2),
+			{ok, Req3} = cowboy_http_req:reply(403, Req2),
 			{halt, Req3, Ctx};
 		true ->
 			{ok, Map2} = delete_combatant(Combatant, Map),
@@ -119,6 +132,13 @@ content_types_accepted(Req, Ctx) ->
 		{{<<"application">>, <<"json">>, []}, from_json}
 	],
 	{Types, Req, Ctx}.
+
+to_json(Req, #ctx{layerid = LayerId} = Ctx) when LayerId =/= undefined ->
+	#ctx{map = Map} = Ctx,
+	Combatants = get_combatants(Map#rpgb_rec_battlemap.first_combatant_id),
+	LayerCombatants = [Combatant || #rpgb_rec_combatant{layer_id = Lid} = Combatant <- Combatants, Lid == LayerId],
+	Json = [make_json(Req, Ctx, Combatant) || Combatant <- LayerCombatants],
+	{jsx:to_json(Json), Req, Ctx};
 
 to_json(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 	#ctx{map = Map} = Ctx,
@@ -253,7 +273,8 @@ validate_combatant(Json, InitRec) ->
 		fun check_blank_name/1,
 		fun validate_json/1,
 		fun check_next_combatant_id/1,
-		fun check_next_combatant_self/1
+		fun check_next_combatant_self/1,
+		fun check_valid_layer/1
 	],
 	rpgb:bind({Json, InitRec}, ValidateFuns).
 
@@ -270,6 +291,17 @@ scrub_disallowed(Json, [Key | Tail] = Nopes) ->
 			scrub_disallowed(Json, Tail);
 		Json2 ->
 			scrub_disallowed(Json2, Nopes)
+	end.
+
+check_valid_layer({_Json, #rpgb_rec_combatant{layer_id = undefined}} = In) ->
+	{ok, In};
+check_valid_layer({Json, Rec} = In) ->
+	#rpgb_rec_combatant{layer_id = LayerId, battlemap_id = MapId} = Rec,
+	case rpgb_data:search(rpgb_rec_layer, [{id, LayerId}, {battlemap_id, MapId}]) of
+		{ok, []} ->
+			{error, 422, <<"no such layer">>};
+		{ok, Layers} when length(Layers) >= 1 ->
+			{ok, In}
 	end.
 
 check_named_combatant({Json, Rec} = In) ->
