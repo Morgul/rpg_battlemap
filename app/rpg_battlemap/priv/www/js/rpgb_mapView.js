@@ -98,9 +98,14 @@ RPGB.MapView = Ember.View.extend({
 
 	clicked:function(ev){
 		console.log('twas clicked', ev);
-		var x = ev.offsetX;
-		var y = ev.offsetY;
-		console.log('continaing', this.containingCell(x,y), 'nearest', this.nearestCell(x,y));
+		var xy = this.containingCell(ev.offsetX, ev.offsetY);
+		//var x = ev.offsetX;
+		//var y = ev.offsetY;
+		//console.log('contianing', this.containingCell(x,y), 'nearest', this.nearestCell(x,y));
+		this.set('content.clickedCell.x', xy[0]);
+		this.set('content.clickedCell.y', xy[1]);
+		this.set('content.nearestCell.x', xy[0]);
+		this.set('content.nearestCell.y', xy[1]);
 		return false;
 	},
 

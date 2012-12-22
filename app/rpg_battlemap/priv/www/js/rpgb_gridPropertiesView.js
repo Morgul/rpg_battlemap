@@ -1,6 +1,7 @@
 Ember.TEMPLATES['gridSettings'] = Ember.Handlebars.compile(
-'<h3 {{ action "toggleShowProperties" }}>Grid</h3>' +
-'<span {{ bindStyle display="showProperties"}} class="toolbarDropdown">' +
+'<div class="btn-group">' +
+'<a class="btn dropdown-toggle" data-toggle="dropdown" href="#">Grid<span class="caret"></span></a>' +
+'<div class="dropdown-menu">' +
 
 	'<p>' +
 		'<label>Grid Lines</label>' +
@@ -23,7 +24,8 @@ Ember.TEMPLATES['gridSettings'] = Ember.Handlebars.compile(
 			'{{ action "backgroundColorChange" on="change" }}/>' +
 	'</p>' +
 
-'</span>');
+'</div>' +
+'</div>');
 
 RPGB.GridPropertiesView = Ember.View.extend({
 	templateName: 'gridSettings',

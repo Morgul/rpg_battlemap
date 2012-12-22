@@ -3,11 +3,12 @@
 {% block title %} - {{ map.name }} {% endblock %}
 
 {% block page_style %}
-<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />
+<!--<link type="text/css" href="/contrib/css/smoothness/jquery-ui.css" rel="stylesheet" />-->
+<link type="text/css" href="/contrib/bootstrap/css/bootstrap.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
 
-<div id="toolbar"></div>
+<nav id="toolbar" class="btn-toolbar"></nav>
 
 <script type="text/x-handlebars" data-template-name="map">
 <svg
@@ -50,16 +51,18 @@
 <script type="text/javascript" src="/contrib/bullet.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
 <script type="text/javascript" src="/contrib/ember.js"></script>-->
-<script type="text/javascript" src="/contrib/jquery-ui-1.9pre.js"></script>
+<!--<script type="text/javascript" src="/contrib/jquery-ui-1.9pre.js"></script>-->
+<script type="text/javascript" src="/contrib/bootstrap/js/bootstrap.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.0.beta.6.js"></script>
 <script type="text/javascript" src="/contrib/ember-1.0.pre.js"></script>
 <!--<script type="text/javascript" src="/contrib/ember.prod.js"></script>-->
 <script type="text/javascript" src="/js/bind_extensions.js"></script>
-<script type="text/javascript" src="/contrib/jquery-ember-bridge.js"></script>
+<!--<script type="text/javascript" src="/contrib/jquery-ember-bridge.js"></script>-->
 <script type="text/javascript" src="/js/rpgb_core.js"></script>
 <script type="text/javascript" src="/js/rpgb_gridPropertiesView.js"></script>
 <script type="text/javascript" src="/js/rpgb_mapView.js"></script>
 <script type="text/javascript" src="/js/rpgb_layer_views.js"></script>
+<script type="text/javascript" src="/js/rpgb_combatant_views.js"></script>
 <script id="mapJson" type="application/json">
 {{ map_json }}
 </script>
@@ -69,7 +72,16 @@
 * code that does stuff
 ***/
 
-RPGB.mapController = RPGB.RestObject.create({});
+RPGB.mapController = RPGB.RestObject.create({
+	clickedCell: Ember.Object.create({
+		x: null,
+		y: null
+	}),
+	nearestCell: Ember.Object.create({
+		x: null,
+		y: null
+	})
+});
 RPGB.layerController = Ember.ArrayController.create({
 	content: [],
 
@@ -195,6 +207,79 @@ RPGB.layerController = Ember.ArrayController.create({
 		});
 	}
 });
+RPGB.combatantController = Ember.ArrayController.create({
+	content: [],
+
+	_selectedCombatant: null,
+	selected: function(key, value){
+		if(arguments.length == 1){
+			return this.objectAt(this._selectedCombatant);
+		}
+
+		this._selectedCombatant = this.indexOf(value);
+		this.forEach(function(item){
+			item.set('selected', false);
+		});
+		value.set('selected', true);
+	}.property('content.@each.selected').cacheable(false),
+
+	createCombatant: function(combatantArgs){
+		var combatantsUrl = this.get('map.combatants_url');
+		$.ajax(combatants_url, {
+			'contentType':'application/json',
+			'context':this,
+			'data':JSON.stringify(combatantArgs),
+			'type':'put',
+			'success': function(newCombatant){
+				var combatantObj = RPGB.RestObject.create(newCombatant);
+				this.insertCombatant(combatantObj);
+			}
+		});
+	},
+
+	insertCombatant: function(combatantObj){
+		if(! combatantObj.get('next_combatant_id')){
+			this.pushObject(combatantObj);
+			return;
+		}
+
+		var insertBefore = 0;
+		var nextId = combatantObj.get('next_combatant_id');
+		var findCb = function(item, index){
+			if(item.get('id') == nextId){
+				insertBefore = index;
+				return true;
+			}
+			return false;
+		}
+		var found = this.find(findCb);
+		if(found == null){
+			this.reloadCombatants();
+			return;
+		}
+		this.insertAt(insertBefore, combatantObj);
+		return;
+	},
+
+	deleteSelectedCombatant: function(){
+		this.deleteCombatant(this.get('selected'));
+	},
+
+	deleteCombatant: function(combatantObj){
+		var url = combatantObj.get('url');
+		$.ajax(url, {
+			'type':'delete',
+			'context': this,
+			'success': function(){
+				this.removeObject(combatantObj);
+			}
+		});
+	},
+
+	reloadCombatants: function(){
+		console.log('oh crap');
+	}
+});
 
 var mapJson = JSON.parse($('#mapJson').text());
 var prop;
@@ -216,8 +301,23 @@ mapJson.layers.map(function(layerData){
 	RPGB.layerController.pushObject(layerObj);
 	layerObj.unlockCommits();
 });
+mapJson.combatants.map(function(combatantData){
+	var combatantObj = RPGB.RestObject.create({});
+	combatantObj.lockCommits();
+	combatantObj.set('map', RPGB.mapController);
+	var combatantProp;
+	combatantObj.set('url', mapJson.combatants_url + '/' + combatantData.id);
+	for(combatantProp in combatantData){
+		combatantObj.set(combatantProp, combatantData[combatantProp]);
+		combatantObj.addRestfulProperty(combatantProp);
+	}
+	RPGB.combatantController.pushObject(combatantObj);
+	combatantObj.unlockCommits();
+})
 RPGB.mapController.set('layers', RPGB.layerController);
+RPGB.mapController.set('combatants', RPGB.combatantController);
 RPGB.layerController.set('map', RPGB.mapController);
+RPGB.combatantController.set('map', RPGB.mapController);
 RPGB.mapController.unlockCommits();
 
 RPGB.currentGridView = RPGB.GridPropertiesView.create({
@@ -232,8 +332,13 @@ RPGB.layersToolbar = RPGB.LayerListView.create({
 	content: RPGB.layerController
 });
 
+RPGB.combatantsToolbar = RPGB.CombatantListView.create({
+	content: RPGB.combatantController
+});
+
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
+RPGB.combatantsToolbar.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');
 
 </script>

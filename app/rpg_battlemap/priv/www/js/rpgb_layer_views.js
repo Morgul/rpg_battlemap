@@ -1,6 +1,10 @@
 Ember.TEMPLATES['layerList'] = Ember.Handlebars.compile(
-'<h3 {{ action "toggleShowLayers" }}>Layers</h3>' +
-'<span {{bindStyle display="showLayers"}} class="toolbarDropdown layerDropDown">' +
+'<div class="btn-group">' +
+	'<a class="btn dropdown-toggle" data-toggle="dropdown" href="#">' +
+		'Layers' +
+		'<span class="caret"></span>' +
+	'</a>' +
+'<div class="dropdown-menu">' +
 
 '{{#each content.topToBottom}}' +
 	'{{view RPGB.LayerListItemView tagName="p" class="layerItem"}}' +
@@ -14,7 +18,8 @@ Ember.TEMPLATES['layerList'] = Ember.Handlebars.compile(
 	'<button {{action "deleteSelectedLayer" target="content"}}>Delete Selected</button>' +
 '</p>' +
 
-'</span>');
+'</div>' +
+'</div>');
 
 
 Ember.TEMPLATES['layerListItem'] = Ember.Handlebars.compile(
@@ -87,6 +92,10 @@ RPGB.LayerListItemView = Ember.View.extend({
 RPGB.LayerNameField = Ember.TextField.extend({
 	change: function(evt){
 		this.set('newName', evt.target.value);
+		return false;
+	},
+
+	click: function(){
 		return false;
 	}
 });
