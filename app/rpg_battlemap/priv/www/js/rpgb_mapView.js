@@ -92,7 +92,7 @@ RPGB.MapView = Ember.View.extend({
 	windowResized: function(){
 		var headerHeight = $('#head').height();
 		var toolbarHeight = $('#tools').height();
-		var guessHeight = window.innerHeight - (headerHeight + toolbarHeight + 28 + 20 + 20);
+		var guessHeight = window.innerHeight - (headerHeight + toolbarHeight + 28 + 20 + 20 + 20);
 		this.set('viewHeight', guessHeight + 'px');
 	},
 

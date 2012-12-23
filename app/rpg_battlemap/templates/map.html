@@ -209,6 +209,11 @@ RPGB.layerController = Ember.ArrayController.create({
 });
 RPGB.combatantController = Ember.ArrayController.create({
 	content: [],
+	newCombatant: Ember.Object.create({
+		name: 'Fight Man',
+		aura_size: 0,
+		aura_color: 'white'
+	}),
 
 	_selectedCombatant: null,
 	selected: function(key, value){
