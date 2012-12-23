@@ -1,3 +1,12 @@
+Ember.TEMPLATES['mapTool'] = Ember.Handlebars.compile(
+	'{{ content.currentTool }}'
+);
+
+RPGB.MapToolView = Ember.View.extend({
+	templateName: 'mapTool',
+	classNames: ['pull-right', 'label']
+});
+
 RPGB.MapView = Ember.View.extend({
 	templateName: 'map',
 	content: null,
@@ -45,6 +54,7 @@ RPGB.MapView = Ember.View.extend({
 		});
 		this.$().mousemove(function(ev){
 			if(thisRef.get('panning')){
+				thisRef._suppressNextClick = true;
 				var deltaX = ev.pageX - dragData.lastX;
 				var deltaY = ev.pageY - dragData.lastY;
 				dragData.lastX = ev.pageX;
@@ -97,15 +107,25 @@ RPGB.MapView = Ember.View.extend({
 	},
 
 	clicked:function(ev){
-		console.log('twas clicked', ev);
+		if(this._suppressNextClick){
+			this._suppressNextClick = false;
+			return false;
+		}
+		//console.log('twas clicked', ev);
 		var xy = this.containingCell(ev.offsetX, ev.offsetY);
 		//var x = ev.offsetX;
 		//var y = ev.offsetY;
 		//console.log('contianing', this.containingCell(x,y), 'nearest', this.nearestCell(x,y));
-		this.set('content.clickedCell.x', xy[0]);
+		var xyObj = Ember.Object.create({
+			x: xy[0],
+			y: xy[1]
+		});
+		this.set('content.clickedCell', xyObj);
+		this.set('content.nearestCell', xyObj);
+		/*this.set('content.clickedCell.x', xy[0]);
 		this.set('content.clickedCell.y', xy[1]);
 		this.set('content.nearestCell.x', xy[0]);
-		this.set('content.nearestCell.y', xy[1]);
+		this.set('content.nearestCell.y', xy[1]);*/
 		return false;
 	},
 

@@ -11,7 +11,7 @@ Ember.TEMPLATES['combatantList'] = Ember.Handlebars.compile(
 		'{{/each}}' +
 
 		'<p>' +
-			'<a href="#" role="button" class="btn" data-target="#newCombatantDialog" data-toggle="modal">New...</a>' +
+			'<a href="#" role="button" class="btn" data-target="#newCombatantDialog" data-toggle="modal" {{action "activateAddCombatantTool" }}>New...</a>' +
 		'</p>' +
 
 	'</div>' +
@@ -128,13 +128,28 @@ RPGB.CombatantListView = Ember.View.extend({
 		this.set('content.selected', combatantObj);
 	},
 
-	showCreateCombatant: function(){
-		console.log('show create combatant');
+	activateAddCombatantTool: function(){
+		this.set('content.map.currentTool', 'addCombatant');
 	}
 });
 
 RPGB.CombatantCreateView = Ember.View.extend({
 	templateName: 'combatantCreateView',
+
+	createCombatantAt: function(){
+		if(this._creationEnabled){
+			console.log('creation enabled!');
+		}
+	}.observes('context.content.map.clickedCell'),
+
+	setCreation: function(){
+		var activeTool = this.get('context.content.map.currentTool');
+		if(activeTool == 'addCombatant'){
+			this._creationEnabled = true;
+			return;
+		}
+		this._creationEnabled = false;
+	}.observes('context.content.map.currentTool'),
 
 	auraSizeChange: function(ev){
 		this.set('context.content.newCombatant.aura_size', parseInt(ev.target.value));
@@ -149,6 +164,7 @@ RPGB.CombatantCreateView = Ember.View.extend({
 	},
 
 	sizeChange: function(ev){
+		window.gu = this;
 		this.set('context.content.newCombatant.size', parseInt(ev.target.value));
 	},
 

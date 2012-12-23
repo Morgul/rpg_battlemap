@@ -73,14 +73,9 @@
 ***/
 
 RPGB.mapController = RPGB.RestObject.create({
-	clickedCell: Ember.Object.create({
-		x: null,
-		y: null
-	}),
-	nearestCell: Ember.Object.create({
-		x: null,
-		y: null
-	})
+	clickedCell: null,
+	nearestCell: null,
+	currentTool: ''
 });
 RPGB.layerController = Ember.ArrayController.create({
 	content: [],
@@ -341,6 +336,11 @@ RPGB.combatantsToolbar = RPGB.CombatantListView.create({
 	content: RPGB.combatantController
 });
 
+RPGB.currentToolDisplay = RPGB.MapToolView.create({
+	content: RPGB.mapController
+});
+
+RPGB.currentToolDisplay.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
 RPGB.combatantsToolbar.appendTo('#toolbar');
