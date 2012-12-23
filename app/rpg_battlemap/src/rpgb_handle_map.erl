@@ -120,7 +120,9 @@ to_html(Req, Ctx) ->
 	User = rpgb_session:get_user(Ctx#ctx.session),
 	LayerUrl = make_location(Req, Ctx, Ctx#ctx.map),
 	LayerUrl2 = <<LayerUrl/binary, "/layers">>,
-	Json2 = [{layers_url, LayerUrl2} | Json],
+	CombatantUrl = make_location(Req, Ctx, Ctx#ctx.map),
+	CombatantUrl2 = <<CombatantUrl/binary, "/combatants">>,
+	Json2 = [{combatants_url, CombatantUrl2}, {layers_url, LayerUrl2} | Json],
 	PatternHelper = [begin
 		[{x, Row * 32}, {y, Col * 32}]
 	end || Row <- lists:seq(0, 15), Col <- lists:seq(0, 15)],
