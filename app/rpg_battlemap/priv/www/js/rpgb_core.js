@@ -1,5 +1,8 @@
 var RPGB = Ember.Application.create({ });
 
+RPGB.CELL_SIZE = 32;
+RPGB.CELL_HALF_SIZE = 16;
+
 /****************************************************
 * A base object to build auto commiting objects upon.
 ****************************************************/

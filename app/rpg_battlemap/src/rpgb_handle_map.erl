@@ -214,7 +214,7 @@ get_combatants(undefined, Acc) ->
 	lists:reverse(Acc);
 get_combatants(Id, Acc) ->
 	{ok, Combatant} = rpgb_data:get_by_id(rpgb_rec_combatant, Id),
-	get_combatants(Combatant#rpgb_rec_combatant.id, [Combatant | Acc]).
+	get_combatants(Combatant#rpgb_rec_combatant.next_combatant_id, [Combatant | Acc]).
 
 validate_map(Json, InitMap) ->
 	ValidateFuns = [

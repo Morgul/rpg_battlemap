@@ -130,20 +130,22 @@ RPGB.MapView = Ember.View.extend({
 	},
 
 	pixelsToCell: function(x,y){
-		var outx = x * 32;
-		var outy = y * 32;
+		var outx = x * RPGB.CELL_SIZE;
+		var outy = y * RPGB.CELL_SIZE;
 		return [outx,outy];
 	},
 
 	containingCell: function(x,y){
-		var cellX = Math.floor((x - this.get('panX')) / (this.get('zoom') * 32));
-		var cellY = Math.floor((y - this.get('panY')) / (this.get('zoom') * 32));
+		var cell = RPGB.CELL_SIZE;
+		var cellX = Math.floor((x - this.get('panX')) / (this.get('zoom') * cell));
+		var cellY = Math.floor((y - this.get('panY')) / (this.get('zoom') * cell));
 		return [cellX,cellY];
 	},
 
 	nearestCell: function(x,y){
-		var cellX = Math.round((x - this.get('panX')) / (this.get('zoom') * 32));
-		var cellY = Math.round((y - this.get('panY')) / (this.get('zoom') * 32));
+		var cell = RPGB.CELL_SIZE;
+		var cellX = Math.round((x - this.get('panX')) / (this.get('zoom') * cell));
+		var cellY = Math.round((y - this.get('panY')) / (this.get('zoom') * cell));
 		return [cellX,cellY];
 	}
 

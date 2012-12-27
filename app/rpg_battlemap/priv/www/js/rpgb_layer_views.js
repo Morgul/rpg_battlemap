@@ -27,7 +27,11 @@ Ember.TEMPLATES['layerListItem'] = Ember.Handlebars.compile(
 	'{{ name }}'
 );
 
-Ember.TEMPLATES['layerSVG'] = Ember.Handlebars.compile('');
+Ember.TEMPLATES['layerSVG'] = Ember.Handlebars.compile(
+'{{#each view.context.combatants}}' +
+	'{{view RPGB.CombatantItemSVGView }}' +
+'{{/each}}'
+);
 
 RPGB.LayerListView = Ember.View.extend({
 	templateName: 'layerList',
@@ -65,8 +69,9 @@ RPGB.LayerListItemView = Ember.View.extend({
 	//content: null,
 
 	// event handlers
-	click: function(){
+	click: function(ev){
 		this.set('parentView.content.selected', this.get('context'));
+		//ev.stopPropagation();
 		return false;
 	},
 

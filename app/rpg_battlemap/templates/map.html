@@ -209,6 +209,7 @@ RPGB.combatantController = Ember.ArrayController.create({
 		aura_size: 0,
 		aura_color: 'white'
 	}),
+	nameStash: {},
 
 	_selectedCombatant: null,
 	selected: function(key, value){
@@ -225,7 +226,7 @@ RPGB.combatantController = Ember.ArrayController.create({
 
 	createCombatant: function(combatantArgs){
 		var combatantsUrl = this.get('map.combatants_url');
-		$.ajax(combatants_url, {
+		$.ajax(combatantsUrl, {
 			'contentType':'application/json',
 			'context':this,
 			'data':JSON.stringify(combatantArgs),
@@ -233,6 +234,7 @@ RPGB.combatantController = Ember.ArrayController.create({
 			'success': function(newCombatant){
 				var combatantObj = RPGB.RestObject.create(newCombatant);
 				this.insertCombatant(combatantObj);
+				this.buildNameStash();
 			}
 		});
 	},
@@ -272,12 +274,43 @@ RPGB.combatantController = Ember.ArrayController.create({
 			'context': this,
 			'success': function(){
 				this.removeObject(combatantObj);
+				this.buildNameStash();
 			}
 		});
 	},
 
 	reloadCombatants: function(){
 		console.log('oh crap');
+	},
+
+	buildNameStash: function(){
+		this.nameStash = {};
+		var thisRef = this;
+		var regEx = /(.*) (\d+)$/;
+		this.forEach(function(item){
+			var name = item.get('name');
+			var match = name.match(regEx);
+			if(match == null){
+				if(thisRef.nameStash[name]){
+					thisRef.nameStash[name] += 1;
+					return;
+				}
+				thisRef.nameStash[name] = 1;
+				return;
+			}
+			var nameNum = parseInt(match[2]);
+			var name = match[1];
+			if(thisRef.nameStash[name] < nameNum){
+				thisRef.nameStash[name] = nameNum;
+			}
+		});
+	},
+
+	nextName: function(name){
+		if(this.nameStash[name]){
+			return name + ' ' + (this.nameStash[name] + 1);
+		}
+		return name
 	}
 });
 
@@ -289,7 +322,14 @@ for(prop in mapJson){
 	RPGB.mapController.addRestfulProperty(prop);
 }
 mapJson.layers.map(function(layerData){
-	var layerObj = RPGB.RestObject.create({});
+	var layerObj = RPGB.RestObject.create({
+		combatants: function(){
+			var thisId = this.get('id');
+			return this.get('map.combatants').filter(function(item){
+				return item.get('layer_id') == thisId;
+			});
+		}.property('map.combatants.@each.layer_id')
+	});
 	layerObj.lockCommits();
 	layerObj.set('map', RPGB.mapController);
 	var layerProp;
@@ -311,6 +351,10 @@ mapJson.combatants.map(function(combatantData){
 		combatantObj.set(combatantProp, combatantData[combatantProp]);
 		combatantObj.addRestfulProperty(combatantProp);
 	}
+	combatantObj.addRestfulProperty('next_combatant_id');
+	combatantObj.addRestfulProperty('layer_id');
+	// TODO remove this once debugging/dev is done.
+	combatantObj.addRestfulProperty('token_image');
 	RPGB.combatantController.pushObject(combatantObj);
 	combatantObj.unlockCommits();
 })
@@ -336,6 +380,10 @@ RPGB.combatantsToolbar = RPGB.CombatantListView.create({
 	content: RPGB.combatantController
 });
 
+RPGB.selectedCombatantToolbar = RPGB.CombatantDropDown.create({
+	content: RPGB.combatantController
+});
+
 RPGB.currentToolDisplay = RPGB.MapToolView.create({
 	content: RPGB.mapController
 });
@@ -344,6 +392,7 @@ RPGB.currentToolDisplay.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
 RPGB.combatantsToolbar.appendTo('#toolbar');
+RPGB.selectedCombatantToolbar.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');
 
 </script>
