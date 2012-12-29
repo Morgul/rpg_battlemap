@@ -17407,6 +17407,31 @@ Ember.ViewState = Ember.State.extend(
       return range;
     };
 
+    makeFragment = function(range, html){
+      var fragment;
+      try {
+        fragment = range.createContextualFragment(html);
+      } catch (err) {
+        // some node types, like those in svg, can't do above
+        var namespace = range.startContainer.namespaceURI;
+        var nodes;
+        var domParser = new DOMParser();
+        switch(namespace){
+          case 'http://www.w3.org/2000/svg':
+            var mime = 'image/svg+xml';
+            html = '<svg xmlns="' + namespace + '">' + html + '</svg>';
+            var docFrag = domParser.parseFromString(html, mime);
+            var length = docFrag.childNodes[0].childNodes.length;
+            fragment = document.createDocumentFragment('');
+            for(var i = 0; i < length; i++){
+              fragment.appendChild(docFrag.childNodes[0].firstChild);
+            }
+            break;
+        }
+      }
+      return fragment;
+    };
+
     htmlFunc = function(html, outerToo) {
       // get a range for the current metamorph object
       var range = rangeFor(this, outerToo);
@@ -17416,7 +17441,13 @@ Ember.ViewState = Ember.State.extend(
       range.deleteContents();
 
       // create a new document fragment for the HTML
-      var fragment = range.createContextualFragment(html);
+      /*try {
+        var fragment = range.createContextualFragment(html);
+      } catch (err) {
+        // let's try creating the nodes directly, neh?
+        var fragment = document.createDocumentFragment(html);
+      }*/
+      var fragment = makeFragment(range, html);
 
       // insert the fragment into the range
       range.insertNode(fragment);
@@ -17435,7 +17466,8 @@ Ember.ViewState = Ember.State.extend(
       var range = document.createRange();
       range.setStart(node);
       range.collapse(false);
-      var frag = range.createContextualFragment(this.outerHTML());
+      //var frag = range.createContextualFragment(this.outerHTML());
+      var frag = makeFragment(range, this.outerHTML());
       node.appendChild(frag);
     };
 
@@ -17446,7 +17478,8 @@ Ember.ViewState = Ember.State.extend(
       range.setStartAfter(after);
       range.setEndAfter(after);
 
-      var fragment = range.createContextualFragment(html);
+      //var fragment = range.createContextualFragment(html);
+      var fragment = makeFragment(range, html);
       range.insertNode(fragment);
     };
 
@@ -17457,7 +17490,8 @@ Ember.ViewState = Ember.State.extend(
       range.setStartAfter(start);
       range.setEndAfter(start);
 
-      var fragment = range.createContextualFragment(html);
+      //var fragment = range.createContextualFragment(html);
+      var fragment = makeFragment(range, html);
       range.insertNode(fragment);
     };
 

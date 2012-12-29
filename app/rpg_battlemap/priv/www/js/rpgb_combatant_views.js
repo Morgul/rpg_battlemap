@@ -163,7 +163,7 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 			'{{bindAttr y="view.cellYCorner"}} ' +
 			'{{bindAttr width="view.size"}} ' +
 			'{{bindAttr height="view.size"}} ' +
-		'xlink:href="" />' +
+		'data-xlink-href="" />' +
 		'<mask>' +
 			'<circle ' +
 				'{{bindAttr cx="view.cellXCenter"}} ' +
@@ -172,8 +172,8 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 				'fill="white" />' +
 		'</mask>' +
 	'</defs>' +
-	'<use xlink:href="circle" />' +
-	'<use xlink:href="image" mask="mask" />'
+	'<use data-xlink-href="circle"></use>' +
+	'<use data-xlink-href="image" mask="mask"></use>'
 );
 
 RPGB.CombatantListView = Ember.View.extend({
@@ -261,7 +261,7 @@ RPGB.CombatantDropDown = Ember.View.extend({
 	},
 
 	didInsertElement: function(){
-		this.$('input').on('click', function(ev){
+		this.$('input, selected').on('click', function(ev){
 			ev.stopPropagation();
 		});
 	},
@@ -329,9 +329,9 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 	_fixUseElements: function(){
 		var thisRef = this;
 		this.$('use').each(function(index, elem){
-			var targetElem = $(elem).attr('xlink:href');
+			var targetElem = $(elem).attr('data-xlink-href');
 			var corrected = '#' + thisRef._elemId(targetElem);
-			$(elem).attr('xlink:href', corrected);
+			$(elem)[0].setAttributeNS('http://www.w3.org/1999/xlink', 'href', corrected);
 			if($(elem).attr('mask')){
 				$(elem).attr('mask', 'url(#' + thisRef._elemId('mask') + ')');
 			}
@@ -343,7 +343,7 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		if(! tokenImage){
 			tokenImage = "";
 		}
-		this.$('defs image').attr('xlink:href', tokenImage);
+		this.$('defs image')[0].setAttributeNS('http://www.w3.org/1999/xlink', 'href', tokenImage);
 	},
 
 	circleId: function(){
