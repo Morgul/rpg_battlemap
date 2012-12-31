@@ -57,3 +57,11 @@ img.avatar {
 	width: 5em;
 	height: 7em;
 }
+
+.dropdown-menu p {
+	overflow: hidden;
+}
+
+/*.dropdown-menu input {
+	width: 100%;
+}*/

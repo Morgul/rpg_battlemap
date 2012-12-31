@@ -2,9 +2,57 @@ Ember.TEMPLATES['mapTool'] = Ember.Handlebars.compile(
 	'{{ content.currentTool }}'
 );
 
+Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
+	'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="view"}}>Move Combatant</button>' +
+	'<button class="btn btn-mini" {{ action setToolToAddCombatant target="view" }}>Add Combatant</button>'
+);
+
 RPGB.MapToolView = Ember.View.extend({
 	templateName: 'mapTool',
 	classNames: ['pull-right', 'label']
+});
+
+RPGB.MapToolbar = Ember.View.extend({
+	templateName: 'mapToolBar',
+	classNames: ['pull-right', 'btn-group'],
+
+	didInsertElement: function(){
+		window.gu = this;
+		this.$().attr('data-toggle', 'buttons-radio');
+	},
+
+	clickedCellChanged: function(){
+		var currentTool = this.get('content.currentTool');
+		if(this[currentTool]){
+			var clickedCell = this.get('content.clickedCell');
+			this[currentTool](clickedCell);
+			return;
+		}
+		console.log('no action taken for tool ', currentTool, clickedCell);
+	}.observes('content.clickedCell'),
+
+	combatantSelected: function(){
+		if(this.get('content.combatants.selected')){
+			return 'inline-block';
+		}
+		return 'none';
+	}.property('content.combatants.selected'),
+
+	setToolToMoveCombatant: function(ev){
+		this.set('content.currentTool', 'moveCombatant');
+	},
+
+	setToolToAddCombatant: function(ev){
+		this.set('content.currentTool', 'addCombatant');
+	},
+
+	moveCombatant: function(cell){
+		var combatant = this.get('content.combatants.selected');
+		if(! combatant){
+			return;
+		}
+		combatant.setProperties({'x':cell.x, 'y':cell.y});
+	}
 });
 
 RPGB.MapView = Ember.View.extend({

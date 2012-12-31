@@ -158,7 +158,20 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 			'{{bindAttr cx="view.cellXCenter"}} ' +
 			'{{bindAttr cy="view.cellYCenter"}} ' +
 			'{{ bindAttr r="view.radius" }} ' +
-			'{{ bindAttr fill="view.context.color"}} />' +
+			'{{ bindAttr fill="view.context.color"}} ' +
+			'{{ bindAttr stroke-opacity="view.isSelectedAsOpacity" }} ' +
+			'stroke="blue" ' +
+			'stroke-width="3" ' +
+			'stroke-dasharray="20 5" ' +
+		'>' +
+			'<animate attributeName="stroke-dashoffset" ' +
+				'attributeType="XML" ' +
+				'dur="15s" ' +
+				'from="0%" ' +
+				'to="100%" ' +
+				'repeatCount="indefinite">' +
+			'</animate>' +
+		'</circle>' +
 		'<image {{bindAttr x="view.cellXCorner"}} ' +
 			'{{bindAttr y="view.cellYCorner"}} ' +
 			'{{bindAttr width="view.size"}} ' +
@@ -257,7 +270,6 @@ RPGB.CombatantDropDown = Ember.View.extend({
 
 	init: function(){
 		this._super();
-		window.gu = this;
 	},
 
 	didInsertElement: function(){
@@ -306,7 +318,6 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 	tagName: 'g',
 
 	init: function(){
-		window.gu = this;
 		this._super();
 	},
 
@@ -314,12 +325,18 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		this.$('defs circle').attr('id', this._elemId('circle'));
 		this.$('defs image').attr('id', this._elemId('image'));
 		this.$('defs mask').attr('id', this._elemId('mask'));
+
 		var thisRef = this;
 		this.get('context').addObserver('token_image', function(){
 			thisRef._fixImageElement();
 		});
 		this._fixImageElement();
 		this._fixUseElements();
+
+		this.$().attr('pointer-events', 'visiblePainted');
+		this.$().click(function(){
+			thisRef.click();
+		});
 	},
 
 	_elemId: function(base){
@@ -344,6 +361,11 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 			tokenImage = "";
 		}
 		this.$('defs image')[0].setAttributeNS('http://www.w3.org/1999/xlink', 'href', tokenImage);
+	},
+
+	click: function(){
+		console.log('combatant clicked');
+		this.set('context.map.combatants.selected', this.get('context'));
 	},
 
 	circleId: function(){
@@ -384,5 +406,12 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 
 	size: function(){
 		return this.get('context.size') * RPGB.CELL_SIZE;
-	}.property('context.size')
+	}.property('context.size'),
+
+	isSelectedAsOpacity: function(){
+		if(this.get('context.selected')){
+			return 1;
+		}
+		return 0;
+	}.property('context.selected')
 });

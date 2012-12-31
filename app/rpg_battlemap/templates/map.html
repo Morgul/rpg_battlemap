@@ -384,11 +384,16 @@ RPGB.selectedCombatantToolbar = RPGB.CombatantDropDown.create({
 	content: RPGB.combatantController
 });
 
+RPGB.mapToolbar = RPGB.MapToolbar.create({
+	content: RPGB.mapController
+});
+
 RPGB.currentToolDisplay = RPGB.MapToolView.create({
 	content: RPGB.mapController
 });
 
 RPGB.currentToolDisplay.appendTo('#toolbar');
+RPGB.mapToolbar.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
 RPGB.combatantsToolbar.appendTo('#toolbar');
