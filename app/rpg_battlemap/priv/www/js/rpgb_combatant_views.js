@@ -196,7 +196,27 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 		'stroke-width="5px" ' +
 	'></circle>' +
 	'{{/if}}' +
-	'<use data-xlink-href="circle" {{action "setSelected" }}></use>' +
+/*	'{{#if hasGhost}}' +
+		'{{#if view.hasAura }}' +
+			'<circle ' +
+				'{{ bindAttr cx="view.ghostCellXCenter"}} ' +
+				'{{ bindAttr cy="view.ghostCellYCenter"}} ' +
+				'{{ bindAttr r="view.auraRadius"}} ' +
+				'fill-opacity="0" ' +
+				'stroke-width="5px" ' +
+				'stroke="gray" ' +
+			'></circle>' +
+		'{{/if}}' +
+		'<circle ' +
+			'{{ bindAttr cx="view.ghostCellXCenter"}} ' +
+			'{{ bindAttr cy="view.ghostCellYCenter"}} ' +
+			'{{ bindAttr r="view.radius"}} ' +
+			'fill-opacity="0" ' +
+			'stroke="gray" ' +
+			'stroke-width="5px" ' +
+		'></circle>' +
+	'{{/if}}' +*/
+	'<use data-xlink-href="circle" {{action "setSelected" }} draggable="true"></use>' +
 	'<use data-xlink-href="image" mask="mask" style="display:inline;"></use>'
 );
 
@@ -346,13 +366,13 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 
 		var circleUse = this.$('use[mask]')[0];
 		circleUse.setAttribute('pointer-events', 'visiblePainted');
-		$(circleUse).click(function(){
-			thisRef.setSelected();
+		$(circleUse).mousedown(function(ev){
+			thisRef.setSelected(ev);
 		});
-		/*this.$().attr('pointer-events', 'visiblePainted');
-		this.$().click(function(){
-			thisRef.click();
-		});*/
+
+		$(circleUse).on('dragstart', function(){
+			console.log('drag start!');
+		});
 	},
 
 	_elemId: function(base){
@@ -391,9 +411,11 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		}, 1);
 	}.observes('context.x', 'context.y'),
 
-	setSelected: function(){
+	setSelected: function(ev){
 		console.log('combatant clicked');
 		this.set('context.map.combatants.selected', this.get('context'));
+		ev.stopPropagation();
+		return false;
 	},
 
 	circleId: function(){
