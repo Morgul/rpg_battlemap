@@ -196,7 +196,7 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 		'stroke-width="5px" ' +
 	'></circle>' +
 	'{{/if}}' +
-	'<use data-xlink-href="circle"></use>' +
+	'<use data-xlink-href="circle" {{action "setSelected" }}></use>' +
 	'<use data-xlink-href="image" mask="mask" style="display:inline;"></use>'
 );
 
@@ -344,10 +344,15 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		this._fixImageElement();
 		this._fixUseElements();
 
-		this.$().attr('pointer-events', 'visiblePainted');
+		var circleUse = this.$('use[mask]')[0];
+		circleUse.setAttribute('pointer-events', 'visiblePainted');
+		$(circleUse).click(function(){
+			thisRef.setSelected();
+		});
+		/*this.$().attr('pointer-events', 'visiblePainted');
 		this.$().click(function(){
 			thisRef.click();
-		});
+		});*/
 	},
 
 	_elemId: function(base){
@@ -386,7 +391,7 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		}, 1);
 	}.observes('context.x', 'context.y'),
 
-	click: function(){
+	setSelected: function(){
 		console.log('combatant clicked');
 		this.set('context.map.combatants.selected', this.get('context'));
 	},
