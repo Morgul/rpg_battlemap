@@ -185,8 +185,19 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 				'fill="white" />' +
 		'</mask>' +
 	'</defs>' +
+	'{{#if view.hasAura }}' +
+	'<circle ' +
+		'{{ bindAttr cx="view.cellXCenter"}} ' +
+		'{{ bindAttr cy="view.cellYCenter"}} ' +
+		'{{ bindAttr r="view.auraRadius" }} ' +
+		'{{ bindAttr fill="view.context.aura_color"}} ' +
+		'fill-opacity="0.2" ' +
+		'{{ bindAttr stroke="view.context.aura_color"}} ' +
+		'stroke-width="5px" ' +
+	'></circle>' +
+	'{{/if}}' +
 	'<use data-xlink-href="circle"></use>' +
-	'<use data-xlink-href="image" mask="mask"></use>'
+	'<use data-xlink-href="image" mask="mask" style="display:inline;"></use>'
 );
 
 RPGB.CombatantListView = Ember.View.extend({
@@ -363,6 +374,18 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 		this.$('defs image')[0].setAttributeNS('http://www.w3.org/1999/xlink', 'href', tokenImage);
 	},
 
+	_moveCombatantImageFix: function(){
+		var use = this.$('use[mask]')[0];
+		var hideIt = function(){ use.style.display = "none"; };
+		var showIt = function(){ use.style.display = "inline"; };
+		setTimeout(function(){
+			hideIt();
+			setTimeout(function(){
+				showIt();
+			}, 1);
+		}, 1);
+	}.observes('context.x', 'context.y'),
+
 	click: function(){
 		console.log('combatant clicked');
 		this.set('context.map.combatants.selected', this.get('context'));
@@ -371,6 +394,17 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 	circleId: function(){
 		return 'base-circle-' + this.$().attr('id');
 	},
+
+	hasAura: function(){
+		var auraSize = this.get('context.aura_size');
+		return auraSize > 0;
+	}.property('context.aura_size'),
+
+	auraRadius: function(){
+		var auraSize = this.get('context.aura_size');
+		var combatantSize = this.get('context.size');
+		return (auraSize * RPGB.CELL_SIZE) + (combatantSize * RPGB.CELL_HALF_SIZE);
+	}.property('context.size', 'context.aura_size'),
 
 	radius: function(){
 		var size = this.get('context.size');
