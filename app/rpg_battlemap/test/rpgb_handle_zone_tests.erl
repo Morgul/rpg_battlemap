@@ -4,8 +4,11 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("rpg_battlemap.hrl").
 
--define(zone_url, "http://localhost:9098/map/" ++ integer_to_list(?mapid) ++ "/layers/" ++ integer_to_list(?layerid)).
+-define(zone_aura_url(Mode), "http://localhost:9098/map/" ++ integer_to_list(?mapid) ++ "/layers/" ++ integer_to_list(?layerid) ++ "/" ++ Mode).
+-define(zone_url, ?zone_aura_url("zones")).
 -define(zone_url(ZoneId), if is_integer(ZoneId) -> ?zone_url ++ "/" ++ integer_to_list(ZoneId); true -> binary_to_list(proplists:get_value(<<"url">>, ZoneId)) end).
+-define(aura_url, ?zone_aura_url("auras")).
+-define(aura_url(AuraId), if is_integer(AuraId) -> ?aura_url ++ "/" ++ integer_to_list(AuraId); true -> binary_to_list(proplists:get_value(<<"url">>, AuraId)) end).
 -define(mapid, 9000).
 -define(layerid, 3000).
 -define(accepts, {"Accept", "application/json"}).
@@ -276,6 +279,7 @@ create_zone(Zone, Name, Next, State) ->
 	Json = [{<<"next_zone_id">>, NextZoneId} | Zone],
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
+	?debugMsg(?zone_url),
 	ibrowse:send_req(?zone_url, [owner_cookie(), ?accepts, ?contenttype], put, jsx:to_json(Json3)).
 
 delete_zone(Nth, State) ->
@@ -335,8 +339,15 @@ get_next(Nth, List) ->
 	ZoneAura = lists:nth(Nth, List),
 	proplists:get_value(<<"id">>, ZoneAura).
 
+purge_undef([{}]) ->
+	[{}];
 purge_undef(Json) ->
-	[KV || {_, Value} = KV <- Json, Value =/= undefined].
+	case [KV || {_, Value} = KV <- Json, Value =/= undefined] of
+		[] ->
+			[{}];
+		Out ->
+			Out
+	end.
 
 decode_res({ok, _, _, Body}) ->
 	jsx:to_term(list_to_binary(Body)).
