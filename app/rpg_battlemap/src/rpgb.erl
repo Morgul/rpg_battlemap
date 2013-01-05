@@ -12,6 +12,8 @@
 -export([now_to_timestamp/1]).
 -export([refresh_templates/1]).
 -export([bind/2]).
+-export([splice/3,splice/4]).
+-export([snip/2]).
 
 res_init(Term) ->
 	case get_env(trace) of
@@ -169,6 +171,28 @@ bind(Arg, [Fun | Tail]) ->
 			Else
 	end.
 
+splice(List, Start, Delete) ->
+	splice(List, Start, Delete, []).
+
+splice(List, Start, Delete, Inserts) when is_integer(Start), is_integer(Delete), 
+		is_list(List), is_list(Inserts), Delete >= 0, Delete + Start - 1 =< length(List),
+		Start >= 1, Delete >= 0 ->
+	{Head, Tail} = lists:split(Start - 1, List),
+	Nommed = delete_n(Tail, Delete),
+	Head ++ Inserts ++ Nommed.
+
+delete_n(List, 0) ->
+	List;
+delete_n([_ | List], N) when is_integer(N), N > 0 ->
+	delete_n(List, N - 1).
+
+snip(_Nth, []) ->
+	erlang:error(badarg);
+
+snip(Nth, List) when is_integer(Nth), is_list(List), 1 =< Nth, Nth =< length(List) ->
+	{Head, [_ | Tail]} = lists:split(Nth - 1, List),
+	Head ++ Tail.
+
 -ifdef(TEST).
 
 bind_test_() -> [
@@ -198,32 +222,20 @@ bind_test_() -> [
 		?assertEqual({error, b}, bind(a, [F1, F2, F3]))
 	end}].
 
+splice_test_() -> [
+	?_assertEqual([1], splice([], 1, 0, [1])),
+	?_assertEqual([], splice([1], 1, 1, [])),
+	?_assertEqual([1,2,3], splice([1,3], 2, 0, [2])),
+	?_assertEqual([1,3], splice([1,2,3], 2, 1, [])),
+	?_assertEqual([1,a,3], splice([1,2,3], 2, 1, [a])),
+	?_assertEqual([1,2,3,4,5,6,7,8,9], splice([1,2,3,7,8,9], 4, 0, [4,5,6]))
+].
+
+snip_test_() -> [
+	?_assertEqual([], snip(1, "a")),
+	?_assertEqual("ac", snip(2, "abc")),
+	?_assertEqual("ab", snip(3, "abc"))
+].
+
+
 -endif.
-%is_string(List) ->
-%	lists:any(fun is_not_printable/1, List).
-%
-%is_printable(X) when is_integer(X) ->
-%	if
-%		X < 0 -> false;
-%		X > 255 -> false;
-%		true -> true
-%	end;
-%is_printable(_X) ->
-%	false.
-%
-%is_not_printable(X) ->
-%	not is_printable(X).
-%
-%to_json(Props) ->
-%	to_json(Props, [deep, skip]).
-%
-%to_json(Props, Options) ->
-%	to_json(Props, Options, []).
-%
-%to_json([], _Options, Acc) ->
-%	{struct, Acc};
-%
-%to_json(Tuple, Options) when is_tuple(Tuple), is_atom(element(1, Tuple)) ->
-%	if
-%		not erlang:function_exported(element(1), id, 1) and proplists:get_value(skip, Options) ->
-%			to_json(

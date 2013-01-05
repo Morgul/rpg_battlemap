@@ -36,15 +36,6 @@ browser_test_() -> {setup, fun() ->
 	end,
 	fun(_) -> [
 
-		{"splice", [
-			?_assertEqual([1], splice([], 1, 0, [1])),
-			?_assertEqual([], splice([1], 1, 1, [])),
-			?_assertEqual([1,2,3], splice([1,3], 2, 0, [2])),
-			?_assertEqual([1,3], splice([1,2,3], 2, 1, [])),
-			?_assertEqual([1,a,3], splice([1,2,3], 2, 1, [a])),
-			?_assertEqual([1,2,3,4,5,6,7,8,9], splice([1,2,3,7,8,9], 4, 0, [4,5,6]))
-		]},
-
 		{"statem", timeout, 60000, fun() ->
 			?assert(proper:quickcheck(?MODULE:prop_map_statem()))
 		end}
@@ -182,15 +173,15 @@ next_state(State, Res, {call, _, create_batch, [Put, Next, _Creator, Count, _S]}
 		Atom when is_atom(Atom) ->
 			State ++ Calls;
 		_ ->
-			splice(State, Next, 0, Calls)
+			rpgb:splice(State, Next, 0, Calls)
 	end;
 
 next_state(State, Res, {call, _, update, [_Put, Nth, null, _Layer, _Creator, _S]}) ->
-	State2 = snip(Nth, State),
+	State2 = rpgb:snip(Nth, State),
 	State2 ++ [{call, ?MODULE, decode_res, [Res]}];
 
 next_state(State, Res, {call, _, update, [_Put, Nth, undefined, _Layer, _Creator, _S]}) ->
-	splice(State, Nth, 1, [{call, ?MODULE, decode_res, [Res]}]);
+	rpgb:splice(State, Nth, 1, [{call, ?MODULE, decode_res, [Res]}]);
 
 next_state(State, Res, {call, _, update, [_Put, Nth, Next, _Layer, _Creator, _S]}) when Nth < Next ->
 	{Sacrifice, Tail} = lists:split(Next - 1, State),
@@ -203,10 +194,10 @@ next_state(State, Res, {call, _, update, [_Put, Nth, Next, _Layer, _Creator, _S]
 	Head ++ [{call, ?MODULE, decode_res, [Res]}] ++ Mid ++ Tail;
 
 next_state(State, Res, {call, _, get_a_combatant, [_Who, Nth, _State]}) ->
-	splice(State, Nth, 1, [{call, ?MODULE, decode_res, [Res]}]);
+	rpgb:splice(State, Nth, 1, [{call, ?MODULE, decode_res, [Res]}]);
 
 next_state(State, Res, {call, _, delete, [Nth, _State]}) ->
-	snip(Nth, State);
+	rpgb:snip(Nth, State);
 
 next_state(State, _Result, _Call) ->
 	State.
@@ -581,22 +572,6 @@ assert_batch([], []) ->
 assert_batch([E | ETail], [G | GTail]) ->
 	?assert(rpgb_test_util:match_keys(lists:sort(E), lists:sort(G))),
 	assert_batch(ETail, GTail).
-
-snip(Nth, List) ->
-	{Head, [_ | Tail]} = lists:split(Nth - 1, List),
-	Head ++ Tail.
-
-splice(List, Start, Delete, Inserts) when is_integer(Start), is_integer(Delete),
-		is_list(List), is_list(Inserts), Delete >= 0, Delete + Start - 1 =< length(List),
-		Start >= 1, Delete >= 0 ->
-	{Head, Tail} = lists:split(Start - 1, List),
-	Nommed = delete_n(Tail, Delete),
-	Head ++ Inserts ++ Nommed.
-
-delete_n(List, 0) ->
-	List;
-delete_n([_ | List], N) when is_integer(N), N > 0 ->
-	delete_n(List, N - 1).
 
 insert_at(Insert, At, List) when is_atom(At) ->
 	List ++ [Insert];
