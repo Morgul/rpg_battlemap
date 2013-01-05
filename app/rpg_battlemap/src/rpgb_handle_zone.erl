@@ -4,6 +4,8 @@
 
 get_routes() ->
 	[
-		[<<"zone">>],
-		[<<"zone">>, zoneid]
+		[<<"map">>, mapid, <<"layers">>, layerid, <<"auras">>],
+		[<<"map">>, mapid, <<"layers">>, layerid, <<"auras">>, zoneid],
+		[<<"map">>, mapid, <<"layers">>, layerid, <<"zoness">>],
+		[<<"map">>, mapid, <<"layers">>, layerid, <<"zones">>, zoneid]
 	].

@@ -1,6 +1,7 @@
 % Define the data structures used throughout the app.
 
 -type(time() :: {pos_integer(), non_neg_integer(), non_neg_integer()} | 'undefined').
+-type(keyval() :: {binary(), any()}).
 
 -record(rpgb_rec_user, {
 	id :: 'undefined' | pos_integer(),
@@ -45,6 +46,8 @@
   name :: binary(),
   battlemap_id :: pos_integer(),
   next_layer_id :: pos_integer(),
+  first_zone_id :: pos_integer(),
+  first_aura_id :: pos_integer(),
   created :: time(),
   updated :: time()
 }).
@@ -52,16 +55,16 @@
 -record(rpgb_rec_zone, {
 	id :: 'undefined' | pos_integer(),
 	name :: binary(),
+	type = 'zone' :: 'zone' | 'aura',
 	layer_id :: pos_integer(),
-	layer = ground :: 'sky' | 'ground',
-	z_index = 1 :: pos_integer(),
-	rotation = 'none' :: 'none' | 'ccw' | 'cw' | 'about',
+	next_zone_id :: pos_integer(),
+	rotation :: float(),
+	stroke_color = <<"black">> :: binary(),
 	stroke_width = 5 :: non_neg_integer(),
-	stroke_opacity = 1 :: 'float',
-	stoke_color = <<"black">> :: binary(),
+	stroke_opacity = 1 :: float(),
 	fill_color = <<"green">> :: binary(),
-	stroke_mode = gappy :: 'gappy' | 'solid',
-	path = <<>> :: binary(),
+	element_type = 'rect' :: 'rect' | 'circle' | 'ellipse' | 'line' | 'polyline' | 'polygon' | 'path',
+	element_attrs = [] :: [keyval()],
 	created :: time(),
 	updated :: time()
 }).
