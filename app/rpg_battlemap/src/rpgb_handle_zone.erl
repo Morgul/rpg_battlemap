@@ -126,12 +126,17 @@ resource_exists(Req, #ctx{rec = undefined} = Ctx) ->
 resource_exists(Req, Ctx) ->
 	{true, Req, Ctx}.
 
+delete_resource(Req, #ctx{rec = undefined} = Ctx) ->
+	{false, Req, Ctx};
 delete_resource(Req, Ctx) ->
-	{false, Req, Ctx}.
+	Rec = Ctx#ctx.rec,
+	rpgb_data:delete(Rec),
+	delete_zone(Ctx#ctx.layer, Rec),
+	{true, Req, Ctx}.
 
 content_types_provided(Req, Ctx) ->
 	Types = [
-		{{<<"applicatoin">>, <<"json">>, []}, to_json}
+		{{<<"application">>, <<"json">>, []}, to_json}
 	],
 	{Types, Req, Ctx}.
 
@@ -141,9 +146,37 @@ content_types_accepted(Req, Ctx) ->
 	],
 	{Types, Req, Ctx}.
 
-to_json(Req, Ctx) ->
-	{<<"nope">>, Req, Ctx}.
+to_json(Req, #ctx{rec = undefined} = Ctx) ->
+	{<<"nope">>, Req, Ctx};
 
+to_json(Req, #ctx{rec = Rec} = Ctx) ->
+	Json = make_json(Req, Ctx),
+	{jsx:to_json(Json), Req, Ctx}.
+
+from_json(Req, #ctx{rec = undefined} = Ctx) ->
+	#ctx{map = Map, layer = Layer, mode = Mode} = Ctx,
+	InitialZone = #rpgb_rec_zone{
+		id = undefined, name = <<>>, layer_id = Layer#rpgb_rec_layer.id,
+		type = Mode, created = os:timestamp(), updated = os:timestamp()
+	},
+	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	Term = jsx:to_term(Body),
+	case validate_zone(Term, InitialZone) of
+		{ok, {_Json, Rec}} ->
+			{ok, Rec2} = rpgb_data:save(Rec),
+			{Layer2, Rec3} = insert_zone(Layer, Rec2),
+			Ctx2 = Ctx#ctx{layer = Layer2, rec = Rec3},
+			Location = make_location(Req1, Ctx2),
+			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+			{OutBody, Req3, Ctx3} = to_json(Req2, Ctx2),
+			{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+			{true, Req4, Ctx3};
+		{error, Status, ErrBody} ->
+			ErrBody2 = jsx:to_json(ErrBody),
+			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			{halt, Req3, Ctx}
+	end;
 from_json(Req, Ctx) ->
 	{false, Req, Ctx}.
 
@@ -160,3 +193,140 @@ generate_etag(Req, #ctx{rec = Rec} = Ctx) ->
 	Md5 = crypto:md5(Bin2),
 	Etag = rpgb_util:bin_to_hexstr(Md5),
 	{{weak, list_to_binary(Etag)}, Req, Ctx}.
+
+make_location(Req, Ctx) ->
+	#ctx{hostport = {Host, Port}, map = Map, layer = Layer, rec = Rec, mode = Mode} = Ctx,
+	ModeList = atom_to_list(Mode),
+	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Map#rpgb_rec_battlemap.id),
+		"layers", integer_to_list(Layer#rpgb_rec_layer.id), ModeList ++ "s",
+		integer_to_list(Rec#rpgb_rec_zone.id)]).
+
+validate_zone(Json, InitialZone) ->
+	ValidateFuns = [
+		fun rpgb_validation:scrub_disallowed/1,
+		fun scrub_disallowed/1,
+		fun rpgb_validation:check_blank_name/1,
+		fun check_name_conflict/1,
+		fun validate_json_warnings/1,
+		fun check_named_zone/1,
+		fun check_next_zone_id/1
+	],
+	rpgb:bind({Json, InitialZone}, ValidateFuns).
+
+scrub_disallowed({[{}], _Zone} = In) ->
+	{ok, In};
+scrub_disallowed({Json, Zone}) ->
+	Disallowed = [<<"type">>],
+	Json2 = [KV || {Key, _Value} = KV <- Json, not lists:member(Key, Disallowed)],
+	{ok, {Json2, Zone}}.
+
+check_name_conflict({Json, Zone} = In) ->
+	case proplists:get_value(<<"name">>, Json) of
+		undefined ->
+			{ok, In};
+		Name ->
+			#rpgb_rec_zone{type = Mode, layer_id = LayerId} = Zone,
+			case rpgb_data:search(rpgb_rec_zone, [{type, Mode}, {layer_id, LayerId}, {name, Name}]) of
+				{ok, []} ->
+					{ok, In};
+				_ ->
+					{error, 409, <<"Name is already used on that layer">>}
+			end
+	end.
+
+validate_json_warnings({Json, Zone}) ->
+	case Zone:from_json(Json, [null_is_undefined]) of
+		{ok, Zone2} ->
+			{ok, {Json, Zone2}};
+		{ok, Zone2, Warnings} ->
+			case validate_warnings(Zone2, Warnings) of
+				{ok, Zone3} ->
+					{ok, {Json, Zone3}};
+				Warnings2 ->
+					{error, 422, iolist_to_binary(io_lib:format("There were errors in the submitted json: ~p", [Warnings2]))}
+			end;
+		{_, Else} ->
+			{error, 422, iolist_to_binary(io_lib:format("There were errors in the submitted json: ~p", [Else]))}
+	end.
+
+validate_warnings(Zone, Warnings) ->
+	validate_warnings(Zone, Warnings, []).
+
+validate_warnings(Zone, [], []) ->
+	{ok, Zone};
+validate_warnings(Zone, [], Acc) ->
+	lists:reverse(Acc);
+validate_warnings(Zone, [fill_color | Tail], Acc) ->
+	case rpgb_validation:is_valid_color(Zone#rpgb_rec_zone.fill_color) of
+		true ->
+			validate_warnings(Zone, Tail, Acc);
+		false ->
+			validate_warnings(Zone, Tail, [fill_color | Acc])
+	end;
+validate_warnings(Zone, [stroke_color | Tail], Acc) ->
+	case rpgb_validation:is_valid_color(Zone#rpgb_rec_zone.stroke_color) of
+		true ->
+			validate_warnings(Zone, Tail, Acc);
+		false ->
+			validate_warnings(Zone, Tail, [stroke_color| Acc])
+	end.
+
+check_named_zone({Json, #rpgb_rec_zone{name = undefined}}) ->
+	{error, 422, <<"name cannot be blank">>};
+check_named_zone(In) ->
+	{ok, In}.
+
+check_next_zone_id({_Json, #rpgb_rec_zone{next_zone_id = undefined}} = In) ->
+	{ok, In};
+check_next_zone_id({_Json, #rpgb_rec_zone{id = In, next_zone_id = In}}) ->
+	{error, 422, <<"zone cannot point to itself as the next in list">>};
+check_next_zone_id({_Json, Zone} = In) ->
+	#rpgb_rec_zone{next_zone_id = NextId, type = Mode, layer_id = Layer} = Zone,
+	case rpgb_data:search(rpgb_rec_zone, [{id, NextId}, {type, Mode}, {layer_id, Layer}]) of
+		{ok, []} ->
+			{error, 422, <<"Next zone indicated doesn't exist">>};
+		{ok, _} ->
+			{ok, In}
+	end.
+
+insert_zone(#rpgb_rec_layer{first_zone_id = undefined} = Layer, #rpgb_rec_zone{type = zone} = Zone) ->
+	Layer2 = Layer#rpgb_rec_layer{first_zone_id = Zone#rpgb_rec_zone.id},
+	{ok, Layer3} = rpgb_data:save(Layer2),
+	{Layer3, Zone};
+insert_zone(#rpgb_rec_layer{first_aura_id = undefined} = Layer, #rpgb_rec_zone{type = aura} = Zone) ->
+	Layer2 = Layer#rpgb_rec_layer{first_aura_id = Zone#rpgb_rec_zone.id},
+	{ok, Layer3} = rpgb_data:save(Layer2),
+	{Layer3, Zone};
+insert_zone(#rpgb_rec_layer{first_zone_id = FirstId} = Layer, #rpgb_rec_zone{type = zone, next_zone_id = FirstId} = Zone) ->
+	insert_zone(Layer#rpgb_rec_layer{first_zone_id = undefined}, Zone);
+insert_zone(#rpgb_rec_layer{first_aura_id = FirstId} = Layer, #rpgb_rec_zone{type = aura, next_zone_id = FirstId} = Zone) ->
+	insert_zone(Layer#rpgb_rec_layer{first_aura_id = undefined}, Zone);
+insert_zone(Layer, Zone) ->
+	#rpgb_rec_zone{type = Type, layer_id = LayerId, next_zone_id = NextId} = Zone,
+	{ok, Updates} = rpgb_data:search(rpgb_rec_zone, [{type, Type}, {layer_id, LayerId}, {next_zone_id, NextId}]),
+	[Update | _] = [Z || Z <- Updates, Z#rpgb_rec_zone.id =/= Zone#rpgb_rec_zone.id],
+	Update2 = Update#rpgb_rec_zone{next_zone_id = Zone#rpgb_rec_zone.id},
+	{ok, _} = rpgb_data:save(Update2),
+	{Layer, Zone}.
+
+delete_zone(#rpgb_rec_layer{first_aura_id = Id} = Layer, #rpgb_rec_zone{type = aura, id = Id} = Rec) ->
+	Layer2 = Layer#rpgb_rec_layer{first_aura_id = Rec#rpgb_rec_zone.next_zone_id},
+	rpgb_data:save(Layer2);
+delete_zone(#rpgb_rec_layer{first_zone_id = Id} = Layer, #rpgb_rec_zone{type = zone, id = Id} = Rec) ->
+	Layer2 = Layer#rpgb_rec_layer{first_zone_id = Rec#rpgb_rec_zone.next_zone_id},
+	rpgb_data:save(Layer2);
+delete_zone(_Layer, Rec) ->
+	#rpgb_rec_zone{type = Mode, layer_id = Lid, id = Id, next_zone_id = NextId} = Rec,
+	case rpgb_data:search(rpgb_rec_zone, [{type, Mode}, {next_zone_id, Id}, {layer_id, Lid}]) of
+		{ok, []} ->
+			% huh...
+			ok;
+		{ok, [Prev | _]} ->
+			Prev2 = Prev#rpgb_rec_zone{next_zone_id = NextId},
+			rpgb_data:save(Prev2)
+	end.
+
+make_json(Req, Ctx) ->
+	#ctx{hostport = {Host, Port}, rec = Rec} = Ctx,
+	Url = make_location(Req, Ctx),
+	Rec:to_json([{url, Url},type,{null_is_undefined}]).
