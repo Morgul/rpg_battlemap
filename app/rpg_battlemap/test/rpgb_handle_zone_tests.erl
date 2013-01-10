@@ -95,8 +95,8 @@ command(S) ->
 %		{call, ?MODULE, update_zone_bad_user, [g_zone(), g_maybe_layer(), g_maybe_next(zone, S), oneof(['baduser', 'partier1', 'partier2']), S]},
 %		{call, ?MODULE, update_aura_bad_user, [g_zone(), g_maybe_layer(), g_maybe_next(aura, S), oneof(['baduser', 'wrong_partier']), S]},
 %
-%		{call, ?MODULE, delete_aura, [g_existant(S), oneof(['map_owner', 'aura_owner']), S]}
-		{call, ?MODULE, delete_zone, [g_existant(zone, S), S]}
+		{call, ?MODULE, delete_zone, [g_existant(zone, S), S]},
+		{call, ?MODULE, delete_aura, [g_existant(aura, S), oneof(['owner', 'partier1', 'partier2']), S]}
 	]).
 
 g_next(zone, #state{zones = []}) ->
@@ -259,6 +259,8 @@ precondition(S, {call, _, create_aura, _}) ->
 	true;
 precondition(S, {call, _, delete_zone, [_, #state{zones = Z}]}) when length(Z) >= 1 ->
 	true;
+precondition(S, {call, _, delete_aura, [_, _, #state{auras = A}]}) when length(A) >= 1 ->
+	true;
 precondition(_,_) ->
 	false.
 
@@ -274,6 +276,7 @@ next_state(#state{zones = Zones} = State, Res, {call, _, create_zone, [_Put, _Na
 			rpgb:splice(Zones, Next, 0, [{call, ?MODULE, decode_res, [Res]}])
 	end,
 	State#state{zones = Zones2};
+
 next_state(#state{auras = Auras} = State, Res, {call, _, create_aura, [_Put, _Name, Next, _Putter, _S]}) ->
 	Auras2 = if
 		is_atom(Next) ->
@@ -282,8 +285,13 @@ next_state(#state{auras = Auras} = State, Res, {call, _, create_aura, [_Put, _Na
 			rpgb:splice(Auras, Next, 0, [{call, ?MODULE, decode_res, [Res]}])
 	end,
 	State#state{auras = Auras2};
+
 next_state(#state{zones = Zones} = State, Res, {call, _, delete_zone, [Nth, _]}) ->
 	State#state{zones = rpgb:snip(Nth, Zones)};
+
+next_state(#state{auras = Auras} = State, Res, {call, _, delete_aura, [Nth, _, _]}) ->
+	State#state{auras = rpgb:snip(Nth, Auras)};
+
 next_state(State, _Res, _Call) ->
 	State.
 
@@ -314,6 +322,12 @@ delete_zone(Nth, State) ->
 	Url = proplists:get_value(<<"url">>, Zone),
 	ibrowse:send_req(binary_to_list(Url), [owner_cookie(), ?accepts, ?contenttype], delete, []).
 
+delete_aura(Nth, Deleter, State) ->
+	#state{auras = Auras} = State,
+	Aura = lists:nth(Nth, Auras),
+	Url = proplists:get_value(<<"url">>, Aura),
+	Cookie = cookie(Deleter),
+	ibrowse:send_req(binary_to_list(Url), [Cookie, ?accepts, ?contenttype], delete, []).
 %% =======================================================
 %% postcondition
 %% =======================================================
@@ -337,6 +351,9 @@ postcondition(State, {call, _, create_aura, [Put, Name, Next, Who, _]}, {ok, "20
 	true;
 
 postcondition(State, {call, _, delete_zone, _}, {ok, "204", _, _}) ->
+	true;
+
+postcondition(State, {call, _, delete_aura, _}, {ok, "204", _, _}) ->
 	true;
 
 postcondition(S, C, R) ->
