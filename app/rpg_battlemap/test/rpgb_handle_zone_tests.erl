@@ -77,7 +77,7 @@ initial_state() ->
 command(S) ->
 	oneof([
 		{call, ?MODULE, create_zone, [g_zone(), rpgb_prop:g_name(), g_next(zone, S), S]},
-%		{call, ?MODULE, create_aura, [g_aura(), g_name(), g_layer(), g_next(aura, S), oneof(['owner', 'partier1', 'partier2']), S]},
+		{call, ?MODULE, create_aura, [g_aura(), rpgb_prop:g_name(), g_next(aura, S), oneof(['owner', 'partier1', 'partier2']), S]},
 %
 %		{call, ?MODULE, create_zone_bad_user, [g_zone(), g_name(), g_layer(), g_next(zone, S), oneof(['partier1', partier2, baduser]), S]},
 %		{call, ?MODULE, create_aura_bad_user, [g_aura(), g_name(), g_layer(), g_next(aura, S), S]},
@@ -105,7 +105,7 @@ g_next(zone, #state{zones = Zones}) ->
 	oneof([undefined, null, g_existant(Zones)]);
 g_next(aura, #state{auras = []}) ->
 	null;
-g_next(arua, #state{auras = Auras}) ->
+g_next(aura, #state{auras = Auras}) ->
 	oneof([undefined, null, g_existant(Auras)]).
 
 g_existant([]) ->
@@ -255,6 +255,8 @@ g_point() ->
 
 precondition(S, {call, _, create_zone, _}) ->
 	true;
+precondition(S, {call, _, create_aura, _}) ->
+	true;
 precondition(S, {call, _, delete_zone, [_, #state{zones = Z}]}) when length(Z) >= 1 ->
 	true;
 precondition(_,_) ->
@@ -272,6 +274,14 @@ next_state(#state{zones = Zones} = State, Res, {call, _, create_zone, [_Put, _Na
 			rpgb:splice(Zones, Next, 0, [{call, ?MODULE, decode_res, [Res]}])
 	end,
 	State#state{zones = Zones2};
+next_state(#state{auras = Auras} = State, Res, {call, _, create_aura, [_Put, _Name, Next, _Putter, _S]}) ->
+	Auras2 = if
+		is_atom(Next) ->
+			Auras ++ [{call, ?MODULE, decode_res, [Res]}];
+		true ->
+			rpgb:splice(Auras, Next, 0, [{call, ?MODULE, decode_res, [Res]}])
+	end,
+	State#state{auras = Auras2};
 next_state(#state{zones = Zones} = State, Res, {call, _, delete_zone, [Nth, _]}) ->
 	State#state{zones = rpgb:snip(Nth, Zones)};
 next_state(State, _Res, _Call) ->
@@ -289,6 +299,15 @@ create_zone(Zone, Name, Next, State) ->
 	Json3 = purge_undef(Json2),
 	ibrowse:send_req(?zone_url, [owner_cookie(), ?accepts, ?contenttype], put, jsx:to_json(Json3)).
 
+create_aura(Aura, Name, Next, Who, State) ->
+	#state{auras = Auras} = State,
+	NextZoneId = get_next(Next, Auras),
+	Json = [{<<"next_zone_id">>, NextZoneId} | Aura],
+	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
+	Json3 = purge_undef(Json2),
+	Cookie = cookie(Who),
+	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Json3)).
+
 delete_zone(Nth, State) ->
 	#state{zones = Zones} = State,
 	Zone = lists:nth(Nth, Zones),
@@ -302,6 +321,15 @@ delete_zone(Nth, State) ->
 postcondition(State, {call, _, create_zone, [Put, Name, Next, _]}, {ok, "201", _, Body}) ->
 	#state{zones = Zones} = State,
 	NextZoneId = get_next(Next, Zones),
+	Json = [{<<"next_zone_id">>, NextZoneId} | Put],
+	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
+	Json3 = purge_undef(Json2),
+	?assert(rpgb_test_util:assert_body(Json3, Body)),
+	true;
+
+postcondition(State, {call, _, create_aura, [Put, Name, Next, Who, _]}, {ok, "201", _, Body}) ->
+	#state{auras = Auras} = State,
+	NextZoneId = get_next(Next, Auras),
 	Json = [{<<"next_zone_id">>, NextZoneId} | Put],
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
