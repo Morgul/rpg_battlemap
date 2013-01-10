@@ -83,7 +83,7 @@ command(S) ->
 %		{call, ?MODULE, create_aura_bad_user, [g_aura(), g_name(), g_layer(), g_next(aura, S), S]},
 %
 		{call, ?MODULE, get_zones, [oneof(['owner', 'partier1', 'partier2'])]},
-%		{call, ?MODULE, get_auras, [g_layer(), oneof(['owner', 'partier1', 'partier2'])]},
+		{call, ?MODULE, get_auras, [oneof(['owner', 'partier1', 'partier2'])]},
 %		{call, ?MODULE, get_a_zone, [g_zone(S), oneof(['owner', 'partier1', 'partier2']), S]},
 %		{call, ?MODULE, get_an_aura, [g_aura(S), oneof(['owner', 'partier1', 'partier2']), S]},
 %
@@ -253,18 +253,19 @@ g_point() ->
 %% preconditions
 %% =======================================================
 
-precondition(S, {call, _, create_zone, _}) ->
-	true;
-precondition(S, {call, _, create_aura, _}) ->
-	true;
-precondition(S, {call, _, delete_zone, [_, #state{zones = Z}]}) when length(Z) >= 1 ->
-	true;
-precondition(S, {call, _, delete_aura, [_, _, #state{auras = A}]}) when length(A) >= 1 ->
-	true;
-precondition(S, {call, _, get_zones, _}) ->
-	true;
-precondition(_,_) ->
-	false.
+precondition(S, {call, _, Call, _}) ->
+	Needs = [
+		{zones, [delete_zone]},
+		{auras, [delete_aura]}
+	],
+	IsNeeds = [N || {N, List} <- Needs, lists:member(Call, List)],
+	case IsNeeds of
+		[] -> true;
+		[zones] ->
+			length(S#state.zones) > 0;
+		[auras] ->
+			length(S#state.auras) > 0
+	end.
 
 %% =======================================================
 %% next_state
@@ -322,6 +323,10 @@ get_zones(Who) ->
 	Cookie = cookie(Who),
 	ibrowse:send_req(?zone_url, [Cookie, ?accepts, ?contenttype], get, []).
 
+get_auras(Who) ->
+	Cookie = cookie(Who),
+	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], get, []).
+
 delete_zone(Nth, State) ->
 	#state{zones = Zones} = State,
 	Zone = lists:nth(Nth, Zones),
@@ -358,6 +363,18 @@ postcondition(State, {call, _, create_aura, [Put, Name, Next, Who, _]}, {ok, "20
 
 postcondition(State, {call, _, get_zones, [_Who]}, {ok, "200", _, Body}) ->
 	#state{zones = Zones} = State,
+	Zones2 = fix_next_ids(Zones),
+	Terms = jsx:to_term(list_to_binary(Body)),
+	?assertEqual(length(Zones2), length(Terms)),
+	Pairs = lists:zip(Zones2, Terms),
+	[begin
+		Bin = jsx:to_json(T),
+		?assert(rpgb_test_util:assert_body(Z, Bin))
+	end || {Z, T} <- Pairs],
+	true;
+
+postcondition(State, {call, _, get_auras, [_Who]}, {ok, "200", _, Body}) ->
+	#state{auras = Zones} = State,
 	Zones2 = fix_next_ids(Zones),
 	Terms = jsx:to_term(list_to_binary(Body)),
 	?assertEqual(length(Zones2), length(Terms)),
