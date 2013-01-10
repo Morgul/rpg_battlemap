@@ -102,8 +102,14 @@ forbidden(Req, #ctx{map = notfound} = Ctx) ->
 	{halt, Req2, Ctx};
 forbidden(Req, #ctx{map = Map, session = Session, mode = zone} = Ctx) ->
 	User = rpgb_session:get_user(Session),
-	Allowed = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id,
-	{not Allowed, Req, Ctx};
+	Allowed = case cowboy_http_req:method(Req) of
+		{GetOrHead, Req2} when GetOrHead =:= 'GET' orelse GetOrHead =:= 'HEAD' ->
+			User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
+				lists:member(User#rpgb_rec_user.id, Map#rpgb_rec_battlemap.participant_ids);
+		{_Method, Req2} ->
+			User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id
+	end,
+	{not Allowed, Req2, Ctx};
 forbidden(Req, #ctx{map = Map, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	Allowed = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
@@ -120,7 +126,7 @@ resource_exists(Req, #ctx{rec = undefined} = Ctx) ->
 	case cowboy_http_req:method(Req) of
 		{'PUT', Req2} ->
 			{false, Req2, Ctx};
-		{_, Req2, Ctx} ->
+		{_, Req2} ->
 			{true, Req2, Ctx}
 	end;
 resource_exists(Req, Ctx) ->
@@ -147,7 +153,15 @@ content_types_accepted(Req, Ctx) ->
 	{Types, Req, Ctx}.
 
 to_json(Req, #ctx{rec = undefined} = Ctx) ->
-	{<<"nope">>, Req, Ctx};
+	Layer = Ctx#ctx.layer,
+	Recs = case Ctx#ctx.mode of
+		zone ->
+			get_zones(Layer#rpgb_rec_layer.first_zone_id);
+		aura ->
+			get_zones(Layer#rpgb_rec_layer.first_aura_id)
+	end,
+	Jsons = [make_json(Req, Ctx#ctx{rec = Rec}) || Rec <- Recs],
+	{jsx:to_json(Jsons), Req, Ctx};
 
 to_json(Req, #ctx{rec = Rec} = Ctx) ->
 	Json = make_json(Req, Ctx),
@@ -330,3 +344,17 @@ make_json(Req, Ctx) ->
 	#ctx{hostport = {Host, Port}, rec = Rec} = Ctx,
 	Url = make_location(Req, Ctx),
 	Rec:to_json([{url, Url},type,{null_is_undefined}]).
+
+get_zones(undefined) ->
+	[];
+
+get_zones(SeedId) ->
+	get_zones(SeedId, []).
+
+get_zones(undefined, Acc) ->
+	lists:reverse(Acc);
+
+get_zones(SeedId, Acc) ->
+	{ok, Zone} = rpgb_data:get_by_id(rpgb_rec_zone, SeedId),
+	NextId = Zone#rpgb_rec_zone.next_zone_id,
+	get_zones(NextId, [Zone | Acc]).

@@ -82,7 +82,7 @@ command(S) ->
 %		{call, ?MODULE, create_zone_bad_user, [g_zone(), g_name(), g_layer(), g_next(zone, S), oneof(['partier1', partier2, baduser]), S]},
 %		{call, ?MODULE, create_aura_bad_user, [g_aura(), g_name(), g_layer(), g_next(aura, S), S]},
 %
-%		{call, ?MODULE, get_zones, [g_layer(), oneof(['owner', 'partier1', 'partier2'])]},
+		{call, ?MODULE, get_zones, [oneof(['owner', 'partier1', 'partier2'])]},
 %		{call, ?MODULE, get_auras, [g_layer(), oneof(['owner', 'partier1', 'partier2'])]},
 %		{call, ?MODULE, get_a_zone, [g_zone(S), oneof(['owner', 'partier1', 'partier2']), S]},
 %		{call, ?MODULE, get_an_aura, [g_aura(S), oneof(['owner', 'partier1', 'partier2']), S]},
@@ -261,6 +261,8 @@ precondition(S, {call, _, delete_zone, [_, #state{zones = Z}]}) when length(Z) >
 	true;
 precondition(S, {call, _, delete_aura, [_, _, #state{auras = A}]}) when length(A) >= 1 ->
 	true;
+precondition(S, {call, _, get_zones, _}) ->
+	true;
 precondition(_,_) ->
 	false.
 
@@ -316,6 +318,10 @@ create_aura(Aura, Name, Next, Who, State) ->
 	Cookie = cookie(Who),
 	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Json3)).
 
+get_zones(Who) ->
+	Cookie = cookie(Who),
+	ibrowse:send_req(?zone_url, [Cookie, ?accepts, ?contenttype], get, []).
+
 delete_zone(Nth, State) ->
 	#state{zones = Zones} = State,
 	Zone = lists:nth(Nth, Zones),
@@ -348,6 +354,18 @@ postcondition(State, {call, _, create_aura, [Put, Name, Next, Who, _]}, {ok, "20
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
 	?assert(rpgb_test_util:assert_body(Json3, Body)),
+	true;
+
+postcondition(State, {call, _, get_zones, [_Who]}, {ok, "200", _, Body}) ->
+	#state{zones = Zones} = State,
+	Zones2 = fix_next_ids(Zones),
+	Terms = jsx:to_term(list_to_binary(Body)),
+	?assertEqual(length(Zones2), length(Terms)),
+	Pairs = lists:zip(Zones2, Terms),
+	[begin
+		Bin = jsx:to_json(T),
+		?assert(rpgb_test_util:assert_body(Z, Bin))
+	end || {Z, T} <- Pairs],
 	true;
 
 postcondition(State, {call, _, delete_zone, _}, {ok, "204", _, _}) ->
@@ -403,3 +421,21 @@ purge_undef(Json) ->
 
 decode_res({ok, _, _, Body}) ->
 	jsx:to_term(list_to_binary(Body)).
+
+fix_next_ids([]) ->
+	[];
+
+fix_next_ids(List) ->
+	fix_next_ids(List, []).
+
+fix_next_ids([Elem], Acc) ->
+	Elem2 = [{<<"next_zone_id">>, null} | proplists:delete(<<"next_zone_id">>, Elem)],
+	Acc2 = [Elem2 | Acc],
+	lists:reverse(Acc2);
+
+fix_next_ids([Elem | Tail], Acc) ->
+	[Next | _] = Tail,
+	NextId = proplists:get_value(<<"id">>, Next),
+	Elem2 = [{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Elem)],
+	Acc2 = [Elem2 | Acc],
+	fix_next_ids(Tail, Acc2).
