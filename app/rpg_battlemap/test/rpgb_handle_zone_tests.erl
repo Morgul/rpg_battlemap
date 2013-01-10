@@ -142,7 +142,9 @@ g_zone_aura_field() ->
 		])),
 		ElementFields = g_element_fields(),
 		{BasicFields, ElementFields}
-	end, begin ?debugMsg("++"), rpgb_prop:uniquify(Basic ++ Element) end).
+	end, begin
+		rpgb_prop:uniquify(Basic ++ Element)
+	end).
 
 g_element_fields() ->
 	?LET(Element, oneof(['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path']), g_make_element_attrs(Element)).
@@ -198,7 +200,6 @@ g_point_list() ->
 	?LET({Point1, Points},
 		{g_point(), list(g_point())},
 		begin
-			?debugMsg("++"),
 			list_to_binary([integer_to_list(X) ++ [$,] ++ integer_to_list(Y) ++ " " || {X,Y} <- [Point1 | Points]])
 		end).
 
@@ -213,7 +214,6 @@ g_path_segment_data(ML) when ML =:= $m; ML =:= $M; ML =:= $l; ML =:= $L; ML =:= 
 	?LET(Points,
 		list(g_point()),
 		begin
-			?debugMsg("++"),
 			lists:flatten([ML, $ ] ++ [integer_to_list(X) ++ " " ++ integer_to_list(Y) || {X,Y} <- Points])
 		end);
 g_path_segment_data(Z) when Z =:= $z; Z =:= $Z ->
@@ -221,21 +221,18 @@ g_path_segment_data(Z) when Z =:= $z; Z =:= $Z ->
 g_path_segment_data(HV) when HV =:= $h; HV =:= $H; HV =:= $v; HV =:= $V ->
 	?LET(Moves, list(g_xy()),
 		begin
-			?debugMsg("++"),
 			string:join([[HV]] ++ [integer_to_list(M) || M <- Moves], " ")
 		end);
 g_path_segment_data(C) when C =:= $c; C =:= $C ->
 	?LET(Curves, list({g_point(), g_point(), g_point()}),
 		begin
 			Curves2 = lists:flatten([[A,B,C,D,E,F] || {{A,B},{C,D},{E,F}} <- Curves]),
-			?debugMsg("++"),
 			string:join([[C]] ++ [integer_to_list(C) || C <- Curves2], " ")
 		end);
 g_path_segment_data(S) when S =:= $s; S =:= $S; S =:= $q; S =:= $Q ->
 	?LET(Curves, list({g_point(), g_point()}),
 		begin
 			Curves2 = lists:flatten([[A,B,C,D] || {{A,B},{C,D}} <- Curves]),
-			?debugMsg("++"),
 			string:join([[S]] ++ [integer_to_list(C) || C <- Curves2], " ")
 		end);
 g_path_segment_data(A) when A =:= $a; A =:= $A ->
@@ -243,7 +240,6 @@ g_path_segment_data(A) when A =:= $a; A =:= $A ->
 		begin
 			List = tuple_to_list(Params),
 			List2 = [integer_to_list(N) || N <- List],
-			?debugMsg("++"),
 			string:join([[A]] ++ List2, " ")
 		end).
 
@@ -269,10 +265,8 @@ precondition(_,_) ->
 %% =======================================================
 
 next_state(#state{zones = Zones} = State, Res, {call, _, create_zone, [_Put, _Name, Next, _S]}) ->
-	?debugFmt("TASTE THE FLAMES OF SULFURON! ~p~n~p", [Next, Zones]),
 	Zones2 = if
 		is_atom(Next) ->
-			?debugMsg("++"),
 			Zones ++ [{call, ?MODULE, decode_res, [Res]}];
 		true ->
 			rpgb:splice(Zones, Next, 0, [{call, ?MODULE, decode_res, [Res]}])
@@ -293,7 +287,6 @@ create_zone(Zone, Name, Next, State) ->
 	Json = [{<<"next_zone_id">>, NextZoneId} | Zone],
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
-	%?debugMsg(?zone_url),
 	ibrowse:send_req(?zone_url, [owner_cookie(), ?accepts, ?contenttype], put, jsx:to_json(Json3)).
 
 delete_zone(Nth, State) ->
