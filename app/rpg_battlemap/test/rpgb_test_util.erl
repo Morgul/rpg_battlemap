@@ -201,5 +201,7 @@ match_keys(Remaining, []) ->
 	Remaining;
 match_keys([{Key, Val} | ETail], [{Key, Val} | GTail]) ->
 	match_keys(ETail, GTail);
+match_keys([{Key, Val} | Etail], [{Key, NotVal} | GTail]) ->
+	{badmatch, Key, Val, NotVal, Etail};
 match_keys(Expected, [_Got | Tail]) ->
 	match_keys(Expected, Tail).

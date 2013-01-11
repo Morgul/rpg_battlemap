@@ -23,6 +23,22 @@
 	auras = []
 }).
 
+lists_move_test_() -> [
+	%Nth, Next, Updated, List
+	?_assertEqual([1,2,3,4], lists_move(1, 3, 2, [a,1,3,4])),
+	?_assertEqual([1,2,3,4], lists_move(4, 2, 2, [1,3,4,a])),
+	?_assertEqual([1,2,3,4], lists_move(3, 2, 2, [1,3,a,4])),
+	?_assertEqual([1,2,3,4], lists_move(2, undefined, 2, [1,a,3,4])),
+	?_assertEqual([1,2,3,4], lists_move(2, null, 4, [1,a,2,3]))
+].
+
+proplists_update_test_() -> [
+	?_assertEqual([{key, 2}], proplists_update([{key, 2}], [{key, 1}])),
+	?_assertEqual([{b, new}, {a, 1}], proplists_update([{b, new}], [{a, 1}, {b, 2}])),
+	?_assertEqual([{b, new}, {a, 1}, {c, 3}], proplists_update([{b, new}], [{a, 1}, {b, 2}, {c, 3}])),
+	?_assertEqual([{c, new}, {b, new}, {a, 1}, {d, 4}], proplists_update([{b, new}, {c, new}], [{a, 1}, {b, 2}, {c, 3}, {d, 4}]))
+].
+
 browser_test_() -> {setup, fun() ->
 		rpgb_test_util:web_test_setup(?MODULE)
 	end,
@@ -84,13 +100,13 @@ command(S) ->
 %
 		{call, ?MODULE, get_zones, [oneof(['owner', 'partier1', 'partier2'])]},
 		{call, ?MODULE, get_auras, [oneof(['owner', 'partier1', 'partier2'])]},
-%		{call, ?MODULE, get_a_zone, [g_zone(S), oneof(['owner', 'partier1', 'partier2']), S]},
-%		{call, ?MODULE, get_an_aura, [g_aura(S), oneof(['owner', 'partier1', 'partier2']), S]},
+		{call, ?MODULE, get_a_zone, [g_existant(zone, S), oneof(['owner', 'partier1', 'partier2']), S]},
+		{call, ?MODULE, get_an_aura, [g_existant(aura, S), oneof(['owner', 'partier1', 'partier2']), S]},
 %
 %		{call, ?MODULE, get_bad_user, [g_existant(S), S]},
 %
-%		{call, ?MODULE, update_zone, [g_zone(), g_maybe_layer(), g_maybe_next(zone, S), S]},
-%		{call, ?MODULE, update_aura, [g_aura(), g_maybe_layer(), g_maybe_next(zone, S), S]},
+		{call, ?MODULE, update_zone, [g_zone(), g_existant(zone, S), g_next(zone, S), S]},
+%		{call, ?MODULE, update_aura, [g_aura(), g_existant(zone, S), g_next(aura, S), oneof(['owner', 'partier1', 'partier2']), S]},
 %
 %		{call, ?MODULE, update_zone_bad_user, [g_zone(), g_maybe_layer(), g_maybe_next(zone, S), oneof(['baduser', 'partier1', 'partier2']), S]},
 %		{call, ?MODULE, update_aura_bad_user, [g_zone(), g_maybe_layer(), g_maybe_next(aura, S), oneof(['baduser', 'wrong_partier']), S]},
@@ -253,10 +269,14 @@ g_point() ->
 %% preconditions
 %% =======================================================
 
+precondition(S, {call, _, update_zone, [_Put, Nth, Nth, _S]}) ->
+	false;
+precondition(S, {call, _, update_aura, [_Put, Nth, Nth, _Who, _S]}) ->
+	false;
 precondition(S, {call, _, Call, _}) ->
 	Needs = [
-		{zones, [delete_zone]},
-		{auras, [delete_aura]}
+		{zones, [delete_zone, get_a_zone, update_zone]},
+		{auras, [delete_aura, get_an_aura, update_aura]}
 	],
 	IsNeeds = [N || {N, List} <- Needs, lists:member(Call, List)],
 	case IsNeeds of
@@ -295,8 +315,36 @@ next_state(#state{zones = Zones} = State, Res, {call, _, delete_zone, [Nth, _]})
 next_state(#state{auras = Auras} = State, Res, {call, _, delete_aura, [Nth, _, _]}) ->
 	State#state{auras = rpgb:snip(Nth, Auras)};
 
+next_state(State, Res, {call, _, update_zone, [_Put, Nth, MaybeNext, _S]}) ->
+	Zones = State#state.zones,
+	Updated = {call, ?MODULE, decode_res, [Res]},
+	Zones2 = lists_move(Nth, MaybeNext, Updated, Zones),
+	State#state{zones = Zones2};
+
+next_state(State, Res, {call, _, update_aura, [_Put, Nth, MaybeNext, _Who, _S]}) ->
+	Auras = State#state.auras,
+	Updated = {call, ?MODULE, decode_res, [Res]},
+	Auras2 = lists_move(Nth, MaybeNext, Updated, Auras),
+	State#state{auras = Auras2};
+
 next_state(State, _Res, _Call) ->
 	State.
+
+lists_move(Nth, null, Updated, List) ->
+	List2 = rpgb:snip(Nth, List),
+	List2 ++ [Updated];
+
+lists_move(Nth, undefined, Updated, List) ->
+	rpgb:splice(List, Nth, 1, [Updated]);
+
+lists_move(Nth, Next, Updated, List) when Nth < Next ->
+	{Head, Tail} = lists:split(Next - 1, List),
+	Head2 = rpgb:snip(Nth, Head),
+	Head2 ++ [Updated] ++ Tail;
+
+lists_move(Nth, Next, Updated, List) when Next < Nth ->
+	List2 = rpgb:snip(Nth, List),
+	rpgb:splice(List2, Next, 0, [Updated]).
 
 %% =======================================================
 %% tests proper
@@ -326,6 +374,44 @@ get_zones(Who) ->
 get_auras(Who) ->
 	Cookie = cookie(Who),
 	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], get, []).
+
+get_a_zone(Nth, Who, State) ->
+	ItemList = State#state.zones,
+	get_test(Nth, Who, ItemList).
+
+get_an_aura(Nth, Who, State) ->
+	ItemList = State#state.auras,
+	get_test(Nth, Who, ItemList).
+
+get_test(Nth, Who, Items) ->
+	Cookie = cookie(Who),
+	Item = lists:nth(Nth, Items),
+	Url = proplists:get_value(<<"url">>, Item),
+	ibrowse:send_req(binary_to_list(Url), [Cookie, ?accepts, ?contenttype], get, []).
+
+update_zone(Put, Nth, MaybeNext, State) ->
+	Zones = State#state.zones,
+	update_test(Put, Nth, MaybeNext, owner, Zones).
+
+update_aura(Put, Nth, MaybeNext, Who, State) ->
+	Auras = State#state.auras,
+	update_test(Put, Nth, MaybeNext, Who, Auras).
+
+update_test(Put, Nth, MaybeNext, Who, Items) ->
+	UpdateItem = lists:nth(Nth, Items),
+	Url = proplists:get_value(<<"url">>, UpdateItem),
+	Put2 = case MaybeNext of
+		undefined ->
+			Put;
+		null ->
+			[{<<"next_zone_id">>, null} | proplists:delete(<<"next_zone_id">>, Put)];
+		_ ->
+			NextObj = lists:nth(MaybeNext, Items),
+			NextId = proplists:get_value(<<"id">>, NextObj),
+			[{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Put)]
+	end,
+	Cookie = cookie(Who),
+	ibrowse:send_req(binary_to_list(Url), [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Put2)).
 
 delete_zone(Nth, State) ->
 	#state{zones = Zones} = State,
@@ -385,6 +471,29 @@ postcondition(State, {call, _, get_auras, [_Who]}, {ok, "200", _, Body}) ->
 	end || {Z, T} <- Pairs],
 	true;
 
+postcondition(State, {call, _, Get, [Nth, _Who, _S]}, {ok, "200", _, Body}) when Get =:= get_a_zone; Get =:= get_an_aura ->
+	Items = case Get of
+		get_a_zone -> State#state.zones;
+		get_an_aura -> State#state.auras
+	end,
+	Item = lists:nth(Nth, Items),
+	Item2 = if
+		Nth == length(Items) ->
+			[{<<"next_zone_id">>, null} | proplists:delete(<<"next_zone_id">>, Item)];
+		true ->
+			NextObj = lists:nth(Nth + 1, Items),
+			NextId = proplists:get_value(<<"id">>, NextObj),
+			[{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Item)]
+	end,
+	?assert(rpgb_test_util:assert_body(Item2, Body)),
+	true;
+
+postcondition(State, {call, _, update_zone, [Put, Nth, MaybeNext, _S]}, Res) ->
+	postcondition_update(Put, Nth, MaybeNext, State#state.zones, Res);
+
+postcondition(State, {call, _, update_aura, [Put, Nth, MaybeNext, _Who, _S]}, Res) ->
+	postcondition_update(Put, Nth, MaybeNext, State#state.auras, Res);
+
 postcondition(State, {call, _, delete_zone, _}, {ok, "204", _, _}) ->
 	true;
 
@@ -394,6 +503,40 @@ postcondition(State, {call, _, delete_aura, _}, {ok, "204", _, _}) ->
 postcondition(S, C, R) ->
 	?debugFmt("Catch all post condition:~n~p~n~p~n~p", [S,C,R]),
 	false.
+
+postcondition_update(Put, Nth, MaybeNext, Items, {ok, "200", _, Body}) ->
+	Put2 = case MaybeNext of
+		undefined ->
+			NextId = if
+				Nth < length(Items) ->
+					NextObj = lists:nth(Nth + 1, Items),
+					proplists:get_value(<<"id">>, NextObj);
+				true ->
+					null
+			end,
+			[{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Put)];
+		null ->
+			[{<<"next_zone_id">>, null} | proplists:delete(<<"next_zone_id">>, Put)];
+		_ ->
+			NextObj = lists:nth(MaybeNext, Items),
+			NextId = proplists:get_value(<<"id">>, NextObj),
+			[{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Put)]
+	end,
+	Item = lists:nth(Nth, Items),
+	Item2 = proplists_update(Put2, Item),
+	%?debugFmt("~nPut2: ~p~nItemOrig: ~p~nItem2: ~p~nDecoded Body: ~p~n", [Put2, Item, Item2, jsx:to_term(list_to_binary(Body))]),
+	?assert(rpgb_test_util:assert_body(Item2, Body)),
+	true;
+
+postcondition_update(Put, Nth, MaybeNext, _, {_, Status, _, Body}) ->
+	?debugFmt("~nPut: ~p~nNth: ~p~nNext: ~p~nStatus: ~p~nDecoded Body: ~p~n", [Put, Nth, MaybeNext, Status, jsx:to_term(list_to_binary(Body))]),
+	false.
+
+proplists_update([], PL) ->
+	PL;
+proplists_update([{K,V} = KV | Tail], Pl) ->
+	Pl2 = [KV | proplists:delete(K, Pl)],
+	proplists_update(Tail, Pl2).
 
 %% =======================================================
 %% Internal

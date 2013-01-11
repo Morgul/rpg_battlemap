@@ -192,7 +192,25 @@ from_json(Req, #ctx{rec = undefined} = Ctx) ->
 			{halt, Req3, Ctx}
 	end;
 from_json(Req, Ctx) ->
-	{false, Req, Ctx}.
+	#ctx{map = Map, layer = Layer, mode = Mode, rec = InitRec} = Ctx,
+	InitialZone = InitRec#rpgb_rec_zone{updated = os:timestamp()},
+	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	Term = jsx:to_term(Body),
+	case validate_zone(Term, InitialZone) of
+		{ok, {_Json, Rec}} ->
+			{ok, Layer2} = delete_zone(Layer, InitialZone),
+			{ok, Rec2} = rpgb_data:save(Rec),
+			{Layer3, Rec3} = insert_zone(Layer2, Rec2),
+			Ctx2 = Ctx#ctx{layer = Layer3, rec = Rec3},
+			{OutBody, Req3, Ctx3} = to_json(Req, Ctx2),
+			{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+			{true, Req4, Ctx3};
+		{error, Status, ErrBody} ->
+			ErrBody2 = jsx:to_json(ErrBody),
+			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			{halt, Req3, Ctx}
+	end.
 
 generate_etag(Req, #ctx{map = notfound} = Ctx) ->
 	{undefined, Req, Ctx};
@@ -329,7 +347,7 @@ delete_zone(#rpgb_rec_layer{first_aura_id = Id} = Layer, #rpgb_rec_zone{type = a
 delete_zone(#rpgb_rec_layer{first_zone_id = Id} = Layer, #rpgb_rec_zone{type = zone, id = Id} = Rec) ->
 	Layer2 = Layer#rpgb_rec_layer{first_zone_id = Rec#rpgb_rec_zone.next_zone_id},
 	rpgb_data:save(Layer2);
-delete_zone(_Layer, Rec) ->
+delete_zone(Layer, Rec) ->
 	#rpgb_rec_zone{type = Mode, layer_id = Lid, id = Id, next_zone_id = NextId} = Rec,
 	case rpgb_data:search(rpgb_rec_zone, [{type, Mode}, {next_zone_id, Id}, {layer_id, Lid}]) of
 		{ok, []} ->
@@ -338,7 +356,8 @@ delete_zone(_Layer, Rec) ->
 		{ok, [Prev | _]} ->
 			Prev2 = Prev#rpgb_rec_zone{next_zone_id = NextId},
 			rpgb_data:save(Prev2)
-	end.
+	end,
+	{ok, Layer}.
 
 make_json(Req, Ctx) ->
 	#ctx{hostport = {Host, Port}, rec = Rec} = Ctx,
