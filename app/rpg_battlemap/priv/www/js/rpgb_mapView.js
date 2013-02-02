@@ -17,7 +17,7 @@ RPGB.MapToolbar = Ember.View.extend({
 	classNames: ['pull-right', 'btn-group'],
 
 	didInsertElement: function(){
-		window.gu = this;
+		//window.gu = this;
 		this.$().attr('data-toggle', 'buttons-radio');
 	},
 
@@ -59,17 +59,27 @@ RPGB.MapView = Ember.View.extend({
 	templateName: 'map',
 	content: null,
 	viewHeight: '100%',
-	zoom: 1,
+	/*zoom: 1,
 	panX: 0,
-	panY: 0,
-	panning: false,
+	panY: 0,*/
+	//panning: false,
+	//_tool: undefined,
 
 	transformString: function(){
-		return 'translate(' + this.get('panX') + ' ' + this.get('panY') + ') scale(' + this.get('zoom') + ')';
-	}.property('zoom','panX','panY'),
+		return 'translate(' + this.get('content.panX') + ' ' + this.get('content.panY') + ') scale(' + this.get('content.zoom') + ')';
+	}.property('content.zoom','content.panX','content.panY'),
+
+	/*currentTool: function(){
+		if(! this._tool){
+			return false;
+		}
+		return this._tool.name;
+	}.property('_tool'),*/
 
 	init: function(){
+		window.mapView = this;
 		this._super();
+		this._tool = this.panTool();
 		window.mapViewThing = this;
 		var thisRef = this;
 		$(window).resize(function(){
@@ -85,12 +95,24 @@ RPGB.MapView = Ember.View.extend({
 			thisRef.scrollEvent(ev, delta);
 		});
 
-		var dragData = {
+		/*var dragData = {
 			lastX: 0,
 			lastY: 0
-		};
+		};*/
 
 		this.$().mousedown(function(ev){
+			thisRef.toolDispatch('mousedown', ev);
+		});
+		this.$().mouseup(function(ev){
+			thisRef.toolDispatch('mouseup', ev);
+		});
+		this.$().mousemove(function(ev){
+			thisRef.toolDispatch('mousemove', ev);
+		});
+		this.$().mouseout(function(ev){
+			thisRef.toolDispatch('mouseout', ev);
+		});
+		/*this.$().mousedown(function(ev){
 			thisRef.set('panning', true);
 			dragData.lastX = ev.pageX;
 			dragData.lastY = ev.pageY;
@@ -113,7 +135,57 @@ RPGB.MapView = Ember.View.extend({
 		this.$().mouseout(function(){
 			thisRef.set('panning', false);
 			return false;
-		});
+		});*/
+	},
+
+	panTool: function(){
+		var dragData = {
+			lastX: 0,
+			lastY: 0
+		};
+		var panning = false;
+
+		var mousedown = function(_x, _y, event, map){
+			panning = true;
+			dragData.lastX = event.pageX;
+			dragData.lastY = event.pageY;
+			return false;
+		};
+		var mouseup = function(_x, _y, event, map){
+			panning = false;
+			return false;
+		};
+		var mousemove = function(_x, _y, event, map){
+			if(! panning){
+				return;
+			}
+			var deltaX = event.pageX - dragData.lastX;
+			var deltaY = event.pageY - dragData.lastY;
+			dragData.lastX = event.pageX;
+			dragData.lastY = event.pageY;
+			map.panEvent(deltaX, deltaY);
+		};
+		var mouseout = function(){
+			panning = false;
+		};
+
+		return {
+			'name': 'Pan Map',
+			'mousedown': mousedown,
+			'mouseup': mouseup,
+			'mousemove': mousemove,
+			'mouseout': mouseout
+		};
+	},
+
+	toolDispatch: function(eventName, event){
+		var content = this.get('content');
+		var pixelX = event.pageX;
+		var pixelY = event.pageY;
+		var cellXY = this.pixelsToCell(pixelX, pixelY);
+		var x = cellXY[0];
+		var y = cellXY[1];
+		return content.toolDispatch(eventName, x, y, event);
 	},
 
 	scrollEvent: function(ev, delta){
@@ -125,26 +197,8 @@ RPGB.MapView = Ember.View.extend({
 		} else {
 			delta = -0.1;
 		}
-		this.adjustZoom(delta);
+		this.get('content').adjustZoom(delta);
 		return false;
-	},
-
-	adjustZoom: function(delta){
-		var oldZoom = this.get('zoom');
-		var newZoom = oldZoom + delta;
-		if(newZoom < 0.1){
-			newZoom = 0.1;
-		} else if(newZoom > 3){
-			newZoom = 3;
-		}
-		this.set('zoom', newZoom);
-	},
-
-	panEvent: function(dx, dy){
-		var pannedX = this.get('panX');
-		var pannedY = this.get('panY');
-		this.set('panX', pannedX + dx);
-		this.set('panY', pannedY + dy);
 	},
 
 	windowResized: function(){
@@ -152,38 +206,46 @@ RPGB.MapView = Ember.View.extend({
 		var toolbarHeight = $('#tools').height();
 		var guessHeight = window.innerHeight - (headerHeight + toolbarHeight + 28 + 20 + 20 + 20);
 		this.set('viewHeight', guessHeight + 'px');
+		var offsets = this.$('svg').offset();
+		this.set('content.offsetX', offsets.left);
+		this.set('content.offsetY', offsets.top);
 	},
 
-	clicked:function(ev){
+	clicked: function(){ },
+	/*clicked:function(ev){
 		if(this._suppressNextClick){
 			this._suppressNextClick = false;
 			return false;
 		}
-		//console.log('twas clicked', ev);
 		var xy = this.containingCell(ev.offsetX, ev.offsetY);
-		//var x = ev.offsetX;
-		//var y = ev.offsetY;
-		//console.log('contianing', this.containingCell(x,y), 'nearest', this.nearestCell(x,y));
 		var xyObj = Ember.Object.create({
 			x: xy[0],
 			y: xy[1]
 		});
 		this.set('content.clickedCell', xyObj);
 		this.set('content.nearestCell', xyObj);
-		/*this.set('content.clickedCell.x', xy[0]);
-		this.set('content.clickedCell.y', xy[1]);
-		this.set('content.nearestCell.x', xy[0]);
-		this.set('content.nearestCell.y', xy[1]);*/
 		return false;
-	},
+	},*/
 
-	pixelsToCell: function(x,y){
+	/*pixelsToCell: function(x,y){
 		var outx = x * RPGB.CELL_SIZE;
 		var outy = y * RPGB.CELL_SIZE;
 		return [outx,outy];
+	},*/
+
+	pixelsToCell: function(x,y){
+		var cellx = this.dimensionToCell(x, this.get('panX'));
+		var celly = this.dimensionToCell(y, this.get('panY'));
+		return [cellx, celly];
 	},
 
-	containingCell: function(x,y){
+	dimensionToCell: function(d, pan){
+		var cell = RPGB.CELL_SIZE;
+		var out = ( ( (d - pan) ) / this.get('zoom') ) * cell;
+		return out;
+	},
+
+	/*containingCell: function(x,y){
 		var cell = RPGB.CELL_SIZE;
 		var cellX = Math.floor((x - this.get('panX')) / (this.get('zoom') * cell));
 		var cellY = Math.floor((y - this.get('panY')) / (this.get('zoom') * cell));
@@ -195,6 +257,6 @@ RPGB.MapView = Ember.View.extend({
 		var cellX = Math.round((x - this.get('panX')) / (this.get('zoom') * cell));
 		var cellY = Math.round((y - this.get('panY')) / (this.get('zoom') * cell));
 		return [cellX,cellY];
-	}
+	}*/
 
 });

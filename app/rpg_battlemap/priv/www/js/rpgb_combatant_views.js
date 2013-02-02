@@ -370,8 +370,8 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 			thisRef.setSelected(ev);
 		});
 
-		$(circleUse).on('dragstart', function(){
-			console.log('drag start!');
+		$(circleUse).on('mousedown', function(ev){
+			console.log('combatant mouse down', ev);
 		});
 	},
 
@@ -413,9 +413,10 @@ RPGB.CombatantItemSVGView = Ember.View.extend({
 
 	setSelected: function(ev){
 		console.log('combatant clicked');
+		window.combatantClicked = this;
 		this.set('context.map.combatants.selected', this.get('context'));
-		ev.stopPropagation();
-		return false;
+		//ev.stopPropagation();
+		//return false;
 	},
 
 	circleId: function(){

@@ -73,9 +73,62 @@
 ***/
 
 RPGB.mapController = RPGB.RestObject.create({
-	clickedCell: null,
-	nearestCell: null,
-	currentTool: ''
+	//clickedCell: null,
+	//nearestCell: null,
+	panX: 0,
+	panY: 0,
+	offsetX: 0,
+	offsetY: 0,
+	zoom: 1,
+	currentTool: function(){
+		if(this._tool){
+			return this._tool.name;
+		}
+	}.property('tool'),
+	tool: {},
+
+	adjustZoom: function(delta){
+		var oldZoom = this.get('zoom');
+		var newZoom = oldZoom + delta;
+		if(newZoom < 0.1){
+			newZoom = 0.1;
+		} else if(newZoom > 3){
+			newZoom = 3;
+		}
+		this.set('zoom', newZoom);
+	},
+
+	panEvent: function(dx, dy){
+		var pannedX = this.get('panX');
+		var pannedY = this.get('panY');
+		this.set('panX', pannedX + dx);
+		this.set('panY', pannedY + dy);
+	},
+
+	toolDispatch: function(eventName, x, y, originalEvent){
+		var tool = this.get('tool');
+		if(tool[eventName]){
+			return tool[eventName](x, y, originalEvent, this);
+		}
+	},
+
+	pixelsToCell: function(x,y){
+		var cellx = this.dimensionToCell(x, this.get('panX'), this.get('offsetX'));
+		var celly = this.dimensionToCell(y, this.get('panY'), this.get('offsetY'));
+		return [cellx, celly];
+	},
+
+	dimensionToCell: function(d, pan, offset){
+		var cell = RPGB.CELL_SIZE;
+		return ( (d - pan - offset) / this.get('zoom') ) / cell
+	},
+
+	cellToPixels: function(x, y){
+		var cellx = this.dimensionToPixel(x, this.get('panX'));
+		var celly = this.dimensionToPixel(y, this.get('panY'));
+		return [cellx, celly];
+	}
+
 });
 RPGB.layerController = Ember.ArrayController.create({
 	content: [],
