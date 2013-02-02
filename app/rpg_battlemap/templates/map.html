@@ -104,17 +104,18 @@ RPGB.mapController = RPGB.RestObject.create({
 		this.set('panY', pannedY + dy);
 	},
 
-	toolDispatch: function(eventName, x, y, originalEvent){
-		var tool = this.get('tool');
-		if(tool[eventName]){
-			return tool[eventName](x, y, originalEvent, this);
-		}
-	},
-
 	pixelsToCell: function(x,y){
 		var cellx = this.dimensionToCell(x, this.get('panX'), this.get('offsetX'));
 		var celly = this.dimensionToCell(y, this.get('panY'), this.get('offsetY'));
 		return [cellx, celly];
+	},
+
+	toolDispatch: function(eventName, originalEvent){
+		var tool = this.get('tool');
+		var xy = this.pixelsToCell(originalEvent.pageX, originalEvent.pageY);
+		if(tool && tool[eventName]){
+			return tool[eventName](xy[0], xy[1], originalEvent, this);
+		}
 	},
 
 	dimensionToCell: function(d, pan, offset){
@@ -420,52 +421,111 @@ RPGB.toolController = Ember.Object.create({
 	'map': RPGB.mapController,
 
 	init: function(){
-		this._panTool = (function(){
-			var dragData = {
-				lastX: 0,
-				lastY: 0
-			};
-			var panning = false;
-
-			var mousedown = function(_x, _y, event, map){
-				panning = true;
-				dragData.lastX = event.pageX;
-				dragData.lastY = event.pageY;
-				return false;
-			};
-			var mouseup = function(_x, _y, event, map){
-				panning = false;
-				return false;
-			};
-			var mousemove = function(_x, _y, event, map){
-				if(! panning){
-					return;
-				}
-				var deltaX = event.pageX - dragData.lastX;
-				var deltaY = event.pageY - dragData.lastY;
-				dragData.lastX = event.pageX;
-				dragData.lastY = event.pageY;
-				map.panEvent(deltaX, deltaY);
-			};
-			var mouseleave = function(_x, _y, event, _map){
-				if(event.fromElement.nodeName == "svg"){
-					console.log('explodering', event);
-					panning = false;
-				}
-			};
-
-			return {
-				'name': 'Pan Map',
-				'mousedown': mousedown,
-				'mouseup': mouseup,
-				'mousemove': mousemove,
-				'mouseleave': mouseleave
-			};
-		})();
 	},
 
 	setToolToPanMap: function(){
-		this.set('map.tool', this._panTool);
+		this.set('map.tool', this.makePanTool());
+	},
+
+	setToolToMoveCombatant: function(){
+		this.set('map.tool', this.makeMoveCombatantTool());
+	},
+
+	makeMoveCombatantTool: function(){
+		var dragData = {
+			offsetX: 0,
+			offsetY: 0
+		};
+		var moving = false;
+		var selectedCombatant = this.get('combatants.selected');
+
+		var moveCombatant = function(x,y){
+			selectedCombatant.set('x', Math.floor(x) - dragData.offsetX);
+			selectedCombatant.set('y', Math.floor(y) - dragData.offsetY);
+		};
+
+		var mousedown = function(x, y, event, map){
+			console.log(x,y,event,map);
+			moving = true;
+			selectedCombatant.lockCommits();
+			if(event.srcElement.nodeName == 'svg'){
+				dragData.offsetX = 0;
+				dragData.offsetY = 0;
+			} else {
+				dragData.offsetX = Math.floor(x) - selectedCombatant.get('x');
+				dragData.offsetY = Math.floor(y) - selectedCombatant.get('y');
+			}
+			moveCombatant(x,y);
+		};
+
+		var mouseup = function(x, y, event, map){
+			moving = false;
+			selectedCombatant.unlockCommits();
+			selectedCombatant.commitProperties('x', 'y');
+		};
+
+		var mousemove = function(x, y){
+			if(! moving){
+				return;
+			}
+			moveCombatant(x,y);
+		};
+
+		var mouseleave = function(){
+			moving = false;
+			selectedCombatant.unlockCommits();
+		}
+
+		return {
+			'name': 'Move Combatant',
+			'mousedown': mousedown,
+			'mouseup': mouseup,
+			'mousemove': mousemove,
+			'mouseleave': mouseleave
+		}
+	},
+
+	makePanTool: function(){
+		var dragData = {
+			lastX: 0,
+			lastY: 0
+		};
+		var panning = false;
+
+		var mousedown = function(_x, _y, event, map){
+			panning = true;
+			dragData.lastX = event.pageX;
+			dragData.lastY = event.pageY;
+			return false;
+		};
+		var mouseup = function(_x, _y, event, map){
+			panning = false;
+			return false;
+		};
+		var mousemove = function(_x, _y, event, map){
+			if(! panning){
+				return;
+			}
+			var deltaX = event.pageX - dragData.lastX;
+			var deltaY = event.pageY - dragData.lastY;
+			dragData.lastX = event.pageX;
+			dragData.lastY = event.pageY;
+			map.panEvent(deltaX, deltaY);
+		};
+		var mouseleave = function(_x, _y, event, _map){
+			if(event.srcElement.nodeName == "svg"){
+				console.log('explodering', event);
+				panning = false;
+			}
+		};
+
+		return {
+			'name': 'Pan Map',
+			'mousedown': mousedown,
+			'mouseup': mouseup,
+			'mousemove': mousemove,
+			'mouseleave': mouseleave
+		};
 	}
 });
 

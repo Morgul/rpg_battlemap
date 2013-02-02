@@ -1,6 +1,6 @@
 Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
 	'<div class="btn-group" data-toggle="buttons-radio">' +
-		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="view"}}>Move Combatant</button>' +
+		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="content"}}>Move Combatant</button>' +
 		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="view" }}>Add Combatant</button>' +
 		'<button class="btn btn-mini" {{ action setToolToPanMap target="content"}}>Pan Map</button>' +
 	'</div>' +
@@ -18,20 +18,8 @@ RPGB.MapToolbar = Ember.View.extend({
 		return 'none';
 	}.property('content.combatants.selected'),
 
-	setToolToMoveCombatant: function(ev){
-		this.set('content.currentTool', 'moveCombatant');
-	},
-
 	setToolToAddCombatant: function(ev){
 		this.set('content.currentTool', 'addCombatant');
-	},
-
-	moveCombatant: function(cell){
-		var combatant = this.get('content.combatants.selected');
-		if(! combatant){
-			return;
-		}
-		combatant.setProperties({'x':cell.x, 'y':cell.y});
 	}
 });
 
@@ -74,6 +62,9 @@ RPGB.MapView = Ember.View.extend({
 		this.$().mouseout(function(ev){
 			thisRef.toolDispatch('mouseout', ev);
 		});
+		this.$().mouseleave(function(ev){
+			thisRef.toolDispatch('mouseleave', ev);
+		});
 		this.$().click(function(ev){
 			thisRef.toolDispatch('click', ev);
 		});
@@ -105,12 +96,12 @@ RPGB.MapView = Ember.View.extend({
 
 	toolDispatch: function(eventName, event){
 		var content = this.get('content');
-		var pixelX = event.pageX;
+		/*var pixelX = event.pageX;
 		var pixelY = event.pageY;
 		var cellXY = this.pixelsToCell(pixelX, pixelY);
 		var x = cellXY[0];
-		var y = cellXY[1];
-		return content.toolDispatch(eventName, x, y, event);
+		var y = cellXY[1];*/
+		return content.toolDispatch(eventName, event);
 	},
 
 	scrollEvent: function(ev, delta){
@@ -158,7 +149,7 @@ RPGB.MapView = Ember.View.extend({
 		return [outx,outy];
 	},*/
 
-	pixelsToCell: function(x,y){
+	/*pixelsToCell: function(x,y){
 		var cellx = this.dimensionToCell(x, this.get('panX'));
 		var celly = this.dimensionToCell(y, this.get('panY'));
 		return [cellx, celly];
@@ -168,7 +159,7 @@ RPGB.MapView = Ember.View.extend({
 		var cell = RPGB.CELL_SIZE;
 		var out = ( ( (d - pan) ) / this.get('zoom') ) * cell;
 		return out;
-	},
+	},*/
 
 	/*containingCell: function(x,y){
 		var cell = RPGB.CELL_SIZE;

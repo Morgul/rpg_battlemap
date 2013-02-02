@@ -63,6 +63,37 @@ RPGB.RestObject = Ember.Object.extend({
 		this.unlockCommits();
 	},
 
+	commitProperties: function(){
+		var dataObj = {};
+		var i = 0;
+		for(i; i < arguments.length; i++){
+			dataObj[arguments[i]] = this.get(arguments[i]);
+		}
+
+		if(this.webSocket){
+			this.webSocket.send(JSON.stringify({
+				'type':this.type,
+				'id':this.id,
+				'action': 'update',
+				'payload': dataObj
+			}));
+			return;
+		}
+
+		if(this.url){
+			var deferred = $.ajax(this.url, {
+				'contentType': 'application/json',
+				'context': this,
+				'data': JSON.stringify(dataObj),
+				'dataType': 'application/json',
+				'type': 'put'
+			});
+			return;
+		}
+
+		console.log('no remote connection set');
+	},
+
 	addRestfulProperty: function(propName){
 		if(this._restProps.indexOf(propName) == -1){
 			this._restProps.push(propName);
