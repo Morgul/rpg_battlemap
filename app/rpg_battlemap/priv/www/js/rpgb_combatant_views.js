@@ -34,10 +34,6 @@ Ember.TEMPLATES['combatantCreateView'] = Ember.Handlebars.compile(
 				'increment appended to the name if needed' +
 			'</p>' +
 
-			/*'<p>' +
-				'{{content.newCombatant.name}}' +
-			'</p>' +*/
-
 			'<p>' +
 				'<label>Name</label>' +
 				'{{view Ember.TextField valueBinding="content.newCombatant.name"}}' +
@@ -86,9 +82,6 @@ Ember.TEMPLATES['combatantCreateView'] = Ember.Handlebars.compile(
  		'</div>' +
 
 	'</div>'
-
-		//'<button {{action "showCreateCombatant"}}>New...</button>' +
-		//'{{name}} - {{map.name}} - {{context.name}} - {{context.map.name}} - {{content.name}} - {{content.map.name}}'
 );
 
 Ember.TEMPLATES['combatantListItem'] = Ember.Handlebars.compile(
@@ -196,26 +189,6 @@ Ember.TEMPLATES['combatantSVG'] = Ember.Handlebars.compile(
 		'stroke-width="5px" ' +
 	'></circle>' +
 	'{{/if}}' +
-/*	'{{#if hasGhost}}' +
-		'{{#if view.hasAura }}' +
-			'<circle ' +
-				'{{ bindAttr cx="view.ghostCellXCenter"}} ' +
-				'{{ bindAttr cy="view.ghostCellYCenter"}} ' +
-				'{{ bindAttr r="view.auraRadius"}} ' +
-				'fill-opacity="0" ' +
-				'stroke-width="5px" ' +
-				'stroke="gray" ' +
-			'></circle>' +
-		'{{/if}}' +
-		'<circle ' +
-			'{{ bindAttr cx="view.ghostCellXCenter"}} ' +
-			'{{ bindAttr cy="view.ghostCellYCenter"}} ' +
-			'{{ bindAttr r="view.radius"}} ' +
-			'fill-opacity="0" ' +
-			'stroke="gray" ' +
-			'stroke-width="5px" ' +
-		'></circle>' +
-	'{{/if}}' +*/
 	'<use data-xlink-href="circle" {{action "setSelected" }} draggable="true"></use>' +
 	'<use data-xlink-href="image" mask="mask" style="display:inline;"></use>'
 );

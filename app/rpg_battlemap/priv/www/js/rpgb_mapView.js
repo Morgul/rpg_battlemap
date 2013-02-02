@@ -1,35 +1,15 @@
-Ember.TEMPLATES['mapTool'] = Ember.Handlebars.compile(
-	'{{ content.currentTool }}'
-);
-
 Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
-	'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="view"}}>Move Combatant</button>' +
-	'<button class="btn btn-mini" {{ action setToolToAddCombatant target="view" }}>Add Combatant</button>'
+	'<div class="btn-group" data-toggle="buttons-radio">' +
+		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="view"}}>Move Combatant</button>' +
+		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="view" }}>Add Combatant</button>' +
+		'<button class="btn btn-mini" {{ action setToolToPanMap target="content"}}>Pan Map</button>' +
+	'</div>' +
+	'<div class="label">{{ content.toolName }}</div>'
 );
-
-RPGB.MapToolView = Ember.View.extend({
-	templateName: 'mapTool',
-	classNames: ['pull-right', 'label']
-});
 
 RPGB.MapToolbar = Ember.View.extend({
 	templateName: 'mapToolBar',
-	classNames: ['pull-right', 'btn-group'],
-
-	didInsertElement: function(){
-		//window.gu = this;
-		this.$().attr('data-toggle', 'buttons-radio');
-	},
-
-	clickedCellChanged: function(){
-		var currentTool = this.get('content.currentTool');
-		if(this[currentTool]){
-			var clickedCell = this.get('content.clickedCell');
-			this[currentTool](clickedCell);
-			return;
-		}
-		console.log('no action taken for tool ', currentTool, clickedCell);
-	}.observes('content.clickedCell'),
+	classNames: ['pull-right'],
 
 	combatantSelected: function(){
 		if(this.get('content.combatants.selected')){
@@ -59,27 +39,14 @@ RPGB.MapView = Ember.View.extend({
 	templateName: 'map',
 	content: null,
 	viewHeight: '100%',
-	/*zoom: 1,
-	panX: 0,
-	panY: 0,*/
-	//panning: false,
-	//_tool: undefined,
 
 	transformString: function(){
 		return 'translate(' + this.get('content.panX') + ' ' + this.get('content.panY') + ') scale(' + this.get('content.zoom') + ')';
 	}.property('content.zoom','content.panX','content.panY'),
 
-	/*currentTool: function(){
-		if(! this._tool){
-			return false;
-		}
-		return this._tool.name;
-	}.property('_tool'),*/
-
 	init: function(){
 		window.mapView = this;
 		this._super();
-		this._tool = this.panTool();
 		window.mapViewThing = this;
 		var thisRef = this;
 		$(window).resize(function(){
@@ -95,11 +62,6 @@ RPGB.MapView = Ember.View.extend({
 			thisRef.scrollEvent(ev, delta);
 		});
 
-		/*var dragData = {
-			lastX: 0,
-			lastY: 0
-		};*/
-
 		this.$().mousedown(function(ev){
 			thisRef.toolDispatch('mousedown', ev);
 		});
@@ -111,6 +73,9 @@ RPGB.MapView = Ember.View.extend({
 		});
 		this.$().mouseout(function(ev){
 			thisRef.toolDispatch('mouseout', ev);
+		});
+		this.$().click(function(ev){
+			thisRef.toolDispatch('click', ev);
 		});
 		/*this.$().mousedown(function(ev){
 			thisRef.set('panning', true);
@@ -136,46 +101,6 @@ RPGB.MapView = Ember.View.extend({
 			thisRef.set('panning', false);
 			return false;
 		});*/
-	},
-
-	panTool: function(){
-		var dragData = {
-			lastX: 0,
-			lastY: 0
-		};
-		var panning = false;
-
-		var mousedown = function(_x, _y, event, map){
-			panning = true;
-			dragData.lastX = event.pageX;
-			dragData.lastY = event.pageY;
-			return false;
-		};
-		var mouseup = function(_x, _y, event, map){
-			panning = false;
-			return false;
-		};
-		var mousemove = function(_x, _y, event, map){
-			if(! panning){
-				return;
-			}
-			var deltaX = event.pageX - dragData.lastX;
-			var deltaY = event.pageY - dragData.lastY;
-			dragData.lastX = event.pageX;
-			dragData.lastY = event.pageY;
-			map.panEvent(deltaX, deltaY);
-		};
-		var mouseout = function(){
-			panning = false;
-		};
-
-		return {
-			'name': 'Pan Map',
-			'mousedown': mousedown,
-			'mouseup': mouseup,
-			'mousemove': mousemove,
-			'mouseout': mouseout
-		};
 	},
 
 	toolDispatch: function(eventName, event){

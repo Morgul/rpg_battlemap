@@ -55,9 +55,7 @@
 <script type="text/javascript" src="/contrib/bootstrap/js/bootstrap.js"></script>
 <script type="text/javascript" src="/contrib/handlebars-1.0.0.beta.6.js"></script>
 <script type="text/javascript" src="/contrib/ember-1.0.pre.js"></script>
-<!--<script type="text/javascript" src="/contrib/ember.prod.js"></script>-->
 <script type="text/javascript" src="/js/bind_extensions.js"></script>
-<!--<script type="text/javascript" src="/contrib/jquery-ember-bridge.js"></script>-->
 <script type="text/javascript" src="/js/rpgb_core.js"></script>
 <script type="text/javascript" src="/js/rpgb_gridPropertiesView.js"></script>
 <script type="text/javascript" src="/js/rpgb_mapView.js"></script>
@@ -80,6 +78,7 @@ RPGB.mapController = RPGB.RestObject.create({
 	offsetX: 0,
 	offsetY: 0,
 	zoom: 1,
+
 	currentTool: function(){
 		if(this._tool){
 			return this._tool.name;
@@ -415,6 +414,61 @@ RPGB.mapController.set('layers', RPGB.layerController);
 RPGB.mapController.set('combatants', RPGB.combatantController);
 RPGB.layerController.set('map', RPGB.mapController);
 RPGB.combatantController.set('map', RPGB.mapController);
+RPGB.toolController = Ember.Object.create({
+	'layers': RPGB.layerController,
+	'combatants': RPGB.combatantController,
+	'map': RPGB.mapController,
+
+	init: function(){
+		this._panTool = (function(){
+			var dragData = {
+				lastX: 0,
+				lastY: 0
+			};
+			var panning = false;
+
+			var mousedown = function(_x, _y, event, map){
+				panning = true;
+				dragData.lastX = event.pageX;
+				dragData.lastY = event.pageY;
+				return false;
+			};
+			var mouseup = function(_x, _y, event, map){
+				panning = false;
+				return false;
+			};
+			var mousemove = function(_x, _y, event, map){
+				if(! panning){
+					return;
+				}
+				var deltaX = event.pageX - dragData.lastX;
+				var deltaY = event.pageY - dragData.lastY;
+				dragData.lastX = event.pageX;
+				dragData.lastY = event.pageY;
+				map.panEvent(deltaX, deltaY);
+			};
+			var mouseleave = function(_x, _y, event, _map){
+				if(event.fromElement.nodeName == "svg"){
+					console.log('explodering', event);
+					panning = false;
+				}
+			};
+
+			return {
+				'name': 'Pan Map',
+				'mousedown': mousedown,
+				'mouseup': mouseup,
+				'mousemove': mousemove,
+				'mouseleave': mouseleave
+			};
+		})();
+	},
+
+	setToolToPanMap: function(){
+		this.set('map.tool', this._panTool);
+	}
+});
+
 RPGB.mapController.unlockCommits();
 
 RPGB.currentGridView = RPGB.GridPropertiesView.create({
@@ -438,14 +492,9 @@ RPGB.selectedCombatantToolbar = RPGB.CombatantDropDown.create({
 });
 
 RPGB.mapToolbar = RPGB.MapToolbar.create({
-	content: RPGB.mapController
+	content: RPGB.toolController
 });
 
-RPGB.currentToolDisplay = RPGB.MapToolView.create({
-	content: RPGB.mapController
-});
-
-RPGB.currentToolDisplay.appendTo('#toolbar');
 RPGB.mapToolbar.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
