@@ -25,3 +25,13 @@ Installation
 
 Runs on port 9090 by default.  Try going to account/login, I hear that's
 fun.
+
+Tests
+=====
+
+Currently playing with angularjs and testacular. To get running:
+
+1. install node.js
+2. install npm
+3. install testacular
+4. install phantomjs
