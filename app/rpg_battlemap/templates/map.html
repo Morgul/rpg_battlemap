@@ -421,6 +421,7 @@ RPGB.toolController = Ember.Object.create({
 	'map': RPGB.mapController,
 
 	init: function(){
+		this.setToolToPanMap();
 	},
 
 	setToolToPanMap: function(){
@@ -431,6 +432,37 @@ RPGB.toolController = Ember.Object.create({
 		this.set('map.tool', this.makeMoveCombatantTool());
 	},
 
+	setToolToAddCombatant: function(){
+		this.set('map.tool', this.makeAddCombatantTool());
+	},
+
+	makeAddCombatantTool: function(){
+		var combatantsController = this.get('combatants');
+		var layersController = this.get('layers');
+
+		var click = function(x, y){
+			var combatantBase = combatantsController.get('newCombatant');
+			var combatantArgs = {
+				name: combatantsController.nextName(combatantBase.get('name')),
+				size: combatantBase.get('size'),
+				color: combatantBase.get('color'),
+				aura_size: combatantBase.get('aura_size'),
+				aura_color: combatantBase.get('aura_color'),
+				x: Math.floor(x),
+				y: Math.floor(y)
+			};
+			var selectedLayer = layersController.get('selected');
+			if(selectedLayer != null){
+				combatantArgs.layer_id = selectedLayer.get('id');
+			}
+			combatantsController.createCombatant(combatantArgs);
+		};
+
+		return {
+			'click': click
+		};
+	},
+
 	makeMoveCombatantTool: function(){
 		var dragData = {
 			offsetX: 0,
@@ -438,6 +470,7 @@ RPGB.toolController = Ember.Object.create({
 		};
 		var moving = false;
 		var selectedCombatant = this.get('combatants.selected');
+		var combatantsController = this.get('combatants');
 
 		var moveCombatant = function(x,y){
 			selectedCombatant.set('x', Math.floor(x) - dragData.offsetX);
@@ -446,6 +479,7 @@ RPGB.toolController = Ember.Object.create({
 
 		var mousedown = function(x, y, event, map){
 			console.log(x,y,event,map);
+			selectedCombatant = combatantsController.get('selected');
 			moving = true;
 			selectedCombatant.lockCommits();
 			if(event.srcElement.nodeName == 'svg'){

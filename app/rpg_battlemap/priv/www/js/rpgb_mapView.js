@@ -1,8 +1,8 @@
 Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
 	'<div class="btn-group" data-toggle="buttons-radio">' +
 		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="content"}}>Move Combatant</button>' +
-		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="view" }}>Add Combatant</button>' +
-		'<button class="btn btn-mini" {{ action setToolToPanMap target="content"}}>Pan Map</button>' +
+		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="content" }}>Add Combatant</button>' +
+		'<button class="btn btn-mini active" {{ action setToolToPanMap target="content"}}>Pan Map</button>' +
 	'</div>' +
 	'<div class="label">{{ content.toolName }}</div>'
 );
@@ -16,11 +16,7 @@ RPGB.MapToolbar = Ember.View.extend({
 			return 'inline-block';
 		}
 		return 'none';
-	}.property('content.combatants.selected'),
-
-	setToolToAddCombatant: function(ev){
-		this.set('content.currentTool', 'addCombatant');
-	}
+	}.property('content.combatants.selected')
 });
 
 RPGB.MapView = Ember.View.extend({
