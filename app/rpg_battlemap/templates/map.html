@@ -37,6 +37,7 @@
 	{% templatetag openvariable %}#each content.layers{% templatetag closevariable %}
 		{% templatetag openvariable %}view RPGB.LayerItemSVGView tagName="g"{% templatetag closevariable %}
 	{% templatetag openvariable %}/each{% templatetag closevariable %}
+	{% templatetag openvariable %}view RPGB.MapRulerView tagName="g"{% templatetag closevariable %}
 	</g>
 
 </svg>
@@ -79,12 +80,23 @@ RPGB.mapController = RPGB.RestObject.create({
 	offsetY: 0,
 	zoom: 1,
 
+	_tool: {},
 	currentTool: function(){
 		if(this._tool){
 			return this._tool.name;
 		}
 	}.property('tool'),
-	tool: {},
+	tool: function(key, value){
+		console.log('der tool property', key, value);
+		if(arguments.length == 1){
+			return this._tool;
+		}
+		if(this._tool.teardown){
+			this._tool.teardown();
+		}
+		this._tool = arguments[1];
+		return this._tool;
+	}.property(),
 
 	adjustZoom: function(delta){
 		var oldZoom = this.get('zoom');
@@ -121,6 +133,10 @@ RPGB.mapController = RPGB.RestObject.create({
 	dimensionToCell: function(d, pan, offset){
 		var cell = RPGB.CELL_SIZE;
 		return ( (d - pan - offset) / this.get('zoom') ) / cell
+	},
+
+	dimensionToPixel: function(d){
+		return d * RPGB.CELL_SIZE;
 	},
 
 	cellToPixels: function(x, y){
@@ -367,6 +383,41 @@ RPGB.combatantController = Ember.ArrayController.create({
 	}
 });
 
+RPGB.rulerController = Ember.Object.create({
+	start: null,
+	end: null,
+	map: RPGB.mapController,
+
+	length: function(){
+		var start = this.get('start');
+		var end = this.get('end');
+		if(start && end){
+			var deltax = Math.abs( start.x - end.x );
+			var deltay = Math.abs( start.y - end.y );
+			if(deltax > deltay){
+				console.log('deltax', deltax);
+				return deltax;
+			}
+			console.log('deltay', deltay);
+			return deltay
+		}
+		console.log('nyet');
+		return 0
+	}.property('start', 'end').cacheable(false),
+
+	isMeasuring: function(){
+		var start = this.get('start');
+		var end = this.get('end');
+		if(start && end){
+			console.log('measuring');
+			return true;
+		}
+		console.log('not measuring');
+		return false;
+	}.property('start', 'end')
+});
+RPGB.mapController.set('ruler', RPGB.rulerController);
+
 var mapJson = JSON.parse($('#mapJson').text());
 var prop;
 RPGB.mapController.lockCommits();
@@ -419,6 +470,7 @@ RPGB.toolController = Ember.Object.create({
 	'layers': RPGB.layerController,
 	'combatants': RPGB.combatantController,
 	'map': RPGB.mapController,
+	'ruler': RPGB.rulerController,
 
 	init: function(){
 		this.setToolToPanMap();
@@ -428,8 +480,16 @@ RPGB.toolController = Ember.Object.create({
 		this.set('map.tool', this.makePanTool());
 	},
 
+	setToolToRuler: function(){
+		this.set('map.tool', this.makeRulerTool());
+	},
+
 	setToolToMoveCombatant: function(){
 		this.set('map.tool', this.makeMoveCombatantTool());
+	},
+
+	setToolToRuler: function(){
+		this.set('map.tool', this.makeRulerTool());
 	},
 
 	setToolToAddCombatant: function(){
@@ -560,6 +620,32 @@ RPGB.toolController = Ember.Object.create({
 			'mousemove': mousemove,
 			'mouseleave': mouseleave
 		};
+	},
+
+	makeRulerTool: function(){
+		var ruler = this.get('ruler');
+		var downx;
+		var downy;
+
+		var mousedown = function(x, y){
+			console.log('down', x, y);
+			downx = Math.floor(x);
+			downy = Math.floor(y);
+			ruler.set('start', {x: downx, y: downy});
+		};
+		var mousemove = function(x, y){
+			console.log('move', x, y);
+			ruler.set('end', {x: Math.floor(x), y: Math.floor(y)});
+		};
+		var teardown = function(){
+			ruler.set('start', null);
+			ruler.set('end', null);
+		};
+		return {
+			'mousedown': mousedown,
+			'mousemove': mousemove,
+			'teardown': teardown
+		}
 	}
 });
 

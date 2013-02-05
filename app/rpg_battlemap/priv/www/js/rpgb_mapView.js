@@ -2,10 +2,42 @@ Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
 	'<div class="btn-group" data-toggle="buttons-radio">' +
 		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="content"}}>Move Combatant</button>' +
 		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="content" }}>Add Combatant</button>' +
+		'<button class="btn btn-mini" {{ action setToolToRuler target="content"}}>Measure</button>' +
 		'<button class="btn btn-mini active" {{ action setToolToPanMap target="content"}}>Pan Map</button>' +
 	'</div>' +
 	'<div class="label">{{ content.toolName }}</div>'
 );
+
+Ember.TEMPLATES['mapRuler'] = Ember.Handlebars.compile(
+	'{{#if content.ruler.isMeasuring}}' +
+		'<line ' +
+			'{{bindAttr x1="view.draw.start.x"}} ' +
+			'{{bindAttr y1="view.draw.start.y"}} ' +
+			'{{bindAttr x2="view.draw.end.x" }} ' +
+			'{{bindAttr y2="view.draw.end.y" }} ' +
+			'stroke-width="13" ' +
+			'stroke="black" ' +
+			'stroke-linecap="round" ' +
+		'/>' +
+		'<line ' +
+			'{{bindAttr x1="view.draw.start.x"}} ' +
+			'{{bindAttr y1="view.draw.start.y"}} ' +
+			'{{bindAttr x2="view.draw.end.x" }} ' +
+			'{{bindAttr y2="view.draw.end.y" }} ' +
+			'stroke-width="7" ' +
+			'stroke="white" ' +
+			'stroke-linecap="round" ' +
+		'/>' +
+		'<g {{bindAttr transform="view.inverseZoom"}} />' +
+			'<text ' +
+				'{{bindAttr x="view.mid.x"}} ' +
+				'{{bindAttr y="view.mid.y"}} ' +
+				'stroke="purple" ' +
+			'>' +
+			'{{ content.ruler.length }}' +
+			'</text>' +
+	'{{/if}}'
+)
 
 RPGB.MapToolbar = Ember.View.extend({
 	templateName: 'mapToolBar',
@@ -17,6 +49,49 @@ RPGB.MapToolbar = Ember.View.extend({
 		}
 		return 'none';
 	}.property('content.combatants.selected')
+});
+
+RPGB.MapRulerView = Ember.View.extend({
+	templateName: 'mapRuler',
+	tagName: 'g',
+	content: null,
+
+	draw: function(){
+		var map = this.get('context.content');
+		var ruler = map.get('ruler');
+		if(ruler.get('isMeasuring')){
+			startxy = map.cellToPixels(ruler.get('start.x') + 0.5, ruler.get('start.y') + 0.5);
+			endxy = map.cellToPixels(ruler.get('end.x') + 0.5, ruler.get('end.y') + 0.5);
+			return {
+				start: {
+					x: startxy[0],
+					y: startxy[1]
+				},
+				end: {
+					x: endxy[0],
+					y: endxy[1]
+				}
+			};
+		}
+		return {};
+	}.property('context.content.ruler.start', 'context.content.ruler.end'),
+
+	mid: function(){
+		var map = this.get('context.content');
+		var ruler = map.get('ruler');
+		if(ruler.get('isMeasuring')){
+			var start = ruler.get('start');
+			var end = ruler.get('end');
+			midx = (start.x + end.x) / 2;
+			midy = (start.y + end.y) / 2;
+			midxy = map.cellToPixels(midx, midy);
+			return {
+				'x': midxy[0],
+				'y': midxy[1]
+			};
+		}
+		return null;
+	}.property('context.content.ruler.start', 'context.content.ruler.end')
 });
 
 RPGB.MapView = Ember.View.extend({
