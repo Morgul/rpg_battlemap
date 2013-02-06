@@ -28,14 +28,25 @@ Ember.TEMPLATES['mapRuler'] = Ember.Handlebars.compile(
 			'stroke="white" ' +
 			'stroke-linecap="round" ' +
 		'/>' +
-		'<g {{bindAttr transform="view.inverseZoom"}} />' +
-			'<text ' +
-				'{{bindAttr x="view.mid.x"}} ' +
-				'{{bindAttr y="view.mid.y"}} ' +
-				'stroke="purple" ' +
-			'>' +
-			'{{ content.ruler.length }}' +
-			'</text>' +
+		'<rect ' +
+			'{{bindAttr x="view.textBg.x"}} ' +
+			'{{bindAttr y="view.textBg.y"}} ' +
+			'{{bindAttr width="view.textBg.width"}} ' +
+			'{{bindAttr height="view.textBg.height"}} ' +
+			'{{bindAttr rx="view.textBg.radius"}} ' +
+			'stroke="black" ' +
+			'fill="black" ' +
+		'/>' +
+		'<text ' +
+			'{{bindAttr font-size="view.fontSize"}} ' +
+			'{{bindAttr x="view.mid.x"}} ' +
+			'{{bindAttr y="view.mid.y"}} ' +
+			'stroke="white" ' +
+			'fill="white" ' +
+			'text-anchor="middle" ' +
+		'>' +
+		'{{ content.ruler.length }}' +
+		'</text>' +
 	'{{/if}}'
 )
 
@@ -91,7 +102,51 @@ RPGB.MapRulerView = Ember.View.extend({
 			};
 		}
 		return null;
-	}.property('context.content.ruler.start', 'context.content.ruler.end')
+	}.property('context.content.ruler.start', 'context.content.ruler.end'),
+
+	fontSize: function(){
+		var zoom = this.get('context.content.zoom');
+		var size = 12 * ( 1 / zoom);
+		if(size < 12){
+			size = 12;
+		}
+		return size + 'px';
+	}.property('context.content.zoom'),
+
+	textBg: function(){
+		var mid = this.get('mid');
+		if(mid == null){
+			return null;
+		}
+		var fontSize = this.get('fontSize');
+		fontSize = parseFloat(fontSize.substring(0, fontSize.length - 2));
+		var length = this.get('context.content.ruler.length');
+		var width = length.toString().length * fontSize;
+		var x = mid.x - (width / 2);
+		var y = mid.y - fontSize;
+		var rx = fontSize / 2;
+		var out = {
+			'x': x,
+			'y': y,
+			'width': width,
+			'height': fontSize + 5,
+			'radius': rx
+		};
+		console.log('der out', out);
+		return out;
+	}.property('mid', 'fontSize').cacheable(false),
+
+	inverseZoom: function(){
+		var map = this.get('context.content');
+		var panx = map.get('panX');
+		var pany = map.get('panY');
+		var zoom = map.get('zoom');
+		zoom = 1 / zoom;
+		panx = panx * -1;
+		pany = pany * -1;
+		var str = 'scale(' + zoom + ') translate(' + panx + ' ' + pany + ')';
+		return str;
+	}.property('context.content.zoom', 'context.content.panX', 'context.content.panY')
 });
 
 RPGB.MapView = Ember.View.extend({
