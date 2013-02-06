@@ -624,16 +624,30 @@ RPGB.toolController = Ember.Object.create({
 
 	makeRulerTool: function(){
 		var ruler = this.get('ruler');
+		// stats
+		// no_measure_up -> measure_down
+		// measuere_down -> measure_up | measure_down
 		var downx;
 		var downy;
+		var moveAction = 'none';
 
 		var mousedown = function(x, y){
-			console.log('down', x, y);
+			if(moveAction == 'measure'){
+				ruler.set('start', null);
+				ruler.set('end', null);
+				moveAction = 'none';
+				return;
+			}
 			downx = Math.floor(x);
 			downy = Math.floor(y);
-			ruler.set('start', {x: downx, y: downy});
+			var xy = {x: downx, y: downy};
+			moveAction = 'measure';
+			ruler.set('start', xy);
 		};
 		var mousemove = function(x, y){
+			if(moveAction == 'none'){
+				return;
+			}
 			console.log('move', x, y);
 			ruler.set('end', {x: Math.floor(x), y: Math.floor(y)});
 		};
