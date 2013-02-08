@@ -28,8 +28,16 @@ Ember.TEMPLATES['layerListItem'] = Ember.Handlebars.compile(
 );
 
 Ember.TEMPLATES['layerSVG'] = Ember.Handlebars.compile(
+'{{#each view.context.zones}}' +
+	'{{view RPGB.ZoneAuraSVGView}}' +
+'{{/each}}' +
+
 '{{#each view.context.combatants}}' +
 	'{{view RPGB.CombatantItemSVGView }}' +
+'{{/each}}' +
+
+'{{#each view.context.auras}}' +
+	'{{view RPGB.ZoneAuraSVGView}}' +
 '{{/each}}'
 );
 
@@ -110,6 +118,5 @@ RPGB.LayerItemSVGView = Ember.View.extend({
 
 	init: function(){
 		this._super();
-		console.log('bing!');
 	}
 });

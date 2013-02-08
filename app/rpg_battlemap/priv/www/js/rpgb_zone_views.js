@@ -41,6 +41,27 @@ Ember.TEMPLATES['zoneAuraList'] = Ember.Handlebars.compile(
 Ember.TEMPLATES['zoneAuraListItem'] = Ember.Handlebars.compile(
 	'{{name}}');
 
+Ember.TEMPLATES['zoneAuraSvg'] = Ember.Handlebars.compile(
+	'{{#if view.isPolyLine}}' +
+		'<polyline ' +
+			'{{bindAttr points="element_attrs.points"}} ' +
+			'{{bindAttr stroke="stroke_color"}} ' +
+			'{{bindAttr stroke-width="stroke_width"}} ' +
+			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
+		'>' +
+	'{{/if}}' +
+
+	'{{#if view.isPolygon}}' +
+		'<polygon ' +
+			'{{bindAttr points="element_attrs.points"}} ' +
+			'{{bindAttr stroke="stroke_color"}} ' +
+			'{{bindAttr stroke-width="stroke_width"}} ' +
+			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
+			'{{bindAttr fill="fill_color"}} ' +
+			'{{bindAttr fill-opacity="opacity"}} ' +
+		'>' +
+	'{{/if}}');
+
 RPGB.ZoneAuraListView = Ember.View.extend({
 	templateName: 'zoneAuraList',
 	content: null,
@@ -95,6 +116,26 @@ RPGB.ZoneAuraListItemView = Ember.View.extend({
 	classNameBindings: 'context.selected',
 
 	click: function(){
+		var selected = this.get('context.selected');
+		if(selected){
+			this.set('context.selected', false);
+			return;
+		}
 		this.set('parentView.content.selected.selectedZoneAura', this.get('context'));
 	}
-})
+});
+
+RPGB.ZoneAuraSVGView = Ember.View.extend({
+	templateName: 'zoneAuraSvg',
+	tagName: 'g',
+
+	isPolyLine: function(){
+		var elemType = this.get('context.element_type');
+		return elemType == 'polyline';
+	}.property('context.element_type'),
+
+	isPolygon: function(){
+		var elemType = this.get('context.element_type');
+		return elemType == 'polygon';
+	}.property('context.element_type')
+});

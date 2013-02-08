@@ -590,6 +590,14 @@ RPGB.toolController = Ember.Object.create({
 		this.set('map.tool', this.makeAddCombatantTool());
 	},
 
+	setToolToEditZone: function(){
+		this.set('map.tool', this.makeEditRegionTool());
+	},
+
+	makeEditRegionTool: function(){
+		return {};
+	},
+
 	makeAddCombatantTool: function(){
 		var combatantsController = this.get('combatants');
 		var layersController = this.get('layers');
