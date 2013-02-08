@@ -433,7 +433,10 @@ assert_layer_list_([EH | ET], [GH | GT]) ->
 	assert_layer(EH1, GH),
 	assert_layer_list_(ET, GT).
 
-assert_layer(Expected, Got) ->
+assert_layer(MaybeBadExpected, Got) ->
+	Expected = lists:keystore(<<"zones">>, 1,
+		lists:keystore(<<"auras">>, 1, MaybeBadExpected, {<<"auras">>, []}),
+		{<<"zones">>, []}),
 	?assertEqual(length(Expected), length(Got)),
 	OrderedE = orddict:from_list(Expected),
 	OrderedG = orddict:from_list(Got),

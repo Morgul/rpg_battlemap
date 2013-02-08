@@ -360,9 +360,15 @@ delete_zone(Layer, Rec) ->
 	{ok, Layer}.
 
 make_json(Req, Ctx) ->
-	#ctx{hostport = {Host, Port}, rec = Rec} = Ctx,
-	Url = make_location(Req, Ctx),
-	Rec:to_json([{url, Url},type,{null_is_undefined}]).
+	#ctx{hostport = {Host, Port}, rec = Rec, map = Map} = Ctx,
+	MapId = Map#rpgb_rec_battlemap.id,
+	Proto = case cowboy_http_req:transport(Req) of
+		{ok, cowboy_ssl_transport, _} ->
+			https;
+		_ ->
+			http
+	end,
+	rpgb_zone:make_json(Proto, Host, Port, Rec, MapId).
 
 get_zones(undefined) ->
 	[];

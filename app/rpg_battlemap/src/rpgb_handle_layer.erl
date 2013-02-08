@@ -202,9 +202,14 @@ get_layers(Id, Acc) ->
 	get_layers(NextId, [Layer | Acc]).
 
 make_json(Req, Ctx, Layer) ->
-	<<"http", RestUrl/binary>> = Url = make_location(Req, Ctx, Layer),
-	% TODO layers, combatants, zones, and participants
-	Layer:to_json([{url, Url}]).
+	{Host, Port} = Ctx#ctx.hostport,
+	Proto = case cowboy_http_req:transport(Req) of
+		{ok, cowboy_ssl_transport, _} ->
+			https;
+		_ ->
+			http
+	end,
+	rpgb_layer:make_json(Proto, Host, Port, Layer).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,

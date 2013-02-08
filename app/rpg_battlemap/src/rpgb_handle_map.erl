@@ -26,14 +26,14 @@ init(Protos, Req, [HostPort | Opts]) ->
 	?info("websocket initialization"),
 	bullet_handler:init(Protos, Req, Opts2);
 
-init(_Protos, Req, _HostPort) ->
+init(_Protos, _Req, _HostPort) ->
 	?info("usual map stuff"),
 	{upgrade, protocol, cowboy_http_rest}.
 
 rest_init(Req, HostPort) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	%?debug("Session:  ~p", [Session]),
-	{Path, Req2} = cowboy_http_req:path(Req1),
+	{_Path, Req2} = cowboy_http_req:path(Req1),
 	%?debug("path:  ~p", [Path]),
 	{MapId, Req3} = cowboy_http_req:binding(mapid, Req2),
 	MapId1 = case MapId of
@@ -54,11 +54,11 @@ allowed_methods(Req, #ctx{mapid = undefined} = Ctx) ->
 allowed_methods(Req, Ctx) ->
 	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
 
-is_authorized(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
+is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
 		undefined ->
 			{{false, <<"post">>}, Req, Ctx};
-		User ->
+		_User ->
 			{true, Req, Ctx}
 	end.
 
@@ -156,7 +156,6 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 	case validate_map(Term, InitialMap) of
 		{ok, {_DerJson, Rec}} ->
 			{ok, Rec2} = rpgb_data:save(Rec),
-			{Host, Port} = Ctx#ctx.hostport,
 			Location = make_location(Req, Ctx, Rec2),
 			{ok, Req2, Rec3} = case MapId of
 				undefined ->
@@ -179,42 +178,18 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 	end.
 
 make_json(Req, Ctx, Map) ->
-	<<"http", RestUrl/binary>> = Url = make_location(Req, Ctx, Map),
-	WebSocket = <<"ws", RestUrl/binary, "/ws">>,
-	% TODO layers, combatants, zones, and participants
-	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, fun make_layer_json/2, first_combatant_id, fun make_combatant_json/2]).
+	{Host, Port} = Ctx#ctx.hostport,
+	Proto = case cowboy_http_req:transport(Req) of
+		{ok, cowboy_ssl_transport, _} ->
+			https;
+		_ ->
+			http
+	end,
+	rpgb_map:make_json(Proto, Host, Port, Map).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
 	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
-
-make_layer_json(Json, Map) ->
-	Layers = get_layers(Map),
-	LayersJson = [Layer:to_json() || Layer <- Layers],
-	[{<<"layers">>, LayersJson} | Json].
-
-get_layers(#rpgb_rec_battlemap{bottom_layer_id = LayerId}) ->
-	get_layers(LayerId, []).
-
-get_layers(undefined, Acc) ->
-	lists:reverse(Acc);
-get_layers(Id, Acc) ->
-	{ok, Layer} = rpgb_data:get_by_id(rpgb_rec_layer, Id),
-	get_layers(Layer#rpgb_rec_layer.next_layer_id, [Layer | Acc]).
-
-make_combatant_json(Json, Map) ->
-	Combatants = get_combatants(Map),
-	CombatantsJson = [Combatant:to_json() || Combatant <- Combatants],
-	[{<<"combatants">>, CombatantsJson} | Json].
-
-get_combatants(#rpgb_rec_battlemap{first_combatant_id = Id}) ->
-	get_combatants(Id, []).
-
-get_combatants(undefined, Acc) ->
-	lists:reverse(Acc);
-get_combatants(Id, Acc) ->
-	{ok, Combatant} = rpgb_data:get_by_id(rpgb_rec_combatant, Id),
-	get_combatants(Combatant#rpgb_rec_combatant.next_combatant_id, [Combatant | Acc]).
 
 validate_map(Json, InitMap) ->
 	ValidateFuns = [
