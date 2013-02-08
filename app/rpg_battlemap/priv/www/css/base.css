@@ -19,7 +19,7 @@ body
 	display: inline-block;
 }
 
-.layerItem.selected, .combatantItem.selected {
+.layerItem.selected, .combatantItem.selected, .zoneAuraItem.selected {
 	box-shadow: inset 0 0 10px 2px blue;
 }
 

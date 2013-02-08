@@ -62,6 +62,7 @@
 <script type="text/javascript" src="/js/rpgb_mapView.js"></script>
 <script type="text/javascript" src="/js/rpgb_layer_views.js"></script>
 <script type="text/javascript" src="/js/rpgb_combatant_views.js"></script>
+<script type="text/javascript" src="/js/rpgb_zone_views.js"></script>
 <script id="mapJson" type="application/json">
 {{ map_json }}
 </script>
@@ -432,7 +433,68 @@ mapJson.layers.map(function(layerData){
 			return this.get('map.combatants').filter(function(item){
 				return item.get('layer_id') == thisId;
 			});
-		}.property('map.combatants.@each.layer_id')
+		}.property('map.combatants.@each.layer_id'),
+		_selectedType: null,
+		_selectedIndex: null,
+		selectedZoneAura: function(key, value){
+			var auraController = this.get('auras');
+			var zoneController = this.get('zones');
+			if(arguments.length == 1){
+				if(this._selectedType == 'zone'){
+					return zoneController.objectAt(this._selectedIndex);
+				} else if(this._selectedType == 'aura'){
+					return auraController.objectAt(this._selectedIndex);
+				}
+				return null;
+			}
+			auraController.forEach(function(item){
+				item.set('selected', false);
+			});
+			zoneController.forEach(function(item){
+				item.set('selected', false);
+			});
+			if(! value){
+				this._selectedIndex = null;
+				this._selectedType = null;
+				return null;
+			}
+			var type = value.get('type');
+			if(type == 'zone'){
+				this._selectedIndex = zoneController.indexOf(value);
+			} else {
+				this._selectedIndex = auraController.indexOf(value);
+			}
+			if(this._selectedIndex == undefined || this._selectedIndex == null){
+				this._selectedIndex = null;
+				this._selectedType = null;
+				return null;
+			}
+			this._selectedType = type;
+			value.set('selected', true);
+			return value;
+		}.property('auraController.content.@each.selected', 'zoneController.content.@each.selected').cacheable(false),
+
+		createZoneAura: function(zoneOrAura, type, name){
+			var url = this.get('url');
+			url += '/' + zoneOrAura + 's';
+			$.ajax(url, {
+				'contentType':'application/json',
+				'context':this,
+				'data': JSON.stringify({
+					'name': name,
+					'element_type': type
+				}),
+				'type':'put',
+				'success': function(newZoneOrAura){
+					var zaObj = RPGB.RestObject.create(newZoneOrAura);
+					if(zoneOrAura == 'zone'){
+						this.get('zones').pushObject(zaObj);
+					} else {
+						this.get('auras').pushObject(zaObj);
+					}
+				}
+			});
+		}
 	});
 	layerObj.lockCommits();
 	layerObj.set('map', RPGB.mapController);
@@ -442,6 +504,38 @@ mapJson.layers.map(function(layerData){
 		layerObj.set(layerProp, layerData[layerProp]);
 		layerObj.addRestfulProperty(layerProp);
 	}
+	var mapFun = function(elem){
+		var restObj = RPGB.RestObject.create({});
+		restObj.lockCommits();
+		var elemProp;
+		for(elemProp in elem){
+			restObj.set(elemProp, elem[elemProp]);
+			restObj.addRestfulProperty(elemProp);
+		}
+		restObj.removeRestfulProperty('url');
+		restObj.unlockCommits();
+		return restObj;
+	};
+	var auraController = Ember.ArrayController.create({
+		content: []
+	});
+	layerData.auras.map(function(auraData){
+		var auraObj = mapFun(auraData);
+		auraObj.set('type', 'aura');
+		auraController.pushObject(auraObj);
+		return auraObj;
+	});
+	layerObj.set('auras', auraController);
+	var zoneController = Ember.ArrayController.create({
+		content: []
+	});
+	layerData.zones.map(function(zoneData){
+		var zoneObj = mapFun(zoneData);
+		zoneObj.set('type', 'zone');
+		zoneController.pushObject(zoneObj);
+		return zoneObj;
+	});
+	layerObj.set('zones', zoneController);
 	RPGB.layerController.pushObject(layerObj);
 	layerObj.unlockCommits();
 });
@@ -677,6 +771,10 @@ RPGB.layersToolbar = RPGB.LayerListView.create({
 	content: RPGB.layerController
 });
 
+RPGB.zoneAuraToolbar = RPGB.ZoneAuraListView.create({
+	content: RPGB.layerController
+});
+
 RPGB.combatantsToolbar = RPGB.CombatantListView.create({
 	content: RPGB.combatantController
 });
@@ -692,6 +790,7 @@ RPGB.mapToolbar = RPGB.MapToolbar.create({
 RPGB.mapToolbar.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
+RPGB.zoneAuraToolbar.appendTo('#toolbar');
 RPGB.combatantsToolbar.appendTo('#toolbar');
 RPGB.selectedCombatantToolbar.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');
