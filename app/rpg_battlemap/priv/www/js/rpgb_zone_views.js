@@ -125,6 +125,7 @@ Ember.TEMPLATES['editPolyRegion'] = Ember.Handlebars.compile(
 	'{{#if content.regionEditor.isEditing}}' +
 		'{{#each content.regionEditor.points}}' +
 			'{{view RPGB.EditPolyRegionPoint}}' +
+			'{{view RPGB.InsertPolyRegionPoint}}' +
 		'{{/each}}' +
 	'{{/if}}'
 );
@@ -142,6 +143,19 @@ Ember.TEMPLATES['editPolyRegionPoint'] = Ember.Handlebars.compile(
 	'</circle>'
 );
 
+Ember.TEMPLATES['insertPolyRegionPoint'] = Ember.Handlebars.compile(
+	'<circle ' +
+		'{{bindAttr cx="view.circle.cx"}} ' +
+		'{{bindAttr cy="view.circle.cy"}} ' +
+		'{{bindAttr r="view.circle.radius"}} ' +
+		'{{bindAttr stroke-opacity="view.opacity"}} ' +
+		'{{bindAttr fill-opacity="view.opacity"}} ' +
+		'stroke="black" ' +
+		'stroke-width="3" ' +
+		'fill="white" ' +
+		'pointer-events="all"' +
+	'></circle>'
+)
 RPGB.ZoneAuraListView = Ember.View.extend({
 	templateName: 'zoneAuraList',
 	content: null,
@@ -361,5 +375,76 @@ RPGB.EditPolyRegionPoint = Ember.View.extend({
 			return;
 		}
 		RPGB.editRegionController.set('selectedPoint', this.get('context'));
+	}
+});
+
+RPGB.InsertPolyRegionPoint = Ember.View.extend({
+	templateName:'insertPolyRegionPoint',
+	tagName: 'g',
+	hover: false,
+
+	didInsertElement: function(){
+		this._super();
+		var thisRef = this;
+		this.$('circle').on('mouseenter', function(){
+			if(thisRef.isDestroyed){
+				return;
+			}
+			thisRef.set('hover', true);
+		}).on('mouseleave', function(){
+			if(thisRef.isDestroyed){
+				return;
+			}
+			thisRef.set('hover', false);
+		});
+	},
+
+	points: function(){
+		return this.get('parentView.context.content.regionEditor.points.content');
+	}.property('parentView.context.content.regionEditor.points.content'),
+
+	nextPoint: function(){
+		var points = this.get('points');
+		var index = points.indexOf(this.get('context'));
+		var nextIndex = index + 1 == points.length ? 0 : index + 1;
+		return points.objectAt(nextIndex);
+	}.property('points'),
+
+	circle: function(){
+		var points = this.get('parentView.context.content.regionEditor.points.content');
+		var point = this.get('context');
+		var nextPoint = this.get('nextPoint');
+		var x = ( point.get('x') + nextPoint.get('x') ) / 2;
+		var y = ( point.get('y') + nextPoint.get('y') ) / 2;
+		var xy = RPGB.mapController.cellToPixels(x, y);
+		console.log(xy);
+		return {
+			'cx':xy[0],
+			'cy':xy[1],
+			'radius':RPGB.CELL_SIZE / 4
+		}
+	}.property('context.x', 'context.y', 'nextPoint.x', 'nextPoint.y'),
+
+	opacity: function(){
+		if(this.get('hover')){
+			return "1";
+		}
+		return "0";
+	}.property('hover'),
+
+	mouseDown: function(){
+		var point = this.get('context');
+		var nextPoint = this.get('nextPoint');
+		var x = ( point.get('x') + nextPoint.get('x') ) / 2;
+		var y = ( point.get('y') + nextPoint.get('y') ) / 2;
+		var newPoint = Ember.Object.create({
+			'x': x,
+			'y': y
+		});
+		var points = this.get('points');
+		var index = points.indexOf(nextPoint);
+		points.insertAt(index, newPoint);
+		var ed = this.get('parentView.context.content.regionEditor');
+		ed.set('selectedPoint', newPoint);
 	}
 });
