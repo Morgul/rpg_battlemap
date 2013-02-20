@@ -78,7 +78,7 @@ RPGB.RestObject = Ember.Object.extend({
 		delete dataObj.id;
 		var args = [];
 		if(arguments.length > 0){
-			for(i; i < arguments.length; i++){
+			for(i = 0; i < arguments.length; i++){
 				args.push(arguments[i]);
 				dataObj[arguments[i]] = this.get(arguments[i]);
 			}

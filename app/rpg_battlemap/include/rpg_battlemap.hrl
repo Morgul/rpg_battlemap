@@ -63,6 +63,7 @@
 	stroke_width = 5 :: non_neg_integer(),
 	stroke_opacity = 1 :: float(),
 	fill_color = <<"green">> :: binary(),
+	fill_opacity = 1,
 	element_type = 'rect' :: 'rect' | 'circle' | 'ellipse' | 'line' | 'polyline' | 'polygon' | 'path',
 	element_attrs = [] :: [keyval()],
 	created :: time(),

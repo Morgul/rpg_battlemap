@@ -1,5 +1,6 @@
 Ember.TEMPLATES['mapToolBar'] = Ember.Handlebars.compile(
 	'<div class="btn-group" data-toggle="buttons-radio">' +
+		'<button class="btn btn-mini" {{bindStyle display="zoneSelected" }} {{action setToolToDeletePoints target="content"}}>Delete Points</button>' +
 		'<button class="btn btn-mini" {{bindStyle display="zoneSelected" }} {{action setToolToEditZone target="content"}}>Edit Region</button>' +
 		'<button class="btn btn-mini" {{ bindStyle display="combatantSelected" }} {{action setToolToMoveCombatant target="content"}}>Move Combatant</button>' +
 		'<button class="btn btn-mini" {{ action setToolToAddCombatant target="content" }}>Add Combatant</button>' +
@@ -140,7 +141,6 @@ RPGB.MapRulerView = Ember.View.extend({
 			'height': fontSize + 5,
 			'radius': rx
 		};
-		console.log('der out', out);
 		return out;
 	}.property('mid', 'fontSize').cacheable(false),
 

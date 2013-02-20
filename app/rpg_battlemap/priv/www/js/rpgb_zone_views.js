@@ -33,7 +33,7 @@ Ember.TEMPLATES['zoneAuraList'] = Ember.Handlebars.compile(
 			'<p class="divider"></p>' +
 
 			'<p>' +
-				'<a href="#" role="button" class="btn" {{action "deleteSelected"}}>Delete</a>' +
+				'<a href="#" role="button" class="btn" {{action "deleteSelected" }}>Delete</a>' +
 			'</p>' +
 		'</div>' +
 	'</div>');
@@ -48,20 +48,78 @@ Ember.TEMPLATES['zoneAuraSvg'] = Ember.Handlebars.compile(
 			'{{bindAttr stroke="stroke_color"}} ' +
 			'{{bindAttr stroke-width="stroke_width"}} ' +
 			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
+			'{{ bindAttr fill="fill_color"}} ' +
+			'{{ bindAttr fill-opacity="view.opacity"}} ' +
 		'>' +
 	'{{/if}}' +
 
 	'{{#if view.isPolygon}}' +
 		'<polygon ' +
 			'{{bindAttr points="view.correctedPoints"}} ' +
-			//'{{bindAttr points="element_attrs.points"}} ' +
 			'{{bindAttr stroke="stroke_color"}} ' +
 			'{{bindAttr stroke-width="stroke_width"}} ' +
 			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
 			'{{bindAttr fill="fill_color"}} ' +
-			'{{bindAttr fill-opacity="opacity"}} ' +
+			'{{bindAttr fill-opacity="view.opacity"}} ' +
 		'>' +
 	'{{/if}}');
+
+Ember.TEMPLATES['zoneAuraDropdown'] = Ember.Handlebars.compile(
+	'<div class="btn-group" {{bindStyle display="displayZoneAuraDropdown"}}>' +
+		'<a class="btn dropdown-toggle" data-toggle="dropdown" href="#">' +
+			'{{content.name}}' +
+			'<span class="caret"></span>' +
+		'</a>' + 
+		'<div class="dropdown-menu">' +
+
+			'<p>' +
+				'<label>Name</label>' +
+				'{{view Ember.TextField valueBinding="content.name"}}' +
+			'</p>' +
+
+			'<p>' +
+				'<label>Border Color</label>' +
+				'<input type="color" ' +
+					'{{bindAttr value="content.stroke_color" }}' +
+					'{{ action "strokeColorChange" on="change" }}' +
+				'/>' +
+			'</p>' +
+
+			'<p>' +
+				'<label>Border Width</label>' +
+				'<input type="number" min="0" max="20" step="1" ' +
+					'{{ bindAttr value="content.stroke_width" }} ' +
+					'{{ action "strokeWidthChange" on="change" }} ' +
+				'/>' +
+			'</p>' +
+
+			'<p>' +
+				'<label>Border Opacity</label>' +
+				'<input type="number" min="0" max="1" step="0.1" ' +
+					'{{ bindAttr value="content.stroke_opacity" }} ' +
+					'{{ action "strokeOpacityChange" on="change" }} ' +
+				'/>' +
+			'</p>' +
+
+			'<p>' +
+				'<label>Fill Color</label>' +
+				'<input type="color" ' +
+					'{{ bindAttr value="content.fill_color" }} ' +
+					'{{ action "fillColorChange" on="change" }} ' +
+				'/>' +
+			'</p>' +
+
+			'<p>' +
+				'<label>Fill Opacity</label>' +
+				'<input type="number" min="0" max="1" step="0.1" ' +
+					'{{ bindAttr value="content.fill_opacity" }} ' +
+					'{{ action "fillOpacityChange" on="change" }} ' +
+				'/>' +
+			'</p>' +
+
+		'</div>' +
+	'</div>'
+);
 
 Ember.TEMPLATES['editPolyRegion'] = Ember.Handlebars.compile(
 	'{{#if content.regionEditor.isEditing}}' +
@@ -76,9 +134,10 @@ Ember.TEMPLATES['editPolyRegionPoint'] = Ember.Handlebars.compile(
 		'{{bindAttr cx="view.circle.cx"}} ' +
 		'{{bindAttr cy="view.circle.cy"}} ' +
 		'{{bindAttr r="view.circle.radius"}} ' +
-		'stroke="black" ' +
+		'{{bindAttr stroke="view.stroke" }} ' +
 		'stroke-width="3" ' +
-		'fill="white" ' +
+		'{{bindAttr stroke-dasharray="view.strokeDasharray" }} ' +
+		'{{bindAttr fill="view.fill"}} ' +
 	'>' +
 	'</circle>'
 );
@@ -129,6 +188,13 @@ RPGB.ZoneAuraListView = Ember.View.extend({
 			return;
 		}
 		selected.createZoneAura(type, element, name);
+	},
+
+	deleteSelected: function(){
+		var selectedLayer = this.get('content.selected');
+		if(selectedLayer){
+			selectedLayer.deleteSelected();
+		}
 	}
 });
 
@@ -136,13 +202,14 @@ RPGB.ZoneAuraListItemView = Ember.View.extend({
 	templateName: 'zoneAuraListItem',
 	classNameBindings: 'context.selected',
 
-	click: function(){
+	click: function(ev){
 		var selected = this.get('context.selected');
 		if(selected){
 			this.set('context.selected', false);
 			return;
 		}
 		this.set('parentView.content.selected.selectedZoneAura', this.get('context'));
+		ev.stopPropagation();
 	}
 });
 
@@ -160,8 +227,17 @@ RPGB.ZoneAuraSVGView = Ember.View.extend({
 		return elemType == 'polygon';
 	}.property('context.element_type'),
 
+	opacity: function(){
+		var type = this.get('context.type');
+		var opacity = this.get('context.fill_opacity');
+		var coefficient = 1;
+		if(type == "aura"){
+			coefficient = 0.3;
+		}
+		return opacity * coefficient + '';
+	}.property('context.type', 'context.fill_opacity'),
+
 	correctedPoints: function(){
-		console.log('ver boing!');
 		var elem = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
 		elem.setAttribute('points', this.get('context.element_attrs.points'));
 		var mapFun = function(point){
@@ -177,6 +253,43 @@ RPGB.ZoneAuraSVGView = Ember.View.extend({
 	}.property('context.element_attrs.points')
 });
 
+RPGB.ZoneAuraDropDown = Ember.View.extend({
+	templateName: 'zoneAuraDropdown',
+
+	displayZoneAuraDropdown: function(){
+		if(this.get('content')){
+			return 'inline-block';
+		}
+		return 'none';
+	}.property('content'),
+
+	didInsertElement: function(){
+		this.$('input, select').on('click', function(ev){
+			ev.stopPropagation();
+		});
+	},
+
+	strokeColorChange: function(ev){
+		this.set('content.stroke_color', ev.target.value);
+	},
+
+	strokeWidthChange: function(ev){
+		this.set('content.stroke_width', parseInt(ev.target.value));
+	},
+
+	strokeOpacityChange: function(ev){
+		this.set('content.stroke_opacity', parseFloat(ev.target.value));
+	},
+
+	fillColorChange: function(ev){
+		this.set('content.fill_color', ev.target.value);
+	},
+
+	fillOpacityChange: function(ev){
+		this.set('content.fill_opacity', parseFloat(ev.target.value));
+	}
+});
+
 RPGB.EditPolyRegionView = Ember.View.extend({
 	templateName: 'editPolyRegion',
 	tagName:'g'
@@ -185,12 +298,21 @@ RPGB.EditPolyRegionView = Ember.View.extend({
 RPGB.EditPolyRegionPoint = Ember.View.extend({
 	templateName: 'editPolyRegionPoint',
 	tagName: 'g',
+	hover: false,
 
 	didInsertElement: function(){
 		this._super();
-		window.pv = this.get('parentView');
-		this.$('rect').mousedown(function(){
-			console.log('rect md!');
+		var thisRef = this;
+		this.$('circle').on('mouseenter', function(){
+			if(thisRef.isDestroyed){
+				return;
+			}
+			thisRef.set('hover', true);
+		}).on('mouseleave', function(){
+			if(thisRef.isDestroyed){
+				return;
+			}
+			thisRef.set('hover', false);
 		});
 	},
 
@@ -212,8 +334,32 @@ RPGB.EditPolyRegionPoint = Ember.View.extend({
 		return 0;
 	}.property('context.selected'),
 
-	mouseDown: function(){
-		console.log('imma stab a ho!');
+	strokeDasharray: function(){
+		if(this.get('context.selected')){
+			return "4 2";
+		}
+		return "none";
+	}.property('context.selected'),
+
+	stroke: function(){
+		if(this.get('hover')){
+			return "white";
+		}
+		return "black";
+	}.property('hover'),
+
+	fill: function(){
+		if(this.get('hover')){
+			return "black";
+		}
+		return "white";
+	}.property('hover'),
+
+	mouseDown: function(ev){
+		if(ev.shiftKey){
+			this.set('context.selected', true);
+			return;
+		}
 		RPGB.editRegionController.set('selectedPoint', this.get('context'));
 	}
 });

@@ -91,7 +91,6 @@ RPGB.mapController = RPGB.RestObject.create({
 		}
 	}.property('tool'),
 	tool: function(key, value){
-		console.log('der tool property', key, value);
 		if(arguments.length == 1){
 			return this._tool;
 		}
@@ -191,12 +190,10 @@ RPGB.layerController = Ember.ArrayController.create({
 			'data': JSON.stringify(layerArgs),
 			'type': 'put',
 			'success': function(newLayer){
-				console.log('new layer created', newLayer, arguments);
 				var layerObj = RPGB.RestObject.create(newLayer);
 				this.insertLayer(layerObj);
 			}
 		})
-		console.log('create layer', arguments);
 	},
 
 	insertLayer: function(layerObj){
@@ -238,7 +235,7 @@ RPGB.layerController = Ember.ArrayController.create({
 	},
 
 	reloadLayers: function(){
-		console.log('oh crap');
+		console.log('reload layers nyi');
 	},
 
 	_isVisibilityMode: function(mode){
@@ -353,7 +350,7 @@ RPGB.combatantController = Ember.ArrayController.create({
 	},
 
 	reloadCombatants: function(){
-		console.log('oh crap');
+		console.log('reload combatants nyi');
 	},
 
 	buildNameStash: function(){
@@ -399,13 +396,10 @@ RPGB.rulerController = Ember.Object.create({
 			var deltax = Math.abs( start.x - end.x );
 			var deltay = Math.abs( start.y - end.y );
 			if(deltax > deltay){
-				console.log('deltax', deltax);
 				return deltax;
 			}
-			console.log('deltay', deltay);
 			return deltay
 		}
-		console.log('nyet');
 		return 0
 	}.property('start', 'end').cacheable(false),
 
@@ -413,10 +407,8 @@ RPGB.rulerController = Ember.Object.create({
 		var start = this.get('start');
 		var end = this.get('end');
 		if(start && end){
-			console.log('measuring');
 			return true;
 		}
-		console.log('not measuring');
 		return false;
 	}.property('start', 'end')
 });
@@ -497,6 +489,27 @@ mapJson.layers.map(function(layerData){
 					}
 				}
 			});
+		},
+
+		deleteSelected: function(){
+			var zoneAura = this.get('selectedZoneAura');
+			if(zoneAura){
+				this.deleteZoneAura(zoneAura);
+			}
+		},
+
+		deleteZoneAura: function(obj){
+			var url = obj.get('url');
+			$.ajax(url, {
+				'type':'delete',
+				'context': this,
+				'success': function(){
+					if(obj.get('type') == "aura"){
+						this.get('auras').removeObject(obj);
+					}
+					this.get('zones').removeObject(obj);
+				}
+			});
 		}
 	});
 	layerObj.lockCommits();
@@ -572,9 +585,9 @@ RPGB.editRegionController = Ember.Object.create({
 	_suppressUpdatePoints: 0,
 
 	isEditing: function(){
-		if(this.get('map.tool.name') != 'Edit Region'){
+		/*if(this.get('map.tool.name') != 'Edit Region'){
 			return false;
-		}
+		}*/
 		if(this.get('layers.selected.selectedZoneAura')){
 			return true;
 		}
@@ -598,17 +611,17 @@ RPGB.editRegionController = Ember.Object.create({
 	}.property('points.@each.selected'),
 
 	pushPoints: function(){
-		console.log('explosions');
 		if(this._suppressPushPoints){
-			console.log('suppressed', this._suppressPushPoints);
 			return;
 		}
 		var zoneAura = this.get('layers.selected.selectedZoneAura');
 		if(! zoneAura){
-			console.log('no zoneAura', zoneAura);
 			return;
 		}
 		var pointStrArr = this.get('points').map(function(point){
+			if(! point){
+				return '';
+			}
 			var x = point.get('x');
 			var y = point.get('y');
 			return x + ' ' + y;
@@ -621,7 +634,7 @@ RPGB.editRegionController = Ember.Object.create({
 		if(this._suppressUpdatePoints){
 			return;
 		}
-		var regionpoints = this.get('layers.selected.selectedZoneAura.element_attrs');
+		var regionpoints = this.get('layers.selected.selectedZoneAura.element_attrs.points');
 		var points = Ember.ArrayController.create({content:[]});
 		if(! regionpoints){
 			this.set('points', points);
@@ -640,6 +653,7 @@ RPGB.editRegionController = Ember.Object.create({
 			var point = elem.animatedPoints.getItem(i);
 			points.pushObject(mapFun(point));
 		}
+		this.set('points', points);
 	}.observes('layers.selected.selectedZoneAura')
 });
 RPGB.mapController.set('regionEditor', RPGB.editRegionController);
@@ -678,25 +692,31 @@ RPGB.toolController = Ember.Object.create({
 		this.set('map.tool', this.makeEditRegionTool());
 	},
 
+	setToolToDeletePoints: function(){
+		this.set('map.tool', this.makeDeletePointsTool());
+	},
+
+	makeDeletePointsTool: function(){
+		var ed = this.get('editRegion');
+		var mouseup = function(){
+			var selected = ed.get('selectedPoint');
+			if(! selected){
+				return;
+			}
+			ed.set('selecedPoint', null);
+			ed.get('points.content').removeObject(selected);
+			ed.get('layers.selected.selectedZoneAura').commitProperties('element_attrs');
+		};
+
+		return {
+			'name': 'Delete Points',
+			'mouseup': mouseup
+		}
+	},
+
 	makeEditRegionTool: function(){
 		var ed = this.get('editRegion');
 		var isDown = false;
-		/*var mousedown = function(x, y){
-			console.log('der mousedown');
-			var selected = ed.get('selectedPoint');
-			if(selected){
-				return;
-			}
-			x = Math.round(x * 2) / 2;
-			y = Math.round(y * 2) / 2;
-			var pointObj = Ember.Object.create({
-				'x': x,
-				'y': y
-			});
-			var points = ed.get('points');
-			points.pushObject(pointObj);
-			ed.set('selectedPoint', pointObj);
-		};*/
 
 		var mousedown = function(){
 			isDown = true;
@@ -707,7 +727,6 @@ RPGB.toolController = Ember.Object.create({
 			if(! selected){
 				x = Math.round(x * 2) / 2;
 				y = Math.round(y * 2) / 2;
-				console.log('nothing selected foo', selected);
 				var selected = Ember.Object.create({
 					'x': x,
 					'y': y
@@ -716,6 +735,7 @@ RPGB.toolController = Ember.Object.create({
 				points.pushObject(selected);
 			}
 			ed.set('selectedPoint', null);
+			ed.get('layers.selected.selectedZoneAura').commitProperties('element_attrs');
 			isDown = false;
 		};
 
@@ -728,7 +748,6 @@ RPGB.toolController = Ember.Object.create({
 			y = Math.round(y * 2) / 2;
 
 			if(! selected){
-				console.log('nothing selected foo', selected);
 				var selected = Ember.Object.create({
 					'x': x,
 					'y': y
@@ -737,7 +756,6 @@ RPGB.toolController = Ember.Object.create({
 				points.pushObject(selected);
 				ed.set('selectedPoint', selected);
 			}
-			console.log('upendaten', selected, x, y);
 			selected.set('x', x);
 			selected.set('y', y);
 		};
@@ -793,7 +811,6 @@ RPGB.toolController = Ember.Object.create({
 		};
 
 		var mousedown = function(x, y, event, map){
-			console.log(x,y,event,map);
 			selectedCombatant = combatantsController.get('selected');
 			moving = true;
 			selectedCombatant.lockCommits();
@@ -902,7 +919,6 @@ RPGB.toolController = Ember.Object.create({
 			if(moveAction == 'none'){
 				return;
 			}
-			console.log('move', x, y);
 			ruler.set('end', {x: Math.floor(x), y: Math.floor(y)});
 		};
 		var teardown = function(){
@@ -944,6 +960,13 @@ RPGB.selectedCombatantToolbar = RPGB.CombatantDropDown.create({
 	content: RPGB.combatantController
 });
 
+RPGB.selectedZoneAuraToolbar = RPGB.ZoneAuraDropDown.create({
+	layers: RPGB.layerController,
+	content: function(){
+		return this.get('layers.selected.selectedZoneAura');
+	}.property('layers.selected.selectedZoneAura')
+});
+
 RPGB.mapToolbar = RPGB.MapToolbar.create({
 	content: RPGB.toolController
 });
@@ -952,6 +975,7 @@ RPGB.mapToolbar.appendTo('#toolbar');
 RPGB.currentGridView.appendTo('#toolbar');
 RPGB.layersToolbar.appendTo('#toolbar');
 RPGB.zoneAuraToolbar.appendTo('#toolbar');
+RPGB.selectedZoneAuraToolbar.appendTo('#toolbar');
 RPGB.combatantsToolbar.appendTo('#toolbar');
 RPGB.selectedCombatantToolbar.appendTo('#toolbar');
 RPGB.currentMapView.appendTo('#main');

@@ -154,7 +154,8 @@ g_zone_aura_field() ->
 			{<<"stroke_color">>, rpgb_prop:g_color()},
 			{<<"stroke_width">>, choose(0, 10)},
 			{<<"stroke_opacity">>, float(0.0, 1.0)},
-			{<<"fill_color">>, rpgb_prop:g_color()}
+			{<<"fill_color">>, rpgb_prop:g_color()},
+			{<<"fill_opacity">>, float(0.0, 1.0)}
 		])),
 		ElementFields = g_element_fields(),
 		{BasicFields, ElementFields}

@@ -253,8 +253,11 @@ scrub_disallowed({Json, Zone}) ->
 	{ok, {Json2, Zone}}.
 
 check_name_conflict({Json, Zone} = In) ->
+	ZoneName = #rpgb_rec_zone.name,
 	case proplists:get_value(<<"name">>, Json) of
 		undefined ->
+			{ok, In};
+		ZoneName when is_binary(ZoneName) ->
 			{ok, In};
 		Name ->
 			#rpgb_rec_zone{type = Mode, layer_id = LayerId} = Zone,
