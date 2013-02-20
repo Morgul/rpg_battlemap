@@ -65,9 +65,28 @@ RPGB.RestObject = Ember.Object.extend({
 
 	commitProperties: function(){
 		var dataObj = {};
+		var dataObj = JSON.parse(JSON.stringify(this));
 		var i = 0;
-		for(i; i < arguments.length; i++){
-			dataObj[arguments[i]] = this.get(arguments[i]);
+		for(i in dataObj){
+			if(this._restProps.indexOf(i) < 0){
+				delete dataObj[i];
+			}
+		}
+		delete dataObj._lockedCommits;
+		delete dataObj.url;
+		delete dataObj.webSocket;
+		delete dataObj.id;
+		var args = [];
+		if(arguments.length > 0){
+			for(i; i < arguments.length; i++){
+				args.push(arguments[i]);
+				dataObj[arguments[i]] = this.get(arguments[i]);
+			}
+			for(i in dataObj){
+				if(args.indexOf(i) < 0){
+					delete dataObj[i];
+				}
+			}
 		}
 
 		if(this.webSocket){
