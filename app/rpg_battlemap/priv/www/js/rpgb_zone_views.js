@@ -44,7 +44,7 @@ Ember.TEMPLATES['zoneAuraListItem'] = Ember.Handlebars.compile(
 Ember.TEMPLATES['zoneAuraSvg'] = Ember.Handlebars.compile(
 	'{{#if view.isPolyLine}}' +
 		'<polyline ' +
-			'{{bindAttr points="element_attrs.points"}} ' +
+			'{{bindAttr points="view.correctedPoints"}} ' +
 			'{{bindAttr stroke="stroke_color"}} ' +
 			'{{bindAttr stroke-width="stroke_width"}} ' +
 			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
@@ -53,7 +53,8 @@ Ember.TEMPLATES['zoneAuraSvg'] = Ember.Handlebars.compile(
 
 	'{{#if view.isPolygon}}' +
 		'<polygon ' +
-			'{{bindAttr points="element_attrs.points"}} ' +
+			'{{bindAttr points="view.correctedPoints"}} ' +
+			//'{{bindAttr points="element_attrs.points"}} ' +
 			'{{bindAttr stroke="stroke_color"}} ' +
 			'{{bindAttr stroke-width="stroke_width"}} ' +
 			'{{bindAttr stroke-opacity="stroke_opacity"}} ' +
@@ -61,6 +62,26 @@ Ember.TEMPLATES['zoneAuraSvg'] = Ember.Handlebars.compile(
 			'{{bindAttr fill-opacity="opacity"}} ' +
 		'>' +
 	'{{/if}}');
+
+Ember.TEMPLATES['editPolyRegion'] = Ember.Handlebars.compile(
+	'{{#if content.regionEditor.isEditing}}' +
+		'{{#each content.regionEditor.points}}' +
+			'{{view RPGB.EditPolyRegionPoint}}' +
+		'{{/each}}' +
+	'{{/if}}'
+);
+
+Ember.TEMPLATES['editPolyRegionPoint'] = Ember.Handlebars.compile(
+	'<circle ' +
+		'{{bindAttr cx="view.circle.cx"}} ' +
+		'{{bindAttr cy="view.circle.cy"}} ' +
+		'{{bindAttr r="view.circle.radius"}} ' +
+		'stroke="black" ' +
+		'stroke-width="3" ' +
+		'fill="white" ' +
+	'>' +
+	'</circle>'
+);
 
 RPGB.ZoneAuraListView = Ember.View.extend({
 	templateName: 'zoneAuraList',
@@ -137,5 +158,57 @@ RPGB.ZoneAuraSVGView = Ember.View.extend({
 	isPolygon: function(){
 		var elemType = this.get('context.element_type');
 		return elemType == 'polygon';
-	}.property('context.element_type')
+	}.property('context.element_type'),
+
+	correctedPoints: function(){
+		console.log('ver boing!');
+		var elem = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+		elem.setAttribute('points', this.get('context.element_attrs.points'));
+		var mapFun = function(point){
+			var pixels = RPGB.mapController.cellToPixels(point.x, point.y);
+			return pixels[0] + ' ' + pixels[1];
+		}
+		var pointsArr = [];
+		for(var i = 0; i < elem.animatedPoints.numberOfItems; i++){
+			var point = elem.animatedPoints.getItem(i);
+			pointsArr.push(mapFun(point));
+		}
+		return pointsArr.join(' ');
+	}.property('context.element_attrs.points')
+});
+
+RPGB.EditPolyRegionView = Ember.View.extend({
+	templateName: 'editPolyRegion',
+	tagName:'g'
+});
+
+RPGB.EditPolyRegionPoint = Ember.View.extend({
+	templateName: 'editPolyRegionPoint',
+	tagName: 'g',
+
+	didInsertElement: function(){
+		this._super();
+		window.pv = this.get('parentView');
+		this.$('rect').mousedown(function(){
+			console.log('rect md!');
+		});
+	},
+
+	circle: function(){
+		var x = this.get('context.x');
+		var y = this.get('context.y');
+		var xy = RPGB.mapController.cellToPixels(x, y);
+		return {
+			'cx': xy[0],
+			'cy': xy[1],
+			'radius': RPGB.CELL_SIZE / 4
+		};
+	}.property('context.x', 'context.y'),
+
+	isSelectedAsOpacity: function(){
+		if(this.get('context.selected')){
+			return 1;
+		}
+		return 0;
+	}.property('context.selected')
 });

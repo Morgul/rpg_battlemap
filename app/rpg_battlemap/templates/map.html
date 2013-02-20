@@ -37,6 +37,9 @@
 	{% templatetag openvariable %}#each content.layers{% templatetag closevariable %}
 		{% templatetag openvariable %}view RPGB.LayerItemSVGView tagName="g"{% templatetag closevariable %}
 	{% templatetag openvariable %}/each{% templatetag closevariable %}
+
+	{% templatetag openvariable %}view RPGB.EditPolyRegionView tagName="g"{% templatetag closevariable %}
+
 	{% templatetag openvariable %}view RPGB.MapRulerView tagName="g"{% templatetag closevariable %}
 	</g>
 
@@ -560,11 +563,92 @@ RPGB.mapController.set('layers', RPGB.layerController);
 RPGB.mapController.set('combatants', RPGB.combatantController);
 RPGB.layerController.set('map', RPGB.mapController);
 RPGB.combatantController.set('map', RPGB.mapController);
+RPGB.editRegionController = Ember.Object.create({
+	layers: RPGB.layerController,
+	map: RPGB.mapController,
+	points: Ember.ArrayController.create({content:[]}),
+	_selectedPoint: -1,
+	_suppressPushPoints: 0,
+	_suppressUpdatePoints: 0,
+
+	isEditing: function(){
+		if(this.get('map.tool.name') != 'Edit Region'){
+			return false;
+		}
+		if(this.get('layers.selected.selectedZoneAura')){
+			return true;
+		}
+		return false;
+	}.property('map.tool.name', 'layers.selected.selectedZoneAura'),
+
+	selectedPoint: function(key, value){
+		if(arguments.length > 1){
+			this.get('points').forEach(function(item){
+				item.set('selected', false);
+			});
+			this._selectedPoint = this.get('points').indexOf(value);
+			if(this._selectedPoint > -1){
+				value.set('selected', true);
+			}
+			return value;
+		}
+		if(this._selectedPoint > -1){
+			return this.get('points').objectAt(this._selectedPoint);
+		}
+	}.property('points.@each.selected'),
+
+	pushPoints: function(){
+		console.log('explosions');
+		if(this._suppressPushPoints){
+			console.log('suppressed', this._suppressPushPoints);
+			return;
+		}
+		var zoneAura = this.get('layers.selected.selectedZoneAura');
+		if(! zoneAura){
+			console.log('no zoneAura', zoneAura);
+			return;
+		}
+		var pointStrArr = this.get('points').map(function(point){
+			var x = point.get('x');
+			var y = point.get('y');
+			return x + ' ' + y;
+		});
+		var points = pointStrArr.join(' ');
+		zoneAura.set('element_attrs.points', points);
+	}.observes('points.content.length', 'points.@each.x', 'points.@each.y'),
+
+	updatePoints: function(){
+		if(this._suppressUpdatePoints){
+			return;
+		}
+		var regionpoints = this.get('layers.selected.selectedZoneAura.element_attrs');
+		var points = Ember.ArrayController.create({content:[]});
+		if(! regionpoints){
+			this.set('points', points);
+			return;
+		}
+		var elem = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+		elem.setAttribute('points', regionpoints);
+		var mapFun = function(point){
+			var pointObj = Ember.Object.create({
+				x: point.x,
+				y: point.y
+			});
+			return pointObj;
+		}
+		for(var i = 0; i < elem.animatedPoints.numberOfItems; i++){
+			var point = elem.animatedPoints.getItem(i);
+			points.pushObject(mapFun(point));
+		}
+	}.observes('layers.selected.selectedZoneAura')
+});
+RPGB.mapController.set('regionEditor', RPGB.editRegionController);
 RPGB.toolController = Ember.Object.create({
 	'layers': RPGB.layerController,
 	'combatants': RPGB.combatantController,
 	'map': RPGB.mapController,
 	'ruler': RPGB.rulerController,
+	'editRegion': RPGB.editRegionController,
 
 	init: function(){
 		this.setToolToPanMap();
@@ -595,7 +679,45 @@ RPGB.toolController = Ember.Object.create({
 	},
 
 	makeEditRegionTool: function(){
-		return {};
+		var ed = this.get('editRegion');
+
+		var mousedown = function(x, y){
+			console.log('der mousedown');
+			x = Math.round(x * 2) / 2;
+			y = Math.round(y * 2) / 2;
+			var pointObj = Ember.Object.create({
+				'x': x,
+				'y': y
+			});
+			var points = ed.get('points');
+			points.pushObject(pointObj);
+			ed.set('selectedPoint', pointObj);
+		};
+
+		var mouseup = function(){
+			ed.set('selectedPoint', null);
+		};
+
+		var mousemove = function(x, y){
+			var selected = ed.get('selectedPoint');
+			if(! selected){
+				console.log('nothing selected foo', selected);
+				return;
+			}
+			x = Math.round(x * 2) / 2;
+			y = Math.round(y * 2) / 2;
+
+			console.log('upendaten', selected, x, y);
+			selected.set('x', x);
+			selected.set('y', y);
+		};
+
+		return {
+			'name':'Edit Region',
+			'mousedown': mousedown,
+			'mousemove': mousemove,
+			'mouseup': mouseup
+		};
 	},
 
 	makeAddCombatantTool: function(){
@@ -621,6 +743,7 @@ RPGB.toolController = Ember.Object.create({
 		};
 
 		return {
+			'name': 'Add Combatant',
 			'click': click
 		};
 	},
@@ -757,6 +880,7 @@ RPGB.toolController = Ember.Object.create({
 			ruler.set('end', null);
 		};
 		return {
+			'name': 'Measure',
 			'mousedown': mousedown,
 			'mousemove': mousemove,
 			'teardown': teardown
