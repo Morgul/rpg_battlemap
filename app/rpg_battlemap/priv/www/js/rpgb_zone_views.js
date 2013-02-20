@@ -210,5 +210,10 @@ RPGB.EditPolyRegionPoint = Ember.View.extend({
 			return 1;
 		}
 		return 0;
-	}.property('context.selected')
+	}.property('context.selected'),
+
+	mouseDown: function(){
+		console.log('imma stab a ho!');
+		RPGB.editRegionController.set('selectedPoint', this.get('context'));
+	}
 });

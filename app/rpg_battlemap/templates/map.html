@@ -680,9 +680,13 @@ RPGB.toolController = Ember.Object.create({
 
 	makeEditRegionTool: function(){
 		var ed = this.get('editRegion');
-
-		var mousedown = function(x, y){
+		var isDown = false;
+		/*var mousedown = function(x, y){
 			console.log('der mousedown');
+			var selected = ed.get('selectedPoint');
+			if(selected){
+				return;
+			}
 			x = Math.round(x * 2) / 2;
 			y = Math.round(y * 2) / 2;
 			var pointObj = Ember.Object.create({
@@ -692,21 +696,47 @@ RPGB.toolController = Ember.Object.create({
 			var points = ed.get('points');
 			points.pushObject(pointObj);
 			ed.set('selectedPoint', pointObj);
+		};*/
+
+		var mousedown = function(){
+			isDown = true;
 		};
 
-		var mouseup = function(){
+		var mouseup = function(x, y){
+			var selected = ed.get('selectedPoint');
+			if(! selected){
+				x = Math.round(x * 2) / 2;
+				y = Math.round(y * 2) / 2;
+				console.log('nothing selected foo', selected);
+				var selected = Ember.Object.create({
+					'x': x,
+					'y': y
+				});
+				var points = ed.get('points');
+				points.pushObject(selected);
+			}
 			ed.set('selectedPoint', null);
+			isDown = false;
 		};
 
 		var mousemove = function(x, y){
-			var selected = ed.get('selectedPoint');
-			if(! selected){
-				console.log('nothing selected foo', selected);
+			if(! isDown){
 				return;
 			}
+			var selected = ed.get('selectedPoint');
 			x = Math.round(x * 2) / 2;
 			y = Math.round(y * 2) / 2;
 
+			if(! selected){
+				console.log('nothing selected foo', selected);
+				var selected = Ember.Object.create({
+					'x': x,
+					'y': y
+				});
+				var points = ed.get('points');
+				points.pushObject(selected);
+				ed.set('selectedPoint', selected);
+			}
 			console.log('upendaten', selected, x, y);
 			selected.set('x', x);
 			selected.set('y', y);
