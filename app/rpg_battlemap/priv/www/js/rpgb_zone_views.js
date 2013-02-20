@@ -220,6 +220,7 @@ RPGB.ZoneAuraListItemView = Ember.View.extend({
 		var selected = this.get('context.selected');
 		if(selected){
 			this.set('context.selected', false);
+			this.set('parentView.content.selected.selectedZoneAura', null);
 			return;
 		}
 		this.set('parentView.content.selected.selectedZoneAura', this.get('context'));
@@ -413,7 +414,13 @@ RPGB.InsertPolyRegionPoint = Ember.View.extend({
 	circle: function(){
 		var points = this.get('parentView.context.content.regionEditor.points.content');
 		var point = this.get('context');
+		if(! point){
+			return null;
+		}
 		var nextPoint = this.get('nextPoint');
+		if(! nextPoint){
+			return null;
+		}
 		var x = ( point.get('x') + nextPoint.get('x') ) / 2;
 		var y = ( point.get('y') + nextPoint.get('y') ) / 2;
 		var xy = RPGB.mapController.cellToPixels(x, y);
@@ -433,6 +440,10 @@ RPGB.InsertPolyRegionPoint = Ember.View.extend({
 	}.property('hover'),
 
 	mouseDown: function(){
+		var toolName = RPGB.mapController.get('tool.name');
+		if(toolName != "Edit Region"){
+			return;
+		}
 		var point = this.get('context');
 		var nextPoint = this.get('nextPoint');
 		var x = ( point.get('x') + nextPoint.get('x') ) / 2;
