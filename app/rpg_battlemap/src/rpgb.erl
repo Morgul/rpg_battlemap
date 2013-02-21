@@ -33,7 +33,7 @@ get_env(Key, Default) ->
 	end.
 
 get_url() ->
-	{ok, Host} = get_env(host, "localhost"),
+	{ok, Host} = get_env(hostname, "localhost"),
 	{ok, Port} = get_env(port, 9090),
 	get_url(http, Host, Port, []).
 
@@ -44,7 +44,7 @@ get_url(Req, Path) when is_tuple(Req) ->
 		_ ->
 			http
 	end,
-	{ok, Host} = get_env(host, "localhost"),
+	{ok, Host} = get_env(hostname, "localhost"),
 	{ok, Port} = get_env(port, 9090),
 	get_url(Proto, Host, Port, Path);
 
