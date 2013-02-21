@@ -4,6 +4,7 @@
 
 -export([make_json/4, make_json/6]).
 -export([delete/1]).
+-export([get_by_participant/1]).
 
 make_json(Proto, Host, Port, Map) ->
 	Layers = rpgb_layer:get_map_layers(Map#rpgb_rec_battlemap.bottom_layer_id),
@@ -23,6 +24,18 @@ make_json(Proto, Host, Port, Map, Layers, Combatants) ->
 		[{combatants, CombatantsJsons} | InJson]
 	end,
 	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, MakeLayerJson, first_combatant_id, MakeCombatantJson]).
+
+get_by_participant(#rpgb_rec_user{id = UserId}) ->
+	get_by_participant(UserId);
+
+get_by_participant(UserId) ->
+	% This is a prime candidate for optimization
+	{ok, Maps} = rpgb_data:search(rpgb_rec_battlemap, []),
+	Filter = fun(#rpgb_rec_battlemap{owner_id = OwnerId, participant_ids = Partiers}) ->
+			OwnerId == UserId orelse lists:member(UserId, Partiers)
+	end,
+	Maps2 = lists:filter(Filter, Maps),
+	{ok, Maps2}.
 
 delete(#rpgb_rec_battlemap{id = Id}) ->
 	delete(Id);
