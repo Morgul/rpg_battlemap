@@ -97,9 +97,10 @@
   owner_id :: pos_integer(),
 	name :: binary(),
   color = <<"green">> :: binary(),
-  portait_image_url :: 'undefined' | binary(),
+  portrait_image_url :: 'undefined' | binary(),
   token_image_url :: 'undefined' | binary(),
   size = 1 :: pos_integer(),
+  public = false :: boolean(),
 	created :: time(),
 	updated :: time()
 }).

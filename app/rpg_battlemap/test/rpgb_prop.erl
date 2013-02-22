@@ -40,7 +40,8 @@ g_characterjson() ->
 		{color, g_color()},
 		{portrait_image_url, g_url()},
 		{token_image_url, g_url()},
-		{size, pos_integer()}
+		{size, pos_integer()},
+		{public, oneof([true, false])}
 	])), uniquify(X)).
 
 %% nuts n bolts

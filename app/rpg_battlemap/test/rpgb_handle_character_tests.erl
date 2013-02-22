@@ -61,11 +61,12 @@ command(#state{url = undefined} = State) ->
 command(State) ->
 	frequency([
 		{9, {call, ?MODULE, simple_get, [State]}},
+		{9, {call, ?MODULE, other_user_get, [State]}},
 		{9, {call, ?MODULE, bad_user_destroy, [State]}},
-		{9, {call, ?MODULE, create_name_conflict, [rpgb_prop:g_character(), State]}},
-		{9, {call, ?MODULE, update_character, [rpgb_prop:g_character(), State]}},
-		{9, {call, ?MODULE, bad_user_update, [rpgb_prop:g_character(), State]}},
-		{9, {call, ?MODULE, update_blank_name, [rpgb_prop:g_charaacter(), State]}},
+		{9, {call, ?MODULE, create_name_conflict, [rpgb_prop:g_characterjson(), State]}},
+		{9, {call, ?MODULE, update_character, [rpgb_prop:g_characterjson(), State]}},
+		{9, {call, ?MODULE, bad_user_update, [rpgb_prop:g_characterjson(), State]}},
+		{9, {call, ?MODULE, update_blank_name, [rpgb_prop:g_characterjson(), State]}},
 		{1, {call, ?MODULE, destroy_character, [State]}}
 	]).
 
@@ -74,72 +75,59 @@ command(State) ->
 %% =======================================================
 
 precondition(#state{url = Url}, {call, _, Function, _}) ->
-	TheyUseNoMap = [create_map, bad_user_create, create_blank_name, create_missing_name],
-	UsesNoMap = lists:member(Function, TheyUseNoMap),
-	case {Url, UsesNoMap} of
-		{undefined, true} -> true; % no map defined, don't need one
-		{undefined, false} -> false; % no map defined, need one
-		{_, true} -> false; % map defined, don't need one
-		_ -> true % map defined, need one
+	TheyUseNoChar = [bad_user_create, create_blank_name, create_missing_name, create_character],
+	UseNoChar = lists:member(Function, TheyUseNoChar),
+	case {Url, UseNoChar} of
+		{undefined, true} -> true;
+		{undefined, false} -> false;
+		{_, true} -> false;
+		_ -> true
 	end.
 
 %% =======================================================
 %% next_state
 %% =======================================================
 
-next_state(State, {ok, _, _, _} = Res, {call, _, create_map, _}) ->
-	State#state{
-		url = extract_location_header(Res),
-		props = decode_json_body(Res)
-	};
-
-next_state(State, Result, {call, _, create_map, _}) ->
+next_state(State, Result, {call, _, create_character, _}) ->
 	State#state{
 		url = {call, ?MODULE, extract_location_header, [Result]},
 		props = {call, ?MODULE, decode_json_body, [Result]}
 	};
 
-next_state(State, _Result, {call, _, destroy_map, _}) ->
-	State#state{url = undefined};
+next_state(State, _Result, {call, _, destroy_character, _}) ->
+	State#state{url = undefined, props = undefined};
 
-next_state(State, {ok, _, _, _} = Res, {call, _, update_map, _}) ->
-	State#state{
-		props = decode_json_body(Res)
-	};
-
-next_state(State, Result, {call, _, update_map, _}) ->
+next_state(State, Result, {call, _, update_character, _}) ->
 	State#state{
 		props = {call, ?MODULE, decode_json_body, [Result]}
 	};
+
+next_state(State, Result, {call, _, simple_get, _Args}) ->
+	State#state{
+		props = {call, ?MODULE, decode_json_body, [Result]}
+	};
+
+next_state(State, _Result, {call, _, other_user_get, _Args}) ->
+	State;
 
 next_state(State, _Res, _Call) ->
 	State.
 
 extract_location_header({ok, _State, Headers, _Body}) ->
-	proplists:get_value("Location", Headers);
-
-extract_location_header(Res) ->
-	{call, proplists, get_value, ["Location",
-		{call, erlang, element, [3, Res]}
-	]}.
+	proplists:get_value("Location", Headers).
 
 decode_json_body({ok, _State, _Headers, Body}) ->
-	jsx:to_term(list_to_binary(Body));
-
-decode_json_body(Res) ->
-	{call, jsx, to_term, [
-		{call, erlang, list_to_binary, [
-			{call, erlang, element, [3, Res]}
-		]}
-	]}.
+	jsx:to_term(list_to_binary(Body)).
 
 %% =======================================================
 %% tests proper
 %% =======================================================
 
-%% commands with no map yet
-create_map(Json, #state{url = undefined}) ->
-	Binary = jsx:to_json(case Json of [] -> [{}]; _ -> Json end),
+%% commands with no character yet
+create_character([], State) ->
+	create_character([{}], State);
+create_character(Json, _State) ->
+	Binary = jsx:to_json(Json),
 	ibrowse:send_req(?create_url, [?cookie, ?accepts, ?contenttype], put, Binary).
 
 bad_user_create(Json, #state{url = undefined}) ->
@@ -148,8 +136,7 @@ bad_user_create(Json, #state{url = undefined}) ->
 
 create_blank_name([{}], State) ->
 	create_blank_name([], State);
-
-create_blank_name(Json, #state{url = undefined}) ->
+create_blank_name(Json, _State) ->
 	Json2 = [{name, <<>>} | proplists:delete(name, Json)],
 	Binary = jsx:to_json(Json2),
 	ibrowse:send_req(?create_url, [?cookie, ?accepts, ?contenttype], put, Binary).
@@ -158,12 +145,15 @@ create_missing_name(Json, _State) ->
 	Binary = jsx:to_json(Json),
 	ibrowse:send_req(?create_url, [?cookie, ?accepts, ?contenttype], put, Binary).
 
-%% commands with a map
-destroy_map(#state{url = Url}) ->
+%% commands with a character
+destroy_character(#state{url = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts], delete).
 
 simple_get(#state{url = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts], get).
+
+other_user_get(#state{url = Url}) ->
+	ibrowse:send_req(Url, [?accepts, ?badcookie], get).
 
 bad_user_destroy(#state{url = Url}) ->
 	ibrowse:send_req(Url, [?badcookie, ?accepts], delete).
@@ -177,9 +167,13 @@ create_name_conflict(Json, #state{props = Props}) ->
 	Binary = jsx:to_json(Json2),
 	ibrowse:send_req(?create_url, [?accepts, ?cookie, ?contenttype], put, Binary).
 
-update_map(Json, #state{url = Url}) ->
+update_character([], State) ->
+	update_character([{}], State);
+update_character(Json, #state{url = Url}) ->
 	ibrowse:send_req(Url, [?cookie, ?accepts, ?contenttype], put, jsx:to_json(Json)).
 
+bad_user_update([], State) ->
+	bad_user_update([{}], State);
 bad_user_update(Json, #state{url = Url}) ->
 	Binary = jsx:to_json(Json),
 	ibrowse:send_req(Url, [?badcookie, ?accepts, ?contenttype], put, Binary).
@@ -196,7 +190,7 @@ update_blank_name(Json, #state{url = Url}) ->
 %% postcondition
 %% =======================================================
 
-postcondition(_State, {call, _, create_map, [Json, _InState]}, {ok, "201", Heads, Body}) ->
+postcondition(_State, {call, _, create_character, [Json, _InState]}, {ok, "201", Heads, Body}) ->
 	Location = proplists:get_value("Location", Heads),
 	?assertNotEqual(undefined, Location),
 	BodyJson = jsx:to_term(list_to_binary(Body)),
@@ -217,22 +211,33 @@ postcondition(_State, {call, _, create_missing_name, _}, {ok, "422", _Heads, Bod
 	?assertEqual(<<"name cannot be blank.">>, Json),
 	true;
 
-postcondition(_State, {call, _, destroy_map, [_InState]}, {ok, "204", _Heads, _Body}) ->
+postcondition(_State, {call, _, destroy_character, [_InState]}, {ok, "204", _Heads, _Body}) ->
 	true;
 
 postcondition(State, {call, _, simple_get, [_InState]}, {ok, "200", _Heads, Body}) ->
 	?assert(rpgb_test_util:assert_body(State#state.props, Body)),
 	true;
 
+postcondition(State, {call, _, other_user_get, [_InState]}, {ok, Status, _Heads, Body}) ->
+	case proplists:get_value(<<"public">>, State#state.props) of
+		true ->
+			?assertEqual("200", Status),
+			?assert(rpgb_test_util:assert_body(State#state.props, Body)),
+			true;
+		_Else ->
+			?assertEqual("403", Status),
+			true
+	end;
+
 postcondition(_State, {call, _, bad_user_destroy, _}, {ok, "403", _Heads, _Body}) ->
 	true;
 
 postcondition(_State, {call, _, create_name_conflict, _}, {ok, "409", _Heads, Body}) ->
 	Json = jsx:to_term(list_to_binary(Body)),
-	?assertEqual(<<"you already have a map by that name.">>, Json),
+	?assertEqual(<<"you already have a character by that name.">>, Json),
 	true;
 
-postcondition(_State, {call, _, update_map, [Json, _InState]}, {ok, "200", _Heads, Body}) ->
+postcondition(_State, {call, _, update_character, [Json, _InState]}, {ok, "200", _Heads, Body}) ->
 	?assert(rpgb_test_util:assert_body(Json, Body)),
 	true;
 
@@ -245,4 +250,8 @@ postcondition(_State, {call, _, update_blank_name, _}, {ok, "422", _Head, Body})
 	true;
 
 postcondition(_State, _Call, _Res) ->
+	?debugFmt("Fall through postcondition~n"
+		"    State: ~p~n"
+		"    Call: ~p~n"
+		"    Res: ~p", [_State, _Call, _Res]),
 	false.

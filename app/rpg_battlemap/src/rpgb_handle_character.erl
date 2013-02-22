@@ -54,6 +54,7 @@ is_authorized(Req, #ctx{session = Session} = Ctx) ->
 
 forbidden(Req, #ctx{character_id = CharacterId, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
+	{Method, Req2} = cowboy_http_req:method(Req),
 	case CharacterId of
 		undefined ->
 			{false, Req, Ctx};
@@ -62,13 +63,15 @@ forbidden(Req, #ctx{character_id = CharacterId, session = Session} = Ctx) ->
 				{ok, Character} ->
 					if
 						User#rpgb_rec_user.id == Character#rpgb_rec_character.owner_id ->
-							{false, Req, Ctx#ctx{character = Character}};
+							{false, Req2, Ctx#ctx{character = Character}};
+						Method == 'GET' andalso Character#rpgb_rec_character.public ->
+							{false, Req2, Ctx#ctx{character = Character}};
 						true ->
-							{true, Req, Ctx#ctx{character = Character}}
+							{true, Req2, Ctx#ctx{character = Character}}
 					end;
 				{error, not_found} ->
-					{ok, Req2} = cowboy_http_req:reply(404, Req),
-					{halt, Req2, Ctx}
+					{ok, Req3} = cowboy_http_req:reply(404, Req2),
+					{halt, Req3, Ctx}
 			end
 	end.
 
@@ -143,7 +146,7 @@ from_json(Req, #ctx{character_id = CharacterId} = Ctx) ->
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_character.id)]).
+	rpgb:get_url(Req, Host, Port, ["character", integer_to_list(Rec#rpgb_rec_character.id)]).
 
 validate_character(Json, InitCharacter) ->
 	ValidateFuns = [
@@ -179,21 +182,21 @@ check_name_conflict({Json, Character}) ->
 				{ok, []} ->
 					{ok, {Json, Character}};
 				_ ->
-					{error, 409, <<"you already have a map by that name.">>}
+					{error, 409, <<"you already have a character by that name.">>}
 			end
 	end.
 
-check_blank_name({Json, Map}) ->
+check_blank_name({Json, Character}) ->
 	case proplists:get_value(<<"name">>, Json) of
 		<<>> ->
 			{error, 422, <<"name cannot be blank.">>};
 		_ ->
-			{ok, {Json, Map}}
+			{ok, {Json, Character}}
 	end.
 
-scrub_disallowed({Json, Map}) ->
+scrub_disallowed({Json, Character}) ->
 	{ok, Json2} = scrub_disallowed(Json),
-	{ok, {Json2, Map}};
+	{ok, {Json2, Character}};
 
 scrub_disallowed([{}]) ->
 	{ok, [{}]};
