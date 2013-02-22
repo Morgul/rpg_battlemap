@@ -130,12 +130,15 @@ to_html(Req, Ctx) ->
 	LayerUrl2 = <<LayerUrl/binary, "/layers">>,
 	CombatantUrl = make_location(Req, Ctx, Ctx#ctx.map),
 	CombatantUrl2 = <<CombatantUrl/binary, "/combatants">>,
+	LoginLink = rpgb:get_url(Req, ["account", "login"]),
+	LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
 	Json2 = [{combatants_url, CombatantUrl2}, {layers_url, LayerUrl2} | Json],
 	PatternHelper = [begin
 		[{x, Row * 32}, {y, Col * 32}]
 	end || Row <- lists:seq(0, 15), Col <- lists:seq(0, 15)],
 	{ok, Output} = map_dtl:render([{user, User}, {map, Json2},
-		{pattern_helper, PatternHelper}, {map_json, jsx:to_json(Json2)}]),
+		{pattern_helper, PatternHelper}, {map_json, jsx:to_json(Json2)},
+		{login_link, LoginLink}, {logout_link, LogoutLink}]),
 	{Output, Req, Ctx}.
 
 from_json(Req, #ctx{mapid = MapId} = Ctx) ->
