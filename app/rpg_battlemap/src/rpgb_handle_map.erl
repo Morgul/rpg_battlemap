@@ -108,13 +108,7 @@ to_html(Req, #ctx{map = undefined} = Ctx) ->
 to_html(Req, Ctx) ->
 	rpgb:refresh_templates(map_dtl),
 	{Host, Port} = Ctx#ctx.hostport,
-	Proto = case cowboy_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
-	Json = rpgb_map:make_json(Proto, Host, Port, Ctx#ctx.map),
+	Json = rpgb_map:make_json(Req, Host, Port, Ctx#ctx.map),
 	%Json = make_json(Req, Ctx, Ctx#ctx.map),
 	User = rpgb_session:get_user(Ctx#ctx.session),
 	LayerUrl = make_location(Req, Ctx, Ctx#ctx.map),

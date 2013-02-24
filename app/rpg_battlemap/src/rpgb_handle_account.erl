@@ -23,14 +23,14 @@ get_routes() ->
 init(_Protos, Req, _HostPort) ->
 	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	{Path, Req2} = cowboy_req:path(Req1),
 	?debug("path:  ~p", [Path]),
 	Action= case Path of
-		[_, <<"login">>] ->
+		<<"/account/login">> ->
 			login;
-		[_, <<"logout">>] ->
+		<<"/account/logout">> ->
 			logout;
 		_ ->
 			undefined
@@ -38,13 +38,13 @@ rest_init(Req, HostPort) ->
 	{ok, Req1, #ctx{hostport = HostPort, session = Session, action = Action}}.
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'POST', 'HEAD'], Req, Ctx}.
+	{[<<"GET">>, <<"POST">>, <<"HEAD">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{action = Action} = Ctx) when Action =:= login; Action =:= logout ->
 	{true, Req, Ctx};
 is_authorized(Req, #ctx{action = undefined, session = Session} = Ctx) ->
 	case cowboy_req:method(Req) of
-		{'POST', Req1} ->
+		{<<"POST">>, Req1} ->
 			?debug("authorized"),
 			{true, Req1, Ctx};
 		{_, Req1} ->
