@@ -23,16 +23,22 @@ request_test_() ->
 		{"access while logged in", fun() ->
 			rpgb_session:make_ets(),
 			{ok, "200", Heads, _Body} = ibrowse:send_req("http://localhost:9094/", [], get),
-			Cookie = proplists:get_value("Set-Cookie", Heads),
+			ServerCookie = proplists:get_value("set-cookie", Heads),
+			[Cookie | _] = string:tokens(ServerCookie, " ;"),
 			Key = ets:first(rpgb_session),
 			[Session] = ets:lookup(rpgb_session, Key),
 			User = #rpgb_rec_user{
 				email = <<"batman@jla.org">>,
 				name = <<"Batman">>
 			},
+			?debugFmt("Data Dump:~n"
+				"    Heads: ~p~n"
+				"    Cookie: ~p~n"
+				"    Key: ~p~n"
+				"    Session: ~p~n", [Heads, Cookie, Key, Session]),
 			rpgb_session:set_user(User, Session),
 			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
-			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [{"Cookie", Cookie}], get),
+			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [{"cookie", Cookie}], get),
 			?debugFmt("The body:  ~p", [Body]),
 			{ok, Regex} = re:compile("Sign Out"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))

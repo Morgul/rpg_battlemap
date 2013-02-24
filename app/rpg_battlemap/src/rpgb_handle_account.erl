@@ -15,17 +15,17 @@
 
 get_routes() ->
 	[
-		[<<"account">>],
-		[<<"account">>, <<"login">>],
-		[<<"account">>, <<"logout">>]
+		<<"/account">>,
+		<<"/account/login">>,
+		<<"/account/logout">>
 	].
 
 init(_Protos, Req, _HostPort) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
 rest_init(Req, HostPort) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
-	{Path, Req2} = cowboy_http_req:path(Req1),
+	{Path, Req2} = cowboy_req:path(Req1),
 	?debug("path:  ~p", [Path]),
 	Action= case Path of
 		[_, <<"login">>] ->
@@ -43,7 +43,7 @@ allowed_methods(Req, Ctx) ->
 is_authorized(Req, #ctx{action = Action} = Ctx) when Action =:= login; Action =:= logout ->
 	{true, Req, Ctx};
 is_authorized(Req, #ctx{action = undefined, session = Session} = Ctx) ->
-	case cowboy_http_req:method(Req) of
+	case cowboy_req:method(Req) of
 		{'POST', Req1} ->
 			?debug("authorized"),
 			{true, Req1, Ctx};
@@ -71,15 +71,13 @@ previously_existed(Req, Ctx) ->
 process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = logout} = Ctx) ->
 	?info("processing logout"),
 	Req1 = rpgb_session:destroy(Req),
-	%{ok, Req2} = cowboy_http_req:reply(200, Req1),
-	%{halt, Req2, Ctx};
 	{true, Req1, Ctx};
 
 process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = login} = Ctx) ->
 	?info("processing login"),
 	SessionId = rpgb_session:get_id(Session),
 	BaseURL = rpgb:get_url(Req, []),
-	{ok, Post, Req1} = cowboy_http_req:body(Req),
+	{ok, Post, Req1} = cowboy_req:body(Req),
 	Json = jsx:to_term(Post),
 	?info("Json term:  ~p", [Json]),
 	Assertion = proplists:get_value(<<"assertion">>, Json),

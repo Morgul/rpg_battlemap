@@ -38,12 +38,7 @@ get_url() ->
 	get_url(http, Host, Port, []).
 
 get_url(Req, Path) when is_tuple(Req) ->
-	Proto = case cowboy_http_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
+	Proto = get_protocol(Req),
 	{ok, Host} = get_env(hostname, "localhost"),
 	{ok, Port} = get_env(port, 9090),
 	get_url(Proto, Host, Port, Path);
@@ -62,12 +57,8 @@ get_url(Proto, Host, Port, [$/ | Path]) ->
 get_url(Proto, Host, Port, <<$/, Path/binary>>) ->
 	get_url(Proto, Host, Port, Path);
 get_url(Req, Host, Port, Path) when is_tuple(Req) ->
-	Proto = case cowboy_http_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
+	HostUrl = cowboy_req:host_url(Req),
+	Proto = get_protocol(Req),
 	get_url(Proto, Host, Port, Path);
 get_url("http", Host, 80, Path) ->
 	iolist_to_binary(io_lib:format("http://~s/~s", [Host, Path]));
@@ -75,6 +66,19 @@ get_url("https", Host, 443, Path) ->
 	iolist_to_binary(io_lib:format("https://~s/~s", [Host, Path]));
 get_url(Proto, Host, Port, Path) ->
 	iolist_to_binary(io_lib:format("~s://~s:~p/~s", [Proto, Host, Port, Path])).
+
+get_protocol(Req) ->
+	{Url, _Req2} = cowboy_req:host_url(Req),
+	case Url of
+		<<"http://", _/binary>> ->
+			http;
+		<<"https://", _/binary>> ->
+			https;
+		<<"wss://", _/binary>> ->
+			wss;
+		<<"ws://", _/binary>> ->
+			ws
+	end.
 
 sluggify(Binary) when is_binary(Binary) ->
 	list_to_binary(sluggify(binary_to_list(Binary)));
@@ -134,7 +138,7 @@ make_route_tuple(HP, Mod, [{Route, Opts} | Tail], Acc) ->
 	Tuple = {Route, Mod, [HP | Opts]},
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]);
 make_route_tuple(HP, Mod, [Route | Tail], Acc) ->
-	Tuple = {Route, Mod, HP},
+	Tuple = {Route, Mod, [HP]},
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]).
 
 refresh_templates(Template) when is_atom(Template) ->

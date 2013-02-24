@@ -7,8 +7,8 @@
                   kernel,
                   stdlib,
                   crypto,
+                  ranch,
                   cowboy,
-                  bullet,
                   lager
                  ]},
   {mod, { rpg_battlemap_app, []}},

@@ -6,21 +6,21 @@
 -export([delete/1]).
 -export([get_by_participant/1]).
 
-make_json(Proto, Host, Port, Map) ->
+make_json(Req, Host, Port, Map) ->
 	Layers = rpgb_layer:get_map_layers(Map#rpgb_rec_battlemap.bottom_layer_id),
 	Combatants = rpgb_combatant:get_map_combatants(Map#rpgb_rec_battlemap.first_combatant_id),
-	make_json(Proto, Host, Port, Map, Layers, Combatants).
+	make_json(Req, Host, Port, Map, Layers, Combatants).
 
-make_json(Proto, Host, Port, Map, Layers, Combatants) ->
-	Url = rpgb:get_url(Proto, Host, Port, ["map", integer_to_list(Map#rpgb_rec_battlemap.id)]),
+make_json(Req, Host, Port, Map, Layers, Combatants) ->
+	Url = rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Map#rpgb_rec_battlemap.id)]),
 	<<"http", RestUrl/binary>> = Url,
 	WebSocket = <<"ws", RestUrl/binary>>,
 	MakeLayerJson = fun(InJson, _InMap) ->
-		LayersJsons = [rpgb_layer:make_json(Proto, Host, Port, Layer) || Layer <- Layers],
+		LayersJsons = [rpgb_layer:make_json(Req, Host, Port, Layer) || Layer <- Layers],
 		[{layers, LayersJsons} | InJson]
 	end,
 	MakeCombatantJson = fun(InJson, _InMap) ->
-		CombatantsJsons = [rpgb_combatant:make_json(Proto, Host, Port, Combatant) || Combatant <- Combatants],
+		CombatantsJsons = [rpgb_combatant:make_json(Req, Host, Port, Combatant) || Combatant <- Combatants],
 		[{combatants, CombatantsJsons} | InJson]
 	end,
 	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, MakeLayerJson, first_combatant_id, MakeCombatantJson]).

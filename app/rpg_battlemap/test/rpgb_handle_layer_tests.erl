@@ -8,12 +8,12 @@
 -define(layer_url(LayerId), if is_integer(LayerId) -> ?layer_url ++ "/" ++ integer_to_list(LayerId); true -> binary_to_list(proplists:get_value(<<"url">>, LayerId)) end).
 -define(mapid, 9000).
 -define(cookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"sessionid">>),
+	{"Cookie", Cookie}
 end).
 -define(badcookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"baduser">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"baduser">>),
+	{"Cookie", Cookie}
 end).
 -define(accepts, {"Accept", "application/json"}).
 -define(contenttype, {"Content-Type", "application/json"}).
@@ -325,7 +325,7 @@ make_json(_,_) -> ok.
 %% =======================================================
 
 postcondition(_Layers, {call, _, create, [Name, NextId, _UrlType]}, {ok, "201", Heads, Body}) ->
-	Location = proplists:get_value("Location", Heads),
+	Location = proplists:get_value("location", Heads),
 	?assertNotEqual(undefined, Location),
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	?assertEqual(list_to_binary(Location), proplists:get_value(<<"url">>, BodyJson)),

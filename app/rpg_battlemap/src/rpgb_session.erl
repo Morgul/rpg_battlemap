@@ -66,16 +66,11 @@ get_or_create(ReqData) ->
 			{ok, Session, ReqData1}
 	end.
 
-set_cookie(SessionId, Req) when element(1, Req) =:= mochiweb_request ->
-	{CookieHKey, CookieHVal} = mochiweb_cookies:cookie("rpgbsid",
-	SessionId, [{max_age, 60 * 60 * 24 * 7},{path,"/"}]),
-	wrq:set_resp_header(CookieHKey, CookieHVal, Req);
-
 set_cookie(SessionId, Req) ->
-	{Header, Val} = cowboy_cookies:cookie(<<"rpgbsid">>, SessionId, [
-		{max_age, 60 * 60 * 24 * 7}, {path, <<"/">>}]),
-	{ok, Out} = cowboy_http_req:set_resp_header(Header, Val, Req),
-	Out.
+	cowboy_req:set_resp_cookie(<<"rpgbsid">>, SessionId, [
+		{max_age, 60 * 60 *24 * 7},
+		{path, <<"/">>}
+	], Req).
 
 %% @doc Get session data if available based on id or `request_data()'.
 -spec get/1 :: (SessionReference :: string() | binary() | request_data()) ->
@@ -96,13 +91,8 @@ get(Id) when is_binary(Id) ->
 			{ok, Session}
 	end;
 
-get(ReqData) when element(1, ReqData) =:= mochiweb_request ->
-	?info("getting session based on req data"),
-	SessionId = wrq:get_cookie_value("rpgbsid", ReqData),
-	?MODULE:get(SessionId);
-
 get(Req) ->
-	{Cookie, Req1} = cowboy_http_req:cookie(<<"rpgbsid">>, Req),
+	{Cookie, Req1} = cowboy_req:cookie(<<"rpgbsid">>, Req),
 	?MODULE:get(Cookie).
 
 %% @doc Creates a new session in the ets table and returns it.  While the
@@ -131,11 +121,11 @@ destroy(Req) when element(1, Req) =:= mochiweb_request ->
 	{Header, Val} = mochiweb_cookies:cookie("rpgbsid", "", [{path, "/"},{max_age, 0}]),
 	wrq:set_resp_header(Header, Val, Req);
 destroy(Req) ->
-	{SessionId, Req1} = cowboy_http_req:cookie(<<"rpgbsid">>, Req),
+	{SessionId, Req1} = cowboy_req:cookie(<<"rpgbsid">>, Req),
 	?MODULE:destroy(SessionId),
 	{Header, Val} = cowboy_cookies:cookie(<<"rpgbsid">>, <<>>, [
 		{max_age, 0}, {path, <<"/">>}]),
-	{ok, Out} = cowboy_http_req:set_resp_header(Header, Val, Req1),
+	{ok, Out} = cowboy_req:set_resp_header(Header, Val, Req1),
 	Out.
 
 %% @doc Extracts the id from a `session()'.

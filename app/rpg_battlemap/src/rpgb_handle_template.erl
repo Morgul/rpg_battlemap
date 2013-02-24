@@ -16,7 +16,7 @@ handle(Req, {{Host, Port}, Template} = Ctx) ->
 	{ok, Output} = Template:render([
 		{user, User}, {login_link, LoginLink}, {logout_link, LogoutLink}
 	]),
-	{ok, Req2} = cowboy_http_req:reply(200, [], Output, Req1),
+	{ok, Req2} = cowboy_req:reply(200, [], Output, Req1),
 	{ok, Req2, Ctx}.
 
 terminate(Req, Ctx) ->

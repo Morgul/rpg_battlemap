@@ -14,18 +14,18 @@
 
 get_routes() ->
 	[
-		[<<"map">>, mapid, <<"combatants">>],
-		[<<"map">>, mapid, <<"combatants">>, combatantid],
-		[<<"map">>, mapid, <<"layers">>, layerid, <<"combatants">>]
+		<<"/map/:mapid/combatants">>,
+		<<"/map/:mapid/combatants/:combatantid">>,
+		<<"/map/:mapid/layers/:layerid/combatants">>
 	].
 
 init(_Protos, Req, _HostPort) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
-	{Path, Req2} = cowboy_http_req:path(Req1),
-	{MapId, Req3} = cowboy_http_req:binding(mapid, Req2),
+	{Path, Req2} = cowboy_req:path(Req1),
+	{MapId, Req3} = cowboy_req:binding(mapid, Req2),
 	MapId1 = case MapId of
 		undefined ->
 			undefined;
@@ -38,7 +38,7 @@ rest_init(Req, HostPort) ->
 					undefined
 			end
 	end,
-	{CombatantId, Req4} = cowboy_http_req:binding(combatantid, Req3),
+	{CombatantId, Req4} = cowboy_req:binding(combatantid, Req3),
 	CombatantId1 = case CombatantId of
 		undefined ->
 			mapcombatants;
@@ -50,7 +50,7 @@ rest_init(Req, HostPort) ->
 					undefined
 			end
 	end,
-	{LayerId, Req5} = cowboy_http_req:binding(layerid, Req4),
+	{LayerId, Req5} = cowboy_req:binding(layerid, Req4),
 	{ok, Req5, #ctx{hostport = HostPort, session = Session, mapid = MapId1, combatantid = CombatantId1, layerid = LayerId}}.
 
 %% ===============================
@@ -58,13 +58,13 @@ rest_init(Req, HostPort) ->
 %% ===============================
 
 allowed_methods(Req, #ctx{layerid = LayerId} = Ctx) when LayerId =/= undefined ->
-	{['GET', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
-	{['GET', 'PUT', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -78,7 +78,7 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	case rpgb_data:get_by_id(rpgb_rec_battlemap, MapId) of
 		{error, notfound} ->
-			{ok, Req2} = cowboy_http_req:reply(404, Req),
+			{ok, Req2} = cowboy_req:reply(404, Req),
 			{halt, Req2, Ctx};
 		{ok, Map} ->
 			Out = is_participant_or_owner(User, Map),
@@ -94,7 +94,7 @@ resource_exists(Req, #ctx{layerid = LayerId} = Ctx) when LayerId =/= undefined -
 			{true, Req, Ctx}
 	end;
 resource_exists(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
-	case cowboy_http_req:method(Req) of
+	case cowboy_req:method(Req) of
 		{'PUT', Req2} ->
 			{false, Req2, Ctx};
 		{_, Req2} ->
@@ -113,8 +113,8 @@ delete_resource(Req, Ctx) ->
 	User= rpgb_session:get_user(Session),
 	if
 		User#rpgb_rec_user.id =/= Combatant#rpgb_rec_combatant.owner_id ->
-			{ok, Req2} = cowboy_http_req:set_resp_body(<<"only owner can delete">>, Req),
-			{ok, Req3} = cowboy_http_req:reply(403, Req2),
+			Req2 = cowboy_req:set_resp_body(<<"only owner can delete">>, Req),
+			{ok, Req3} = cowboy_req:reply(403, Req2),
 			{halt, Req3, Ctx};
 		true ->
 			{ok, Map2} = delete_combatant(Combatant, Map),
@@ -161,7 +161,7 @@ from_json(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 		created = os:timestamp(),
 		updated = os:timestamp()
 	},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_combatant(Term, BaseCombatant) of
 		{ok, {Json, Rec}} ->
@@ -172,25 +172,25 @@ from_json(Req, #ctx{combatantid = mapcombatants} = Ctx) ->
 					{Map1, Rec3} = insert_combatant(Map, Rec2),
 					Ctx2 = Ctx#ctx{combatant = Rec3, combatantid = Rec3#rpgb_rec_combatant.id, map = Map1},
 					Location = make_location(Req1, Ctx2, Rec3),
-					{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+					Req2 = cowboy_req:set_resp_header(<<"location">>, Location, Req1),
 					{OutBody, Req3, Ctx3} = to_json(Req2, Ctx2),
-					{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+					Req4 = cowboy_req:set_resp_body(OutBody, Req3),
 					{true, Req4, Ctx3};
 				N when is_integer(N), 1 =< N, N =< 20 ->
 					{Map1, Combatants} = make_combatants(N, Rec, Map),
 					Jsons = [make_json(Req, Ctx, C) || C <- Combatants],
-					{ok, Req2} = cowboy_http_req:set_resp_body(jsx:to_json(Jsons), Req1),
+					Req2 = cowboy_req:set_resp_body(jsx:to_json(Jsons), Req1),
 					{true, Req2, Ctx};
 				_ ->
 					OutBody = io_lib:format("batch must be 1 to 20; you gave me ~p", [Batch]),
-					{ok, Req2} = cowboy_http_req:set_resp_body(OutBody, Req),
-					{ok, Req3} = cowboy_http_req:reply(422, Req2),
+					Req2 = cowboy_req:set_resp_body(OutBody, Req),
+					{ok, Req3} = cowboy_req:reply(422, Req2),
 					{halt, Req3, Ctx}
 			end;
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end;
 
@@ -198,7 +198,7 @@ from_json(Req, Ctx) ->
 	#ctx{session = Session, map = Map, mapid = MapId} = Ctx,
 	User = rpgb_session:get_user(Session),
 	BaseCombatant = Ctx#ctx.combatant#rpgb_rec_combatant{updated = os:timestamp()},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_combatant(Term, BaseCombatant) of
 		{ok, {Json, Rec}} ->
@@ -208,12 +208,12 @@ from_json(Req, Ctx) ->
 			{Map3, Rec4} = insert_combatant(Map2, Rec3),
 			Ctx2 = Ctx#ctx{combatant = Rec4, map = Map3},
 			{OutBody, Req2, Ctx3} = to_json(Req1, Ctx2),
-			{ok, Req3} = cowboy_http_req:set_resp_body(OutBody, Req2),
+			Req3 = cowboy_req:set_resp_body(OutBody, Req2),
 			{true, Req3, Ctx2};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
 

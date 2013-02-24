@@ -13,17 +13,17 @@
 
 get_routes() ->
 	[
-		[<<"character">>],
-		[<<"character">>, characterid]
+		<<"/character">>,
+		<<"/character/:characterid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
-	{Path, Req2} = cowboy_http_req:path(Req1),
-	{CharId, Req3} = cowboy_http_req:binding(characterid, Req2),
+	{Path, Req2} = cowboy_req:path(Req1),
+	{CharId, Req3} = cowboy_req:binding(characterid, Req2),
 	CharId1 = case CharId of
 		undefined ->
 			undefined;
@@ -39,10 +39,10 @@ rest_init(Req, HostPort) ->
 	{ok, Req3, #ctx{hostport = HostPort, session = Session, character_id = CharId1}}.
 
 allowed_methods(Req, #ctx{character_id = undefined} = Ctx) ->
-	{['GET', 'PUT', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -54,7 +54,7 @@ is_authorized(Req, #ctx{session = Session} = Ctx) ->
 
 forbidden(Req, #ctx{character_id = CharacterId, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
-	{Method, Req2} = cowboy_http_req:method(Req),
+	{Method, Req2} = cowboy_req:method(Req),
 	case CharacterId of
 		undefined ->
 			{false, Req, Ctx};
@@ -64,13 +64,13 @@ forbidden(Req, #ctx{character_id = CharacterId, session = Session} = Ctx) ->
 					if
 						User#rpgb_rec_user.id == Character#rpgb_rec_character.owner_id ->
 							{false, Req2, Ctx#ctx{character = Character}};
-						Method == 'GET' andalso Character#rpgb_rec_character.public ->
+						Method == <<"GET">> andalso Character#rpgb_rec_character.public ->
 							{false, Req2, Ctx#ctx{character = Character}};
 						true ->
 							{true, Req2, Ctx#ctx{character = Character}}
 					end;
 				{error, not_found} ->
-					{ok, Req3} = cowboy_http_req:reply(404, Req2),
+					{ok, Req3} = cowboy_req:reply(404, Req2),
 					{halt, Req3, Ctx}
 			end
 	end.
@@ -81,7 +81,7 @@ delete_resource(Req, #ctx{character_id = CharacterId} = Ctx) ->
 			{true, Req, Ctx};
 		{error, Err} ->
 			Body = iolist_to_binary(io_lib:format("Error deleteing:  ~p", [Err])),
-			{ok, Req1} = cowboy_http_req:set_resp_body(Body),
+			{ok, Req1} = cowboy_req:set_resp_body(Body),
 			{false, Req1, Ctx}
 	end.
 
@@ -121,26 +121,26 @@ from_json(Req, #ctx{character_id = CharacterId} = Ctx) ->
 			InitC = Ctx#ctx.character,
 			InitC#rpgb_rec_character{updated = os:timestamp()}
 	end,
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_character(Term, InitialCharacter) of
 		{ok, {_DerJson, Rec}} ->
 			{ok, Rec2} = rpgb_data:save(Rec),
 			{Host, Port} = Ctx#ctx.hostport,
 			Location = make_location(Req, Ctx, Rec2),
-			{ok, Req2} = case CharacterId of
+			Req2 = case CharacterId of
 				undefined ->
-					cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1);
+					cowboy_req:set_resp_header(<<"location">>, Location, Req1);
 				_ ->
-					{ok, Req1}
+					Req1
 			end,
 			OutJson = jsx:to_json(Rec2:to_json([{<<"url">>, Location}])),
-			{ok, Req3} = cowboy_http_req:set_resp_body(OutJson, Req2),
+			Req3 = cowboy_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{character_id = Rec2#rpgb_rec_character.id, character = Rec2}};
 		{error, State, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(State, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(State, Req2),
 			{halt, Req3, Ctx}
 	end.
 

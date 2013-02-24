@@ -8,6 +8,14 @@
 -export([web_test_setup/1, web_test_setup/2, web_test_teardown/0,
 	create_authed_session/0, create_authed_session/1,
 	create_authed_session/2, assert_body/2, match_keys/2]).
+-export([make_cookie/2]).
+
+make_cookie(Name, Value) when is_binary(Name) ->
+	make_cookie(binary_to_list(Name), Value);
+make_cookie(Name, Value) when is_binary(Value) ->
+	make_cookie(Name, binary_to_list(Value));
+make_cookie(Name, Value) ->
+	Name ++ "=" ++ Value.
 
 mecked_data(Callback) ->
 	Ets = ets:new(Callback, [public]),
@@ -67,15 +75,16 @@ web_test_setup(TestingModule) ->
 	web_test_setup(TestingModule, Module).
 
 web_test_setup(TestingModule, ModuleUnderTest) ->
+	application:start(ranch),
+	application:start(crypto),
 	application:start(cowboy),
 	Port = rpgb_test_util:get_port(TestingModule),
 	HostPort = {<<"localhost">>, Port},
 	Routes = rpgb:get_routes(HostPort, [ModuleUnderTest]),
-	cowboy:start_listener(TestingModule, 1,
-		cowboy_tcp_transport, [{port, Port}],
-		cowboy_http_protocol, [{dispatch, [
-			{'_', Routes}
-		]}]
+	Dispatch = cowboy_router:compile([{'_', Routes}]),
+	cowboy:start_http(TestingModule, 1,
+		[{port, Port}],
+		[{env, [{dispatch, Dispatch}]}]
 	),
 	ibrowse:start(),
 	rpgb_test_util:mecked_data(meck_data_name(TestingModule)),

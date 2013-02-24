@@ -14,18 +14,18 @@
 
 get_routes() ->
 	[
-		[<<"map">>, mapid, <<"layers">>],
-		[<<"map">>, mapid, <<"layers">>, layerid]
+		<<"/map/:mapid/layers">>,
+		<<"/map/:mapid/layers/:layerid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	%?debug("Session:  ~p", [Session]),
-	{Path, Req2} = cowboy_http_req:path(Req1),
-	{MapId, Req3} = cowboy_http_req:binding(mapid, Req2),
+	{Path, Req2} = cowboy_req:path(Req1),
+	{MapId, Req3} = cowboy_req:binding(mapid, Req2),
 	MapId1 = case MapId of
 		undefined ->
 			undefined;
@@ -38,7 +38,7 @@ rest_init(Req, HostPort) ->
 					undefined
 			end
 	end,
-	{LayerId, Req4} = cowboy_http_req:binding(layerid, Req3),
+	{LayerId, Req4} = cowboy_req:binding(layerid, Req3),
 	LayerId1 = case LayerId of
 		undefined ->
 			maplayers;
@@ -53,10 +53,10 @@ rest_init(Req, HostPort) ->
 	{ok, Req4, #ctx{hostport = HostPort, session = Session, mapid = MapId1, layerid = LayerId1}}.
 
 allowed_methods(Req, #ctx{layerid = LayerId} = Ctx) when is_atom(LayerId) ->
-	{['GET', 'PUT', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -70,7 +70,7 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	case rpgb_data:get_by_id(rpgb_rec_battlemap, MapId) of
 		{error, notfound} ->
-			{ok, Req2} = cowboy_http_req:reply(404, Req),
+			{ok, Req2} = cowboy_req:reply(404, Req),
 			{halt, Req2, Ctx};
 		{ok, Map} ->
 			if
@@ -82,8 +82,8 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 	end.
 
 resource_exists(Req, #ctx{layerid = maplayers} = Ctx) ->
-	case cowboy_http_req:method(Req) of
-		{'PUT', Req2} ->
+	case cowboy_req:method(Req) of
+		{<<"PUT">>, Req2} ->
 			{false, Req2, Ctx};
 		{_, Req2} ->
 			{true, Req, Ctx}
@@ -97,8 +97,8 @@ delete_resource(Req, #ctx{mapid = MapId} = Ctx) ->
 	?debug("Found layers ~p", [Layers]),
 	case Layers of
 		[_Elem] ->
-			{ok, Req2} = cowboy_http_req:set_resp_body(<<"you cannot delete the last layer of a map">>, Req),
-			{ok, Req3} = cowboy_http_req:reply(422, Req2),
+			Req2 = cowboy_req:set_resp_body(<<"you cannot delete the last layer of a map">>, Req),
+			{ok, Req3} = cowboy_req:reply(422, Req2),
 			{halt, Req3, Ctx};
 		_ ->
 			#ctx{map = Map, layerid = LayerId, layer = Layer} = Ctx,
@@ -145,7 +145,7 @@ from_json(Req, #ctx{layerid = maplayers} = Ctx) ->
 		id = undefined, name = <<>>, battlemap_id = MapId, created = os:timestamp(),
 		updated = os:timestamp()
 	},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_layer(Term, InitialLayer) of
 		{ok, {_Json, Rec}} ->
@@ -153,14 +153,14 @@ from_json(Req, #ctx{layerid = maplayers} = Ctx) ->
 			Rec3 = insert_layer(Map, Rec2),
 			Ctx2 = Ctx#ctx{layer = Rec3, layerid = Rec3#rpgb_rec_layer.id},
 			Location = make_location(Req1, Ctx2, Rec3),
-			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+			Req2 = cowboy_req:set_resp_header(<<"location">>, Location, Req1),
 			{OutBody, Req3, Ctx3} = to_json(Req2, Ctx2),
-			{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+			Req4 = cowboy_req:set_resp_body(OutBody, Req3),
 			{true, Req4, Ctx3};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end;
 
@@ -168,7 +168,7 @@ from_json(Req, #ctx{mapid = MapId, map = Map, layer = InitL} = Ctx) ->
 	#ctx{session = Session} = Ctx,
 	User = rpgb_session:get_user(Session),
 	InitialLayer = InitL#rpgb_rec_layer{updated = os:timestamp()},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	?debug("Submitted json:  ~p", [Term]),
 	case validate_layer(Term, InitialLayer) of
@@ -180,12 +180,12 @@ from_json(Req, #ctx{mapid = MapId, map = Map, layer = InitL} = Ctx) ->
 			Map3 = rpgb_data:get_by_id(rpgb_rec_battlemap, Map2#rpgb_rec_battlemap.id),
 			Ctx2 = Ctx#ctx{layer = Rec4, map = Map3},
 			{OutBody, Req2, Ctx3} = to_json(Req1, Ctx2),
-			{ok, Req3} = cowboy_http_req:set_resp_body(OutBody, Req2),
+			Req3 = cowboy_req:set_resp_body(OutBody, Req2),
 			{true, Req3, Ctx3};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
 
@@ -203,13 +203,7 @@ get_layers(Id, Acc) ->
 
 make_json(Req, Ctx, Layer) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	Proto = case cowboy_http_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
-	rpgb_layer:make_json(Proto, Host, Port, Layer).
+	rpgb_layer:make_json(Req, Host, Port, Layer).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,

@@ -13,29 +13,20 @@
 
 get_routes() ->
 	[
-		[<<"map">>],
-		[<<"map">>, mapid],
-		{[<<"map">>, mapid, <<"ws">>], []}
+		<<"/map">>,
+		<<"/map/:mapid">>
 	].
-
-%				{[<<"maps">>], rpgb_handle_maps, HP},
-%				{[<<"maps">>, map_id], rpgb_handle_map, HP},
-%				{[<<"maps">>, map_id, property], rpgb_handle_map, {host, Port}},
-init(Protos, Req, [HostPort | Opts]) ->
-	Opts2 = [{hostport, HostPort}, {handler, rpgb_handle_map_websocket} | Opts],
-	?info("websocket initialization"),
-	bullet_handler:init(Protos, Req, Opts2);
 
 init(_Protos, _Req, _HostPort) ->
 	?info("usual map stuff"),
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	%?debug("Session:  ~p", [Session]),
-	{_Path, Req2} = cowboy_http_req:path(Req1),
+	{_Path, Req2} = cowboy_req:path(Req1),
 	%?debug("path:  ~p", [Path]),
-	{MapId, Req3} = cowboy_http_req:binding(mapid, Req2),
+	{MapId, Req3} = cowboy_req:binding(mapid, Req2),
 	MapId1 = case MapId of
 		undefined -> undefined;
 		_ ->
@@ -49,10 +40,10 @@ rest_init(Req, HostPort) ->
 	{ok, Req3, #ctx{hostport = HostPort, session = Session, mapid = MapId1}}.
 
 allowed_methods(Req, #ctx{mapid = undefined} = Ctx) ->
-	{['GET', 'PUT', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -79,7 +70,7 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 							{true, Req, Ctx#ctx{map = Map}}
 					end;
 				{error, not_found} ->
-					{ok, Req2} = cowboy_http_req:reply(404, Req),
+					{ok, Req2} = cowboy_req:reply(404, Req),
 					{halt, Req2, Ctx}
 			end
 	end.
@@ -90,7 +81,7 @@ delete_resource(Req, #ctx{mapid = MapId} = Ctx) ->
 			{true, Req, Ctx};
 		{error, Err} ->
 			Body = iolist_to_binary(io_lib:format("Error deleting:  ~p", [Err])),
-			{ok, Req1} = cowboy_http_req:set_resp_body(Body),
+			{ok, Req1} = cowboy_req:set_resp_body(Body),
 			{false, Req1, Ctx}
 	end.
 
@@ -117,7 +108,7 @@ to_html(Req, #ctx{map = undefined} = Ctx) ->
 to_html(Req, Ctx) ->
 	rpgb:refresh_templates(map_dtl),
 	{Host, Port} = Ctx#ctx.hostport,
-	Proto = case cowboy_http_req:transport(Req) of
+	Proto = case cowboy_req:transport(Req) of
 		{ok, cowboy_ssl_transport, _} ->
 			https;
 		_ ->
@@ -161,7 +152,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			InitM = Ctx#ctx.map,
 			InitM#rpgb_rec_battlemap{updated = os:timestamp()}
 	end,
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	?debug("Submitted json:  ~p", [Term]),
 	case validate_map(Term, InitialMap) of
@@ -170,7 +161,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			Location = make_location(Req, Ctx, Rec2),
 			{ok, Req2, Rec3} = case MapId of
 				undefined ->
-					{ok, OutReq} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+					OutReq = cowboy_req:set_resp_header(<<"location">>, Location, Req1),
 					LayerRec = #rpgb_rec_layer{battlemap_id = Rec2#rpgb_rec_battlemap.id, name = <<"Bottom Layer">>},
 					{ok, LayerRec2} = rpgb_data:save(LayerRec),
 					{ok, OutRec} = rpgb_data:save(Rec2#rpgb_rec_battlemap{bottom_layer_id = LayerRec2#rpgb_rec_layer.id}),
@@ -179,24 +170,18 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 					{ok, Req1, Rec2}
 			end,
 			OutJson = jsx:to_json(make_json(Req2, Ctx, Rec3)),
-			{ok, Req3} = cowboy_http_req:set_resp_body(OutJson, Req2),
+			Req3 = cowboy_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
 
 make_json(Req, Ctx, Map) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	Proto = case cowboy_http_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
-	rpgb_map:make_json(Proto, Host, Port, Map).
+	rpgb_map:make_json(Req, Host, Port, Map).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,

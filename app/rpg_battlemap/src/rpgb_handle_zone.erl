@@ -13,19 +13,19 @@
 
 get_routes() ->
 	[
-		[<<"map">>, mapid, <<"layers">>, layerid, <<"auras">>],
-		[<<"map">>, mapid, <<"layers">>, layerid, <<"auras">>, zoneid],
-		[<<"map">>, mapid, <<"layers">>, layerid, <<"zones">>],
-		[<<"map">>, mapid, <<"layers">>, layerid, <<"zones">>, zoneid]
+		<<"/map/:mapid/layers/:layerid/auras">>,
+		<<"/map/:mapid/layers/:layerid/auras/:zoneid">>,
+		<<"/map/:mapid/layers/:layerid/zones">>,
+		<<"/map/:mapid/layers/:layerid/zones/:zoneid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
-	{upgrade, protocol, cowboy_http_rest}.
+	{upgrade, protocol, cowboy_rest}.
 
-rest_init(Req, HostPort) ->
+rest_init(Req, [HostPort]) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
-	{Path, Req2} = cowboy_http_req:path(Req1),
-	{MapId, Req3} = cowboy_http_req:binding(mapid, Req2),
+	{Path, Req2} = cowboy_req:path(Req1),
+	{MapId, Req3} = cowboy_req:binding(mapid, Req2),
 	Map = try list_to_integer(binary_to_list(MapId)) of
 		MapN ->
 			case rpgb_data:get_by_id(rpgb_rec_battlemap, MapN) of
@@ -36,7 +36,7 @@ rest_init(Req, HostPort) ->
 		'ERROR':{badarg, _} ->
 			notfound
 	end,
-	{LayerId, Req4} = cowboy_http_req:binding(layerid, Req3),
+	{LayerId, Req4} = cowboy_req:binding(layerid, Req3),
 	Layer = try list_to_integer(binary_to_list(LayerId)) of
 		LayerN ->
 			case rpgb_data:get_by_id(rpgb_rec_layer, LayerN) of
@@ -47,13 +47,15 @@ rest_init(Req, HostPort) ->
 		'ERROR':{badarg, _} ->
 			notfound
 	end,
-	[_Maps, _MapId, _Layers, _LayerId, Mode | _] = Path,
-	Mode2 = case Mode of
-		<<"zones">> -> zone;
-		<<"auras">> -> aura;
+	PreBin = <<"/map/", MapId/binary, "/layers/", LayerId/binary, "/">>,
+	PreBinSize = size(PreBin),
+	<<PreBin:PreBinSize/binary, RestPath/binary>> = Path,
+	Mode2 = case RestPath of
+		<<"zones", _/binary>> -> zone;
+		<<"auras", _/binary>> -> aura;
 		_ -> error
 	end,
-	{ZoneAuraId, Req5} = cowboy_http_req:binding(zoneid, Req4),
+	{ZoneAuraId, Req5} = cowboy_req:binding(zoneid, Req4),
 	ZoneAuraId1 = case ZoneAuraId of
 		undefined ->
 			undefined;
@@ -84,10 +86,10 @@ rest_init(Req, HostPort) ->
 	{ok, Req5, #ctx{hostport = HostPort, session = Session, map = Map, layer = Layer, rec = ZoneAura, mode = Mode2}}.
 
 allowed_methods(Req, #ctx{rec = Id} = Ctx) when is_atom(Id) ->
-	{['GET', 'PUT', 'HEAD'], Req, Ctx};
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
-	{['GET', 'PUT', 'HEAD', 'DELETE'], Req, Ctx}.
+	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
 
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
@@ -98,12 +100,12 @@ is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	end.
 
 forbidden(Req, #ctx{map = notfound} = Ctx) ->
-	{ok, Req2} = cowboy_http_req:reply(404, Req),
+	{ok, Req2} = cowboy_req:reply(404, Req),
 	{halt, Req2, Ctx};
 forbidden(Req, #ctx{map = Map, session = Session, mode = zone} = Ctx) ->
 	User = rpgb_session:get_user(Session),
-	Allowed = case cowboy_http_req:method(Req) of
-		{GetOrHead, Req2} when GetOrHead =:= 'GET' orelse GetOrHead =:= 'HEAD' ->
+	Allowed = case cowboy_req:method(Req) of
+		{GetOrHead, Req2} when GetOrHead =:= <<"GET">> orelse GetOrHead =:= <<"HEAD">> ->
 			User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
 				lists:member(User#rpgb_rec_user.id, Map#rpgb_rec_battlemap.participant_ids);
 		{_Method, Req2} ->
@@ -123,7 +125,7 @@ resource_exists(Req, #ctx{layer = notfound} = Ctx) ->
 resource_exists(Req, #ctx{rec = notfound} = Ctx) ->
 	{false, Req, Ctx};
 resource_exists(Req, #ctx{rec = undefined} = Ctx) ->
-	case cowboy_http_req:method(Req) of
+	case cowboy_req:method(Req) of
 		{'PUT', Req2} ->
 			{false, Req2, Ctx};
 		{_, Req2} ->
@@ -173,7 +175,7 @@ from_json(Req, #ctx{rec = undefined} = Ctx) ->
 		id = undefined, name = <<>>, layer_id = Layer#rpgb_rec_layer.id,
 		type = Mode, created = os:timestamp(), updated = os:timestamp()
 	},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_zone(Term, InitialZone) of
 		{ok, {_Json, Rec}} ->
@@ -181,20 +183,20 @@ from_json(Req, #ctx{rec = undefined} = Ctx) ->
 			{Layer2, Rec3} = insert_zone(Layer, Rec2),
 			Ctx2 = Ctx#ctx{layer = Layer2, rec = Rec3},
 			Location = make_location(Req1, Ctx2),
-			{ok, Req2} = cowboy_http_req:set_resp_header(<<"Location">>, Location, Req1),
+			Req2 = cowboy_req:set_resp_header(<<"location">>, Location, Req1),
 			{OutBody, Req3, Ctx3} = to_json(Req2, Ctx2),
-			{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+			Req4 = cowboy_req:set_resp_body(OutBody, Req3),
 			{true, Req4, Ctx3};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			Req3 = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end;
 from_json(Req, Ctx) ->
 	#ctx{map = Map, layer = Layer, mode = Mode, rec = InitRec} = Ctx,
 	InitialZone = InitRec#rpgb_rec_zone{updated = os:timestamp()},
-	{ok, Body, Req1} = cowboy_http_req:body(Req),
+	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	case validate_zone(Term, InitialZone) of
 		{ok, {_Json, Rec}} ->
@@ -203,12 +205,12 @@ from_json(Req, Ctx) ->
 			{Layer3, Rec3} = insert_zone(Layer2, Rec2),
 			Ctx2 = Ctx#ctx{layer = Layer3, rec = Rec3},
 			{OutBody, Req3, Ctx3} = to_json(Req, Ctx2),
-			{ok, Req4} = cowboy_http_req:set_resp_body(OutBody, Req3),
+			Req4 = cowboy_req:set_resp_body(OutBody, Req3),
 			{true, Req4, Ctx3};
 		{error, Status, ErrBody} ->
 			ErrBody2 = jsx:to_json(ErrBody),
-			{ok, Req2} = cowboy_http_req:set_resp_body(ErrBody2, Req1),
-			{ok, Req3} = cowboy_http_req:reply(Status, Req2),
+			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
+			Req3 = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
 
@@ -365,13 +367,7 @@ delete_zone(Layer, Rec) ->
 make_json(Req, Ctx) ->
 	#ctx{hostport = {Host, Port}, rec = Rec, map = Map} = Ctx,
 	MapId = Map#rpgb_rec_battlemap.id,
-	Proto = case cowboy_http_req:transport(Req) of
-		{ok, cowboy_ssl_transport, _} ->
-			https;
-		_ ->
-			http
-	end,
-	rpgb_zone:make_json(Proto, Host, Port, Rec, MapId).
+	rpgb_zone:make_json(Req, Host, Port, Rec, MapId).
 
 get_zones(undefined) ->
 	[];

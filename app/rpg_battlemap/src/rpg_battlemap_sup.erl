@@ -42,11 +42,9 @@ init(Args) ->
 		Dispatch = [
 			{ListenHost, Routes}
 		],
+		Dispatch2 = cowboy_router:compile(Dispatch),
 
-		cowboy:start_listener(rpgb_listener, Listeners, 
-			cowboy_ssl_transport, [{keyfile, Keyfile}, {certfile, Certfile},
-				{port, Port}], cowboy_http_protocol, [{dispatch, Dispatch}]
-		),
+		cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]),
 
     Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
         5000, worker, [rpgb_session]},
@@ -74,6 +72,7 @@ init(Args) ->
 
 start_test() ->
 	ssl:start(),
+	application:start(ranch),
 	application:start(cowboy),
 	Out = ?MODULE:start_link([{data_callback, nomod}]),
 	?assertMatch({ok, _Pid}, Out),

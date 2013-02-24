@@ -12,16 +12,16 @@
 -define(layer2id, 3002).
 -define(layer3id, 3003).
 -define(cookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"sessionid">>),
+	{"Cookie", Cookie}
 end).
 -define(participant, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"participant">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"participant">>),
+	{"Cookie", Cookie}
 end).
 -define(badcookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"baduser">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"baduser">>),
+	{"Cookie", Cookie}
 end).
 -define(accepts, {"Accepts", "application/json"}).
 -define(contenttype, {"Content-Type", "application/json"}).

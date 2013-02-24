@@ -4,6 +4,6 @@
 
 get_routes() ->
 	[
-			[<<"user">>],
-			[<<"user">>, userid]
+			<<"/user">>,
+			<<"/user/:userid">>
 	].

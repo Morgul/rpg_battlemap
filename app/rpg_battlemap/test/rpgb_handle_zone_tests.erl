@@ -549,20 +549,20 @@ cookie(partier2) -> partier2_cookie();
 cookie(baduser) -> bad_cookie().
 
 owner_cookie() ->
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"owner_session">>),
-	{"Cookie", binary_to_list(Cookie)}.
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"owner_session">>),
+	{"Cookie", Cookie}.
 
 partier1_cookie() ->
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"partier1_session">>),
-	{"Cookie", binary_to_list(Cookie)}.
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"partier1_session">>),
+	{"Cookie", Cookie}.
 
 partier2_cookie() ->
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"partier2_session">>),
-	{"Cookie", binary_to_list(Cookie)}.
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"partier2_session">>),
+	{"Cookie", Cookie}.
 
 bad_cookie() ->
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"baduser">>),
-	{"Cookie", binary_to_list(Cookie)}.
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"baduser">>),
+	{"Cookie", Cookie}.
 
 get_next(Next, _) when is_atom(Next) ->
 	Next;

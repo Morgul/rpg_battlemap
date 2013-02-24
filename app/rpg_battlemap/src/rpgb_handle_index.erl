@@ -4,14 +4,14 @@
 -include("rpg_battlemap.hrl").
 
 -export([get_routes/0]).
--export([init/3, handle/2, terminate/2]).
+-export([init/3, handle/2, terminate/3]).
 
-get_routes() -> [[]].
+get_routes() -> ["/"].
 
 init(_Transport, Req, Ctx) ->
 	{ok, Req, Ctx}.
 
-handle(Req, {Host, Port} = Ctx) ->
+handle(Req, [{Host, Port}] = Ctx) ->
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	User = rpgb_session:get_user(Session),
 	LoginLink = rpgb:get_url(Req, ["account", "login"]),
@@ -40,10 +40,10 @@ handle(Req, {Host, Port} = Ctx) ->
 		{maps, Maps}, {map_create_url, MapCreateUrl}, {characters, Characters},
 		{character_create_url, CharacterCreateUrl}, {member_of_maps, ParticipantMaps}
 	]),
-	{ok, Req2} = cowboy_http_req:reply(200, [{<<"Content-Type">>, <<"text/html">>}], Output, Req1),
+	{ok, Req2} = cowboy_req:reply(200, [{<<"Content-Type">>, <<"text/html">>}], Output, Req1),
 	{ok, Req2, Ctx}.
 
-terminate(Req, Ctx) ->
+terminate(_Cause, _Req, _Ctx) ->
 	ok.
 
 add_map_urls(Maps, Req) ->

@@ -6,12 +6,12 @@
 
 -define(create_url, "http://localhost:" ++ integer_to_list(rpgb_test_util:get_port(?MODULE)) ++ "/character").
 -define(cookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"sessionid">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"sessionid">>),
+	{"Cookie", Cookie}
 end).
 -define(badcookie, begin
-	{_Head, Cookie} = cowboy_cookies:cookie(<<"rpgbsid">>, <<"baduser">>),
-	{"Cookie", binary_to_list(Cookie)}
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"baduser">>),
+	{"Cookie", Cookie}
 end).
 -define(accepts, {"Accept", "application/json"}).
 -define(contenttype, {"Content-Type", "application/json"}).
@@ -114,7 +114,7 @@ next_state(State, _Res, _Call) ->
 	State.
 
 extract_location_header({ok, _State, Headers, _Body}) ->
-	proplists:get_value("Location", Headers).
+	proplists:get_value("location", Headers).
 
 decode_json_body({ok, _State, _Headers, Body}) ->
 	jsx:to_term(list_to_binary(Body)).
@@ -191,7 +191,7 @@ update_blank_name(Json, #state{url = Url}) ->
 %% =======================================================
 
 postcondition(_State, {call, _, create_character, [Json, _InState]}, {ok, "201", Heads, Body}) ->
-	Location = proplists:get_value("Location", Heads),
+	Location = proplists:get_value("location", Heads),
 	?assertNotEqual(undefined, Location),
 	BodyJson = jsx:to_term(list_to_binary(Body)),
 	?assertEqual(list_to_binary(Location), proplists:get_value(<<"url">>, BodyJson)),
