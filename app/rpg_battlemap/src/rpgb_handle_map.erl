@@ -48,7 +48,16 @@ allowed_methods(Req, Ctx) ->
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
 		undefined ->
-			{{false, <<"post">>}, Req, Ctx};
+			rpgb:refresh_templates(base_dtl),
+			User = rpgb_session:get_user(Ctx#ctx.session),
+			LoginLink = rpgb:get_url(Req, ["account", "login"]),
+			LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
+			RenderProps = [{user, User}, {login_link, LoginLink},
+				{logout_link, LogoutLink},
+				{content, <<"You are not logged in!">>}],
+			{ok, Output} = base_dtl:render(RenderProps),
+			Req1 = cowboy_req:set_resp_body(Output, Req),
+			{{false, <<"post">>}, Req1, Ctx};
 		_User ->
 			{true, Req, Ctx}
 	end.
@@ -69,9 +78,17 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 						true ->
 							{true, Req, Ctx#ctx{map = Map}}
 					end;
-				{error, not_found} ->
-					{ok, Req2} = cowboy_req:reply(404, Req),
-					{halt, Req2, Ctx}
+				{error, notfound} ->
+					rpgb:refresh_templates(base_dtl),
+					LoginLink = rpgb:get_url(Req, ["account", "login"]),
+					LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
+					RenderProps = [{user, User}, {login_link, LoginLink},
+						{logout_link, LogoutLink},
+						{content, <<"This map doesn't exist!">>}],
+					{ok, Output} = base_dtl:render(RenderProps),
+					Req2 = cowboy_req:set_resp_body(Output, Req),
+					{ok, Req3} = cowboy_req:reply(404, Req2),
+					{halt, Req3, Ctx}
 			end
 	end.
 
