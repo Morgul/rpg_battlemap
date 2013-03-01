@@ -7,7 +7,7 @@
 
 get_routes() ->
 	[
-		'_'
+		<<"/[...]">>
 	].
 
 init(_Protos, Req, [{Host, Port}]) ->

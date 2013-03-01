@@ -6,7 +6,7 @@
 -export([get_routes/0]).
 -export([init/3, handle/2, terminate/3]).
 
-get_routes() -> ["/"].
+get_routes() -> [<<"/">>].
 
 init(_Transport, Req, Ctx) ->
 	{ok, Req, Ctx}.
