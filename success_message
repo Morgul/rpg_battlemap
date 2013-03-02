@@ -2,6 +2,11 @@
  * Build succeeded!                                                    *
  *                                                                     *
  * For developement:                                                   *
- *     ./devboot                                                       *
+ *     make devrel                                                     *
+ *     rel/rpg_battlemap/bin/rpg_battlemap console                     *
+ *                                                                     *
+ * For Production:                                                     *
+ *    make rel                                                         *
+ *    rel/rpg_battlemap/bin/rpg_battlemap start                        *
  *                                                                     *
  ***********************************************************************
