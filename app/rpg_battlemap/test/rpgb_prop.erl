@@ -55,7 +55,10 @@ g_name() ->
 					{8, integer(32, 126)},
 					{5, char()}
 				])
-			), unicode:characters_to_binary(N)),
+			), case unicode:characters_to_binary(N) of
+				{error, Out, _} -> Out;
+				Out -> Out
+			end),
 			X =/= <<>>).
 
 g_url() ->

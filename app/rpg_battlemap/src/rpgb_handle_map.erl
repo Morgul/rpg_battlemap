@@ -125,7 +125,7 @@ to_html(Req, #ctx{map = undefined} = Ctx) ->
 to_html(Req, Ctx) ->
 	rpgb:refresh_templates(map_dtl),
 	{Host, Port} = Ctx#ctx.hostport,
-	Json = rpgb_map:make_json(Req, Host, Port, Ctx#ctx.map),
+	Json = rpgb_rec_battlemap:make_json(Req, Host, Port, Ctx#ctx.map),
 	%Json = make_json(Req, Ctx, Ctx#ctx.map),
 	User = rpgb_session:get_user(Ctx#ctx.session),
 	LayerUrl = make_location(Req, Ctx, Ctx#ctx.map),
@@ -192,7 +192,7 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 
 make_json(Req, Ctx, Map) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	rpgb_map:make_json(Req, Host, Port, Map).
+	rpgb_rec_battlemap:make_json(Req, Host, Port, Map).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,

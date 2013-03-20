@@ -104,14 +104,9 @@ forbidden(Req, #ctx{map = notfound} = Ctx) ->
 	{halt, Req2, Ctx};
 forbidden(Req, #ctx{map = Map, session = Session, mode = zone} = Ctx) ->
 	User = rpgb_session:get_user(Session),
-	Allowed = case cowboy_req:method(Req) of
-		{GetOrHead, Req2} when GetOrHead =:= <<"GET">> orelse GetOrHead =:= <<"HEAD">> ->
-			User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
-				lists:member(User#rpgb_rec_user.id, Map#rpgb_rec_battlemap.participant_ids);
-		{_Method, Req2} ->
-			User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id
-	end,
-	{not Allowed, Req2, Ctx};
+	Allowed = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
+				lists:member(User#rpgb_rec_user.id, Map#rpgb_rec_battlemap.participant_ids),
+	{not Allowed, Req, Ctx};
 forbidden(Req, #ctx{map = Map, session = Session} = Ctx) ->
 	User = rpgb_session:get_user(Session),
 	Allowed = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id orelse
@@ -367,7 +362,7 @@ delete_zone(Layer, Rec) ->
 make_json(Req, Ctx) ->
 	#ctx{hostport = {Host, Port}, rec = Rec, map = Map} = Ctx,
 	MapId = Map#rpgb_rec_battlemap.id,
-	rpgb_zone:make_json(Req, Host, Port, Rec, MapId).
+	rpgb_rec_zone:make_json(Req, Host, Port, Rec, MapId).
 
 get_zones(undefined) ->
 	[];

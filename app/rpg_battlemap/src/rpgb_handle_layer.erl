@@ -203,7 +203,7 @@ get_layers(Id, Acc) ->
 
 make_json(Req, Ctx, Layer) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	rpgb_layer:make_json(Req, Host, Port, Layer).
+	rpgb_rec_layer:make_json(Req, Host, Port, Layer).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,

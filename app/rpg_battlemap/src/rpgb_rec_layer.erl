@@ -1,4 +1,6 @@
--module(rpgb_layer).
+-module(rpgb_rec_layer).
+
+-compile([{parse_transform, rec2json}]).
 
 -include("rpg_battlemap.hrl").
 
