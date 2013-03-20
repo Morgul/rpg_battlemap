@@ -11,7 +11,6 @@ stop() ->
 	gen_event:stop(?MODULE).
 
 subscribe(Callback, Args) ->
-	Self = self(),
 	gen_event:add_sup_handler(?MODULE, Callback, Args).
 
 notify(Msg) ->
