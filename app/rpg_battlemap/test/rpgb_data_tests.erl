@@ -55,3 +55,93 @@ data_access_test_() ->
 		end}
 
 	] end}.
+
+data_event_test_() ->
+	{setup, fun() ->
+		meck:new(data_callback),
+		meck:new(data_event_consumer),
+		rpgb_data_events:start_link(),
+		rpgb_data:start_link(data_callback)
+	end,
+	fun(_) ->
+		rpgb_data_events:stop(),
+		meck:unload(data_callback)
+	end,
+	fun(_) -> [
+
+		{"install a handler", fun() ->
+			Self = self(),
+			meck:expect(data_event_consumer, init, fun(hello) ->
+				Self ! ok,
+				{ok, undefined}
+			end),
+			rpgb_data_events:subscribe(data_event_consumer, hello),
+			Out = receive
+				ok ->
+					ok
+			after 100 ->
+				timeout
+			end,
+			?assertEqual(ok, Out)
+		end},
+
+		{"alert on save w/ original undef id means new event", fun() ->
+			Self = self(),
+			meck:expect(data_event_consumer, handle_event, fun(Msg, _) ->
+				Self ! {done, Msg},
+				{ok, undefined}
+			end),
+			meck:expect(data_callback, save, fun({goober, undefined, <<"pants">>}) ->
+				{ok, {goober, 1, <<"pants">>}}
+			end),
+			Rec = {goober, undefined, <<"pants">>},
+			{ok, New} = rpgb_data:save(Rec),
+			Out = receive
+				{done, Msg} ->
+					Msg
+			after 100 ->
+				timeout
+			end,
+			?assertEqual({new, New}, Out)
+		end},
+
+		{"alert on save", fun() ->
+			Self = self(),
+			meck:expect(data_event_consumer, handle_event, fun(Msg, _) ->
+				Self ! {done, Msg},
+				{ok, undefined}
+			end),
+			meck:expect(data_callback, save, fun(In) ->
+				{ok, In}
+			end),
+			Rec = {goober, 3, <<"pants">>},
+			{ok, New} = rpgb_data:save(Rec),
+			Out = receive
+				{done, Msg} ->
+					Msg
+			after 100 ->
+				timeout
+			end,
+			?assertEqual({update, New}, Out)
+		end},
+
+		{"alert on delete", fun() ->
+			Self = self(),
+			meck:expect(data_event_consumer, handle_event, fun(Msg, _) ->
+				Self ! {done, Msg},
+				{ok, undefined}
+			end),
+			meck:expect(data_callback, delete, fun(goober, 4) ->
+				{ok, 1}
+			end),
+			{ok, 1} = rpgb_data:delete({goober, 4, <<"pants">>}),
+			Out = receive
+				{done, Msg} ->
+					Msg
+			after 100 ->
+				timeout
+			end,
+			?assertEqual({delete, goober, 4}, Out)
+		end}
+
+	] end}.
