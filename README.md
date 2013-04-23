@@ -24,8 +24,14 @@ Clone it. Then:
 $ make devrel
 ```
 
+Now, start it up:
+
+```bash
+$ ./rel/rpg_battlemap/bin/rpg_battlemap console
+```
+
 Runs on localhost, port 9090 by default.  If you want to run it on something 
-different, edit `rel/rpg_battlemap/etc/app.config`.
+different, edit `rel/rpg_battlemap/releases/1/sys.config`.
 
 Tests
 =====
