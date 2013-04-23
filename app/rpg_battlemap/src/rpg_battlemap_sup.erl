@@ -6,6 +6,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
+-include("log.hrl").
+
 %% API
 -export([start_link/1]).
 
@@ -46,6 +48,7 @@ init(Args) ->
 
 		cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]),
 
+
     Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
         5000, worker, [rpgb_session]},
 
@@ -57,6 +60,8 @@ init(Args) ->
     OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || {OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
 
     Kids = [Session, Data | OtherModules1],
+
+	?notice("RPG Battlemap started on ~p:~p.", [Host, Port]),
 
     {ok, { {one_for_one, 5, 10}, Kids} }.
 
