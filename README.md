@@ -18,12 +18,14 @@ It uses [Persona](https://login.persona.org/) for the authentication system.
 Installation
 ====
 
-    Clone it
-	make
-	make rel
+Clone it. Then:
 
-Runs on port 9090 by default.  Try going to account/login, I hear that's
-fun.
+```bash
+$ make devrel
+```
+
+Runs on localhost, port 9090 by default.  If you want to run it on something 
+different, edit `rel/rpg_battlemap/etc/app.config`.
 
 Tests
 =====
