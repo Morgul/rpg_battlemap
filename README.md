@@ -19,8 +19,8 @@ Installation
 ====
 
     Clone it
-    ./rebar get-deps compile generate
-	./rel/rpg_battlemap/bin/rpg_battlemap console
+	make
+	make rel
 
 Runs on port 9090 by default.  Try going to account/login, I hear that's
 fun.
