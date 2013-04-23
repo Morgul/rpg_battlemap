@@ -140,6 +140,13 @@ Ember.TEMPLATES['combatantDropDown'] = Ember.Handlebars.compile(
 				'valueBinding="view.content.selected.layer_id"}}' +
 		'</p>' +
 
+		'<p>' +
+			'<a class="btn btn-danger"' +
+				'{{ action "deleteCombatant" on="click" }}>' +
+				'Delete' +
+			'</a>' +
+		'</p>' +
+
 	'</div>' +
 
 '</div>'
@@ -314,7 +321,12 @@ RPGB.CombatantDropDown = Ember.View.extend({
 	auraColorChange: function(ev){
 		this.set('content.selected.aura_color', ev.target.value);
 		return false;
-	}
+	},
+
+	deleteCombatant: function(ev){
+		this.content.deleteSelectedCombatant();
+	},
+
 });
 
 RPGB.CombatantItemSVGView = Ember.View.extend({
