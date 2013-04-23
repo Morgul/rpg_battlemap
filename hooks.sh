@@ -6,6 +6,10 @@ function escriptize_rec2json {
 	cd deps/rec2json
 	[ -d deps/ ] || ln -s .. deps
 	make script
+	if [ -L deps ]; then
+		rm deps
+	fi
+
 }
 
 function pre_clean {
