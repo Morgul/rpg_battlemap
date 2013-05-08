@@ -20,45 +20,50 @@
 %% ===================================================================
 
 start_link(Args) ->
-        ssl:start(),
-        supervisor:start_link({local, ?MODULE}, ?MODULE, Args).
+	supervisor:start_link({local, ?MODULE}, ?MODULE, Args).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
 init(Args) ->
-		{ok, ListenHost} = rpgb:get_env(listen_host, '_'),
-		{ok, Host} = rpgb:get_env(hostname, <<"localhost">>),
-		{ok, Port} = rpgb:get_env(port, 9090),
-		{ok, Listeners} = rpgb:get_env(listeners, 100),
-		HP = {Host, Port},
-		{ok, Keyfile} = rpgb:get_env(keyfile, code:priv_dir(rpg_battlemap) ++ "/key"),
-		{ok, Certfile} = rpgb:get_env(certfile, code:priv_dir(rpg_battlemap) ++ "/rpgb.crt"),
-		Routes = rpgb:get_routes(HP, [rpgb_handle_map, rpgb_handle_user,
-			rpgb_handle_layer, rpgb_handle_zone, rpgb_handle_character,
-			rpgb_handle_combatant, rpgb_handle_account, rpgb_handle_index,
-			rpgb_handle_default]),
-		Dispatch = [
-			{ListenHost, Routes}
-		],
-		Dispatch2 = cowboy_router:compile(Dispatch),
+	{ok, ListenHost} = rpgb:get_env(listen_host, '_'),
+	{ok, Host} = rpgb:get_env(hostname, <<"localhost">>),
+	{ok, Port} = rpgb:get_env(port, 9090),
+	{ok, Listeners} = rpgb:get_env(listeners, 100),
+	HP = {Host, Port},
+	{ok, Keyfile} = rpgb:get_env(keyfile, code:priv_dir(rpg_battlemap) ++ "/key"),
+	{ok, Certfile} = rpgb:get_env(certfile, code:priv_dir(rpg_battlemap) ++ "/rpgb.crt"),
+	Routes = rpgb:get_routes(HP, [rpgb_handle_map, rpgb_handle_user,
+		rpgb_handle_layer, rpgb_handle_zone, rpgb_handle_character,
+		rpgb_handle_combatant, rpgb_handle_account, rpgb_handle_index,
+		rpgb_handle_default]),
+	Dispatch = [
+		{ListenHost, Routes}
+	],
+	Dispatch2 = cowboy_router:compile(Dispatch),
 
-		cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]),
+	cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]),
 
-    Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
-        5000, worker, [rpgb_session]},
+	Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
+		5000, worker, [rpgb_session]},
 
-    DataSetup = proplists:get_value(data_callback, Args),
-    Data = {rpgb_data, {rpgb_data, start_link, [DataSetup]}, permanent,
-        5000, worker, [rpgb_data]},
+	Battles = {rpgb_battle_sup, {rpgb_battle_sup, start_link, [HP]}, permanent, 5000, 
+		supervisor, [rpgb_battle_sup]},
 
-    OtherModules = proplists:get_value(additional_modules, Args, []),
-    OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || {OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
+	DataEvents = {rpgb_data_events, {rpgb_data_events, start_link, []}, permanent,
+		5000, worker, [rpgb_data_events]},
+	DataSetup = proplists:get_value(data_callback, Args),
+	Data = {rpgb_data, {rpgb_data, start_link, [DataSetup]}, permanent,
+		5000, worker, [rpgb_data]},
 
-    Kids = [Session, Data | OtherModules1],
+	OtherModules = proplists:get_value(additional_modules, Args, []),
+	OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || 
+		{OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
 
-    {ok, { {one_for_one, 5, 10}, Kids} }.
+	Kids = [Session, DataEvents, Data, Battles | OtherModules1],
+
+	{ok, { {one_for_one, 5, 10}, Kids} }.
 
 %% ===================================================================
 %% Internal

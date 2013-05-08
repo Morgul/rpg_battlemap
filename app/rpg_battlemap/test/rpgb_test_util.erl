@@ -9,6 +9,16 @@
 	create_authed_session/0, create_authed_session/1,
 	create_authed_session/2, assert_body/2, match_keys/2]).
 -export([make_cookie/2]).
+-export([start_app/1]).
+
+start_app(AppName) ->
+	case application:start(AppName) of
+		ok ->
+			ok;
+		{error, {not_started, RequiredApp}} ->
+			ok = start_app(RequiredApp),
+			start_app(AppName)
+	end.
 
 make_cookie(Name, Value) when is_binary(Name) ->
 	make_cookie(binary_to_list(Name), Value);

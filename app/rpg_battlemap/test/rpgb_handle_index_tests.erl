@@ -14,7 +14,7 @@ request_test_() ->
 
 		{"access without login", fun() ->
 			rpgb_session:make_ets(),
-			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
+			%?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [], get),
 			{ok, Regex} = re:compile("Sign in"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))
@@ -31,15 +31,15 @@ request_test_() ->
 				email = <<"batman@jla.org">>,
 				name = <<"Batman">>
 			},
-			?debugFmt("Data Dump:~n"
-				"    Heads: ~p~n"
-				"    Cookie: ~p~n"
-				"    Key: ~p~n"
-				"    Session: ~p~n", [Heads, Cookie, Key, Session]),
+			%?debugFmt("Data Dump:~n"
+			%	"    Heads: ~p~n"
+			%	"    Cookie: ~p~n"
+			%	"    Key: ~p~n"
+			%	"    Session: ~p~n", [Heads, Cookie, Key, Session]),
 			rpgb_session:set_user(User, Session),
-			?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
+				%?debugFmt("The sessions:  ~p", [ets:match(rpgb_session, '$1')]),
 			{ok, "200", _Heads, Body} = ibrowse:send_req("http://localhost:9094/", [{"cookie", Cookie}], get),
-			?debugFmt("The body:  ~p", [Body]),
+			%?debugFmt("The body:  ~p", [Body]),
 			{ok, Regex} = re:compile("Sign Out"),
 			?assertMatch({match, [{_,_}]}, re:run(Body, Regex))
 		end}

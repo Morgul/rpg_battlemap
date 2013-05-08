@@ -9,8 +9,8 @@
 -export([delete/1]).
 
 make_json(Req, Host, Port, Layer) ->
-	Zones = rpgb_zone:get_layer_zones(Layer#rpgb_rec_layer.first_zone_id),
-	Auras = rpgb_zone:get_layer_zones(Layer#rpgb_rec_layer.first_aura_id),
+	Zones = rpgb_rec_zone:get_layer_zones(Layer#rpgb_rec_layer.first_zone_id),
+	Auras = rpgb_rec_zone:get_layer_zones(Layer#rpgb_rec_layer.first_aura_id),
 	make_json(Req, Host, Port, Layer, Zones, Auras).
 
 make_json(Req, Host, Port, Layer, Zones, Auras) ->
@@ -35,5 +35,5 @@ delete(#rpgb_rec_layer{id = Id}) ->
 delete(Id) ->
 	Out = rpgb_data:delete(rpgb_rec_layer, Id),
 	{ok, Zones} = rpgb_data:search(rpgb_rec_zone, [{layer_id, Id}]),
-	[rpgb_zone:delete(Zone) || Zone <- Zones],
+	[rpgb_rec_zone:delete(Zone) || Zone <- Zones],
 	Out.

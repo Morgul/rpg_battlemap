@@ -134,11 +134,13 @@ get_routes(HP, [Mod | Tail], Acc) ->
 make_route_tuple(_HP, _Mod, [], Acc) ->
 	Acc;
 
-make_route_tuple(HP, Mod, [{Route, Opts} | Tail], Acc) ->
+make_route_tuple(HP, Mod, [{Route, Opts} | Tail], Acc) when is_binary(Route), is_list(Opts) ->
 	Tuple = {Route, Mod, [HP | Opts]},
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]);
-make_route_tuple(HP, Mod, [Route | Tail], Acc) ->
+make_route_tuple(HP, Mod, [Route | Tail], Acc) when is_binary(Route) ->
 	Tuple = {Route, Mod, [HP]},
+	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]);
+make_route_tuple(HP, Mod, [{_Path, _OtherMod, _OtherArgs} = Tuple| Tail], Acc) ->
 	make_route_tuple(HP, Mod, Tail, [Tuple | Acc]).
 
 refresh_templates(Template) when is_atom(Template) ->

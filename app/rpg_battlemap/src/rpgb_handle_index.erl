@@ -28,7 +28,7 @@ handle(Req, [{Host, Port}] = Ctx) ->
 			{ok, OutChars} = rpgb_data:search(rpgb_rec_character, [
 				{owner_id, User#rpgb_rec_user.id}
 			]),
-			{ok, OutParticipantMaps} = rpgb_map:get_by_participant(User),
+			{ok, OutParticipantMaps} = rpgb_rec_battlemap:get_by_participant(User),
 			{OutMaps, OutChars, OutParticipantMaps}
 	end,
 	Maps = add_map_urls(NoUrlMaps, Req),

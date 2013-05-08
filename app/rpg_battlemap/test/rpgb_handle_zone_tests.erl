@@ -357,7 +357,7 @@ create_zone(Zone, Name, Next, State) ->
 	Json = [{<<"next_zone_id">>, NextZoneId} | Zone],
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
-	ibrowse:send_req(?zone_url, [owner_cookie(), ?accepts, ?contenttype], put, jsx:to_json(Json3)).
+	ibrowse:send_req(?zone_url, [owner_cookie(), ?accepts, ?contenttype], put, jsx:to_json(Json3, [relax])).
 
 create_aura(Aura, Name, Next, Who, State) ->
 	#state{auras = Auras} = State,
@@ -366,7 +366,7 @@ create_aura(Aura, Name, Next, Who, State) ->
 	Json2 = [{<<"name">>, Name} | proplists:delete(<<"name">>, Json)],
 	Json3 = purge_undef(Json2),
 	Cookie = cookie(Who),
-	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Json3)).
+	ibrowse:send_req(?aura_url, [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Json3, [relax])).
 
 get_zones(Who) ->
 	Cookie = cookie(Who),
@@ -412,7 +412,7 @@ update_test(Put, Nth, MaybeNext, Who, Items) ->
 			[{<<"next_zone_id">>, NextId} | proplists:delete(<<"next_zone_id">>, Put)]
 	end,
 	Cookie = cookie(Who),
-	ibrowse:send_req(binary_to_list(Url), [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Put2)).
+	ibrowse:send_req(binary_to_list(Url), [Cookie, ?accepts, ?contenttype], put, jsx:to_json(Put2, [relax])).
 
 delete_zone(Nth, State) ->
 	#state{zones = Zones} = State,
