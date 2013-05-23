@@ -170,7 +170,8 @@ get_port(rpgb_handle_index_tests) -> 9094;
 get_port(rpgb_handle_combatant_tests) -> 9095;
 get_port(rpgb_handle_character_tests) -> 9096;
 get_port(rpgb_handle_layer_tests) -> 9097;
-get_port(rpgb_handle_zone_tests) -> 9098.
+get_port(rpgb_handle_zone_tests) -> 9098;
+get_port(rpgb_handle_map_websocket_tests) -> 9099.
 
 wait_until(Fun) ->
 	wait_until(Fun, 10, 100).
