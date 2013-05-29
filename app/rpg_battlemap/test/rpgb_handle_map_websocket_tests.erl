@@ -17,7 +17,7 @@ request_test_() ->
 	fun(_) ->
 		rpgb_test_util:web_test_teardown()
 	end,
-	fun(_) -> [
+	fun({_GoodUser, Map}) -> [
 
 		{"connecting without session gets 401", fun() ->
 			Got = gen_websocket:connect(ws_url(3), []),
@@ -27,7 +27,19 @@ request_test_() ->
 		{"connect to non-existant map", fun() ->
 			Got = gen_websocket:connect(ws_url(3), [{headers, [bin_cookie(good)]}]),
 			?assertEqual({error, {404, <<"Not Found">>}}, Got)
-		end}%,
+		end},
+
+		{"has session, but doesn't own map", fun() ->
+			Got = gen_websocket:connect(ws_url(Map#rpgb_rec_battlemap.id), [
+				{headers, [bin_cookie(bad)]}
+			]),
+			?assertEqual({error, {403, <<"Forbidden">>}}, Got)
+		end},
+
+		{"connect to valid map endpoint", fun() ->
+			Got = gen_websocket:connect(ws_url(Map#rpgb_rec_battlemap.id), [{headers, [bin_cookie(good)]}]),
+			?assertMatch({ok, _WsSocket}, Got)
+		end}
 
 		%{"connect to a valid map", ?_assert(false)},
 
@@ -49,7 +61,10 @@ bin_cookie(V) ->
 	{list_to_binary(Head), list_to_binary(Val)}.
 
 cookie(good) ->
-	Cookie =	 rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"sessionid">>),
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"sessionid">>),
+	{"Cookie", Cookie};
+cookie(bad) ->
+	Cookie = rpgb_test_util:make_cookie(<<"rpgbsid">>, <<"baduser">>),
 	{"Cookie", Cookie}.
 
 %-define(cookie, begin

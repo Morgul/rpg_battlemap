@@ -1,6 +1,8 @@
 -module(rpgb_handle_map_websocket).
 -behavior(cowboy_websocket_handler).
 
+-include("rpg_battlemap.hrl").
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -else.
@@ -25,7 +27,8 @@ websocket_init(_TransportName, Req, _Opt) ->
 		fun get_session/1,
 		fun get_user/1,
 		fun map_id_is_integer/1,
-		fun map_exists/1
+		fun map_exists/1,
+		fun user_owns_map/1
 	]),
 	case BindRes of
 		{ok, {Req1, State}} ->
@@ -90,4 +93,14 @@ map_exists({Req, State}) ->
 			{error, Req1};
 		{ok, Map} ->
 			{ok, {Req, State#state{map = Map}}}
+	end.
+
+user_owns_map({Req, State}) ->
+	#state{user = User, map = Map} = State,
+	if
+		User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id ->
+			{ok, {Req, State}};
+		true ->
+			{ok, Req1} = cowboy_req:reply(403, Req),
+			{error, Req1}
 	end.
