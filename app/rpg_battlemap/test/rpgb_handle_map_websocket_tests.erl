@@ -39,9 +39,37 @@ request_test_() ->
 		{"connect to valid map endpoint", fun() ->
 			Got = gen_websocket:connect(ws_url(Map#rpgb_rec_battlemap.id), [{headers, [bin_cookie(good)]}]),
 			?assertMatch({ok, _WsSocket}, Got)
-		end}
+		end},
 
-		%{"connect to a valid map", ?_assert(false)},
+		{"communication tests", setup, fun() ->
+			{ok, Ws} = gen_websocket:connect(ws_url(Map#rpgb_rec_battlemap.id), [{headers, [bin_cookie(good)]}]),
+			Ws
+		end,
+		fun(Ws) ->
+			gen_websocket:shutdown(Ws, normal)
+		end,
+		fun(Ws) -> [
+
+			{"Change map name", fun() ->
+				Request = [
+					{<<"reply_with">>, 1},
+					{<<"action">>, <<"put">>},
+					{<<"type">>, <<"map">>},
+					{<<"id">>, 1},
+					{<<"data">>, [
+						{<<"name">>, <<"ws map name changed">>}
+					]}
+				],
+				Binary = jsx:to_json(Request),
+				ok = gen_websocket:send(Ws, Binary, text),
+				{ok, {text, Recv}} = gen_websocket:recv(Ws, 4000),
+				Reply = jsx:to_term(Recv),
+				?debugFmt("reply got:~n~p", [Reply]),
+				?assertEqual(1, proplists:get_value(<<"reply_for">>, Reply))
+				?assertEqual(true, proplists:get_value(<<"accepted">>, Reply))
+			end}
+
+		] end}
 
 		%{"create a combatant", ?_assert(false)},
 

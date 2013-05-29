@@ -38,7 +38,34 @@ websocket_init(_TransportName, Req, _Opt) ->
 	end.
 
 websocket_handle({text, Msg}, Req, State) ->
-	{reply, {text, <<"okie: ", Msg/binary>>}, Req, State};
+	case jsx:to_term(Msg) of
+		[{}] ->
+			{ok, Req, State};
+		BadJson when not is_list(BadJson) ->
+			{ok, Req, State};
+		Json ->
+			Action = proplists:get_value(<<"action">>, Json),
+			Type = proplists:get_value(<<"type">>, Json),
+			Id = proplists:get_value(<<"id">>, Json),
+			Data = proplists:get_value(<<"data">>, Json),
+			From = proplists:get_value(<<"reply_with">>, Json),
+			Dispatch = dispatch(State, Action, Type, Id, Data),
+			case {From, Dispatch} of
+				{undefined, shutdown} ->
+					{shutdown, Req};
+				{undefined, {error, ErrorMsg}} ->
+					{ok, Req, State};
+				{_, {error, ErrorMsg}} ->
+					OutBin = make_reply(From, false, ErrorMsg),
+					{reply, {text, OutBin}, Req, State};
+				{_, ok} ->
+					OutBin = make_reply(From, true, undefined),
+					{reply, {text, OutBin}, Req, State};
+				{_, {ok, OutData}} ->
+					OutBin = make_reply(From, true, OutData),
+					{reply, {text, OutBin}, Req, State}
+			end
+	end;
 websocket_handle(Msg, Req, State) ->
 	{ok, Req, State}.
 
@@ -104,3 +131,16 @@ user_owns_map({Req, State}) ->
 			{ok, Req1} = cowboy_req:reply(403, Req),
 			{error, Req1}
 	end.
+
+make_reply(From, Accepted, Data) ->
+	Json1 = [{<<"reply_for">>, From}, {<<"accepted">>, Accepted}],
+	Json2 = case Data of
+		undefined ->
+			Json1;
+		_ ->
+			[{<<"data">>, Data} | Json1]
+	end,
+	jsx:to_json(Json2).
+
+dispatch(State, Action, Type, Id, Data) ->
+	{error, <<"nyi">>}.
