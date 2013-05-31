@@ -46,20 +46,15 @@ g_characterjson() ->
 
 %% nuts n bolts
 
+g_unicode_char() ->
+	frequency([{1, 9}, {9, integer(32, 126)}, {5, char()}]).
+
 g_name() ->
-	?SUCHTHAT(X,
-		?LET(N,
-			list(
-				frequency([
-					{1, 9},
-					{8, integer(32, 126)},
-					{5, char()}
-				])
-			), case unicode:characters_to_binary(N) of
-				{error, Out, _} -> Out;
-				Out -> Out
-			end),
-			X =/= <<>>).
+	?LET({First, Rest}, {g_unicode_char(), list(g_unicode_char())},
+		case unicode:characters_to_binary([First | Rest]) of
+			{error, Out, _} -> Out;
+			Out -> Out
+		end).
 
 g_url() ->
 	?LET({Proto, Domain, Path},
