@@ -6,6 +6,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
+-include("log.hrl").
+
 %% API
 -export([start_link/1]).
 
