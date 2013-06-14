@@ -53,9 +53,6 @@ init(Args) ->
 	Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
 		5000, worker, [rpgb_session]},
 
-	Battles = {rpgb_battle_sup, {rpgb_battle_sup, start_link, [HP]}, permanent, 5000, 
-		supervisor, [rpgb_battle_sup]},
-
 	DataEvents = {rpgb_data_events, {rpgb_data_events, start_link, []}, permanent,
 		5000, worker, [rpgb_data_events]},
 	DataSetup = proplists:get_value(data_callback, Args),
@@ -66,7 +63,7 @@ init(Args) ->
 	OtherModules1 = [{OmId, {OmMod, OmFunc, OmArgs}, permanent, 5000, worker, OmMods} || 
 		{OmId, OmMod, OmFunc, OmArgs, OmMods} <- OtherModules],
 
-	Kids = [Session, DataEvents, Data, Battles | OtherModules1],
+	Kids = [Session, DataEvents, Data | OtherModules1],
 
 	{ok, { {one_for_one, 5, 10}, Kids} }.
 

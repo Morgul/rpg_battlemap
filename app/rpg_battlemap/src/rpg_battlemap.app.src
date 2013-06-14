@@ -10,6 +10,7 @@
                   crypto,
                   lager,
                   ranch,
+                  goldrush,
                   cowboy
                  ]},
   {mod, { rpg_battlemap_app, []}},
