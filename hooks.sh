@@ -1,17 +1,6 @@
 #!/bin/bash
 APPDIR="app/rpg_battlemap"
 
-function escriptize_rec2json {
-	echo -e "\033[1;32mESCRIPTIZE rec2json!\033[m"
-	cd deps/rec2json
-	[ -d deps/ ] || ln -s .. deps
-	make script
-	if [ -L deps ]; then
-		rm deps
-	fi
-
-}
-
 function pre_clean {
 	rm -f $APPDIR/include/commit_ver.hrl
 }
@@ -82,10 +71,6 @@ function pre_compile {
 
 -define(COMMIT, $COMMIT)." > $APPDIR/include/commit_ver.hrl
 
-<<<<<<< HEAD
-=======
-  deps/rec2json/rec2json -src=$APPDIR/include/rpg_battlemap.hrl -dest=$APPDIR/ebin -include=$APPDIR/include
->>>>>>> 00f398d6cb51e6c093dec6a29c00113bdebf4b31
 }
 
 function post_compile {
@@ -93,8 +78,6 @@ function post_compile {
 }
 
 case $1 in
-	"post_get_deps"|"post_update_deps")
-		escriptize_rec2json;;
 	"pre_compile")
 		pre_compile;;
 	"post_compile")
