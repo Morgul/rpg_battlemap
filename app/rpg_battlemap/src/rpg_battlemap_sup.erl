@@ -34,16 +34,21 @@ init(Args) ->
 	HP = {Host, Port},
 	{ok, Keyfile} = rpgb:get_env(keyfile, code:priv_dir(rpg_battlemap) ++ "/key"),
 	{ok, Certfile} = rpgb:get_env(certfile, code:priv_dir(rpg_battlemap) ++ "/rpgb.crt"),
-	Routes = rpgb:get_routes(HP, [rpgb_handle_map, rpgb_handle_user,
-		rpgb_handle_layer, rpgb_handle_zone, rpgb_handle_character,
-		rpgb_handle_combatant, rpgb_handle_account, rpgb_handle_index,
-		rpgb_handle_default]),
+	Routes = rpgb:get_routes(HP, [rpgb_handle_map, rpgb_handle_map_websocket,
+		rpgb_handle_user, rpgb_handle_layer, rpgb_handle_zone,
+		rpgb_handle_character, rpgb_handle_combatant, rpgb_handle_account,
+		rpgb_handle_index, rpgb_handle_default]),
 	Dispatch = [
 		{ListenHost, Routes}
 	],
 	Dispatch2 = cowboy_router:compile(Dispatch),
 
-	cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]),
+	case rpgb:get_env(protocol, https) of
+		{ok, https} ->
+			cowboy:start_https(rpgb_listener, Listeners, [{port, Port}, {keyfile, Keyfile}, {certfile, Certfile}], [{env, [{dispatch, Dispatch2}]}]);
+		{ok, http} ->
+			cowboy:start_http(rpgb_listener, Listeners, [{port, Port}], [{env, [{dispatch, Dispatch2}]}])
+	end,
 
 	Session = {rpgb_session, {rpgb_session, start_link, []}, permanent,
 		5000, worker, [rpgb_session]},

@@ -25,4 +25,6 @@ is_valid_color([_R, _G, _B] = RGB) ->
 is_valid_color([R,G,B,A]) ->
 	RGB = [R,G,B],
 	AValid = ( 0 =< A andalso A =< 1 ),
-	AValid andalso is_valid_color(RGB).
+	AValid andalso is_valid_color(RGB);
+is_valid_color(Arg) ->
+	is_binary(Arg).

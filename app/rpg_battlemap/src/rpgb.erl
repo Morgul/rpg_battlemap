@@ -4,8 +4,9 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--export([res_init/1, get_env/1, get_env/2, get_url/0,get_url/2,get_url/3,
-	get_url/4,sluggify/1, get_routes/2]).
+-export([res_init/1, get_env/1, get_env/2,
+	get_url/0, get_url/1, get_url/2, get_url/3, get_url/4,
+	sluggify/1, get_routes/2]).
 %-export([is_printable/1, is_not_printable/1, is_string/1]).
 %-export([to_json/1, to_json/2]).
 -export([set_proplist/3, set_proplist/2]).
@@ -33,9 +34,14 @@ get_env(Key, Default) ->
 	end.
 
 get_url() ->
+	{ok, Proto} = get_env(protocol, https),
 	{ok, Host} = get_env(hostname, "localhost"),
 	{ok, Port} = get_env(port, 9090),
-	get_url(http, Host, Port, []).
+	get_url(Proto, Host, Port, []).
+
+get_url(Path) ->
+	{ok, Proto} = get_env(protocol, https),
+	get_url(Proto, Path).
 
 get_url(Req, Path) when is_tuple(Req) ->
 	Proto = get_protocol(Req),
@@ -43,11 +49,18 @@ get_url(Req, Path) when is_tuple(Req) ->
 	{ok, Port} = get_env(port, 9090),
 	get_url(Proto, Host, Port, Path);
 
+get_url(Proto, Path) when is_atom(Proto) ->
+	{ok, Host} = get_env(hostname, "localhost"),
+	{ok, Port} = get_env(port, 9090),
+	get_url(Proto, Host, Port, Path);
+
 get_url(Host, Port) ->
-	get_url(http, Host, Port, []).
+	{ok, Proto} = get_env(protocol, https),
+	get_url(Proto, Host, Port, []).
 
 get_url(Host, Port, Path) ->
-	get_url(http, Host, Port, Path).
+	{ok, Proto} = get_env(protocol, https),
+	get_url(https, Host, Port, Path).
 
 get_url(Proto, Host, Port, Path) when is_list(Path), is_list(hd(Path)) ->
 	Path1 = filename:join(Path),

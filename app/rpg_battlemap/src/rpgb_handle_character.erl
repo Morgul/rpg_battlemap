@@ -13,8 +13,8 @@
 
 get_routes() ->
 	[
-		<<"/character">>,
-		<<"/character/:characterid">>
+		<<"/characters">>,
+		<<"/characters/:characterid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
@@ -47,7 +47,7 @@ allowed_methods(Req, Ctx) ->
 is_authorized(Req, #ctx{session = Session} = Ctx) ->
 	case rpgb_session:get_user(Session) of
 		undefined ->
-			{{false, <<"post">>}, Req, Ctx};
+			{{false, <<"persona">>}, Req, Ctx};
 		User ->
 			{true, Req, Ctx}
 	end.
@@ -98,6 +98,15 @@ content_types_accepted(Req, Ctx) ->
 	],
 	{Types, Req, Ctx}.
 
+to_json(Req, #ctx{character = undefined} = Ctx) ->
+	User = rpgb_session:get_user(Ctx#ctx.session),
+	{ok, Chars} = rpgb_data:search(rpgb_rec_character, [{owner_id, User#rpgb_rec_user.id}]),
+	Json = lists:map(fun(C) ->
+		Url = make_location(Req, Ctx, C),
+		C:to_json([{url, Url}])
+	end, Chars),
+	{jsx:to_json(Json), Req, Ctx};
+
 to_json(Req, #ctx{character = Character} = Ctx) ->
 	Url = make_location(Req, Ctx, Character),
 	Json = Character:to_json([{url, Url}]),
@@ -144,9 +153,8 @@ from_json(Req, #ctx{character_id = CharacterId} = Ctx) ->
 			{halt, Req3, Ctx}
 	end.
 
-make_location(Req, Ctx, Rec) ->
-	{Host, Port} = Ctx#ctx.hostport,
-	rpgb:get_url(Req, Host, Port, ["character", integer_to_list(Rec#rpgb_rec_character.id)]).
+make_location(_Req, _Ctx, Rec) ->
+	rpgb:get_url(["character", integer_to_list(Rec#rpgb_rec_character.id)]).
 
 validate_character(Json, InitCharacter) ->
 	ValidateFuns = [

@@ -17,7 +17,9 @@ start_app(AppName) ->
 			ok;
 		{error, {not_started, RequiredApp}} ->
 			ok = start_app(RequiredApp),
-			start_app(AppName)
+			start_app(AppName);
+		Else ->
+			Else
 	end.
 
 make_cookie(Name, Value) when is_binary(Name) ->
@@ -89,6 +91,9 @@ web_test_setup(TestingModule, ModuleUnderTest) ->
 	application:start(crypto),
 	application:start(cowboy),
 	Port = rpgb_test_util:get_port(TestingModule),
+	application:set_env(rpg_battlemap, protocol, http),
+	application:set_env(rpg_battlemap, hostname, "localhost"),
+	application:set_env(rpg_battlemap, port, Port),
 	HostPort = {<<"localhost">>, Port},
 	Routes = rpgb:get_routes(HostPort, [ModuleUnderTest]),
 	Dispatch = cowboy_router:compile([{'_', Routes}]),

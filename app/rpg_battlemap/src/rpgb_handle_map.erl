@@ -13,8 +13,8 @@
 
 get_routes() ->
 	[
-		<<"/map">>,
-		<<"/map/:mapid">>
+		<<"/maps">>,
+		<<"/maps/:mapid">>
 	].
 
 init(_Protos, _Req, _HostPort) ->
@@ -57,7 +57,7 @@ is_authorized(Req, #ctx{session = Session} = Ctx) ->
 				{content, <<"You are not logged in!">>}],
 			{ok, Output} = base_dtl:render(RenderProps),
 			Req1 = cowboy_req:set_resp_body(Output, Req),
-			{{false, <<"post">>}, Req1, Ctx};
+			{{false, <<"persona">>}, Req1, Ctx};
 		_User ->
 			{true, Req, Ctx}
 	end.
@@ -72,12 +72,18 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 			case rpgb_data:get_by_id(rpgb_rec_battlemap, MapId) of
 				{ok, Map} ->
 					?debug("map found:  ~p", [Map]),
-					if
-						User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id ->
-							{false, Req, Ctx#ctx{map = Map}};
-						true ->
-							{true, Req, Ctx#ctx{map = Map}}
-					end;
+					IsOwner = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id,
+					IsParticpant = rpgb_rec_battlemap:is_user_participant(User, Map),
+					{Method, Req1} = cowboy_req:method(Req),
+					IsForbidden = case {IsOwner, IsParticpant, Method} of
+						{true, _, _} ->
+							false;
+						{_, true, <<"GET">>} ->
+							false;
+						_ ->
+							true
+					end,
+					{IsForbidden, Req1, Ctx#ctx{map = Map}};
 				{error, notfound} ->
 					rpgb:refresh_templates(base_dtl),
 					LoginLink = rpgb:get_url(Req, ["account", "login"]),
@@ -114,6 +120,15 @@ content_types_accepted(Req, Ctx) ->
 		{{<<"application">>, <<"json">>, []}, from_json}
 	],
 	{Types, Req, Ctx}.
+
+to_json(Req, #ctx{map = undefined} = Ctx) ->
+	Session = Ctx#ctx.session,
+	User = rpgb_session:get_user(Session),
+	{ok, Maps} = rpgb_data:search(rpgb_rec_battlemap, [{owner_id, User#rpgb_rec_user.id}]),
+	Json = lists:map(fun(M) ->
+		make_json(Req, Ctx, M)
+	end, Maps),
+	{jsx:to_json(Json), Req, Ctx};
 
 to_json(Req, #ctx{map = Map} = Ctx) ->
 	Json = make_json(Req, Ctx, Map),
@@ -166,8 +181,9 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 	{ok, Body, Req1} = cowboy_req:body(Req),
 	Term = jsx:to_term(Body),
 	?debug("Submitted json:  ~p", [Term]),
-	case validate_map(Term, InitialMap) of
-		{ok, {_DerJson, Rec}} ->
+	%case validate_map(Term, InitialMap) of
+	case rpgb_rec_battlemap:update_from_json(Term, InitialMap) of
+		{ok, Rec} ->
 			{ok, Rec2} = rpgb_data:save(Rec),
 			Location = make_location(Req, Ctx, Rec2),
 			{ok, Req2, Rec3} = case MapId of
@@ -183,156 +199,23 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			OutJson = jsx:to_json(make_json(Req2, Ctx, Rec3)),
 			Req3 = cowboy_req:set_resp_body(OutJson, Req2),
 			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
-		{error, Status, ErrBody} ->
-			ErrBody2 = jsx:to_json(ErrBody),
+		{error, {Atom, ErrString}} ->
+			ErrBody2 = jsx:to_json(ErrString),
+			Status = case Atom of
+				conflict -> 409;
+				invalid -> 422
+			end,
 			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
 			{ok, Req3} = cowboy_req:reply(Status, Req2),
 			{halt, Req3, Ctx}
 	end.
 
-make_json(Req, Ctx, Map) ->
-	{Host, Port} = Ctx#ctx.hostport,
-	rpgb_rec_battlemap:make_json(Req, Host, Port, Map).
+make_json(_Req, _Ctx, Map) ->
+	rpgb_rec_battlemap:make_json(Map).
 
 make_location(Req, Ctx, Rec) ->
 	{Host, Port} = Ctx#ctx.hostport,
-	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
-
-validate_map(Json, InitMap) ->
-	ValidateFuns = [
-		fun scrub_disallowed/1,
-		fun check_blank_name/1,
-		fun check_name_conflict/1,
-		fun validate_json/1,
-		fun check_named_map/1
-	],
-	rpgb:bind({Json, InitMap}, ValidateFuns).
-
-check_named_map({Json, Map}) ->
-	MapName = Map#rpgb_rec_battlemap.name,
-	JsonName = proplists:get_value(<<"name">>, Json),
-	case {MapName, JsonName} of
-		{undefined, undefined} ->
-			{error, 422, <<"name cannot be blank.">>};
-		_ ->
-			{ok, {Json, Map}}
-	end.
-
-check_blank_name({Json, Map}) ->
-	case proplists:get_value(<<"name">>, Json) of
-		<<>> ->
-			{error, 422, <<"name cannot be blank.">>};
-		_ ->
-			{ok, {Json, Map}}
-	end.
-
-check_name_conflict({Json, Map}) ->
-	#rpgb_rec_battlemap{owner_id = Owner, name = MapName} = Map,
-	?error("map name:  ~p;  json:  ~p", [MapName, Json]),
-	case proplists:get_value(<<"name">>, Json) of
-		undefined ->
-			{ok, {Json, Map}};
-		MapName ->
-			{ok, {Json, Map}};
-		OtherName ->
-			Searched = rpgb_data:search(rpgb_rec_battlemap, [
-				{name, OtherName}, {owner_id, Owner}]),
-			case Searched of
-				{ok, []} ->
-					{ok, {Json, Map}};
-				_ ->
-					{error, 409, <<"you already have a map by that name.">>}
-			end
-	end.
-
-scrub_disallowed({Json, Map}) ->
-	{ok, Json2} = scrub_disallowed(Json),
-	{ok, {Json2, Map}};
-
-scrub_disallowed([{}]) ->
-	{ok, [{}]};
-
-scrub_disallowed(Json) ->
-	Disallowed = [<<"id">>, <<"owner_id">>, <<"created">>, <<"updated">>,
-		<<"participant_ids">>, <<"zoom">>, <<"translate_x">>,
-		<<"translate_y">>, <<"grid_spacing">>, <<"bottom_layer_id">>,
-		<<"first_combatant_id">>],
-	Disallowed1 = ordsets:from_list(Disallowed),
-	Json1 = ordsets:from_list(Json),
-	scrub_disallowed(Json1, Disallowed1).
-
-scrub_disallowed(Json, []) ->
-	{ok, Json};
-
-scrub_disallowed(Json, [Nope | Tail] = Nopes) ->
-	case proplists:delete(Nope, Json) of
-		Json ->
-			scrub_disallowed(Json, Tail);
-		Json1 ->
-			scrub_disallowed(Json1, Nopes)
-	end.
-
-validate_json({Json, Map}) ->
-	case validate_json(Json, Map) of
-		{ok, Map2} ->
-			{ok, {Json, Map2}};
-		{error, {bad_color, Key}} ->
-			Body = iolist_to_binary(io_lib:format("invalid color for ~s.", [Key])),
-			Status = 422,
-			{error, Status, Body}
-	end;
-
-validate_json(Json) ->
-	case rpgb_rec_battlemap:from_json(Json) of
-		{ok, Rec, Warnings} ->
-			validate_warnings(Warnings, Rec);
-		Else ->
-			Else
-	end.
-
-validate_json(Json, Rec) ->
-	{ok, Json1} = scrub_disallowed(Json),
-	case rpgb_rec_battlemap:from_json(Rec, Json1) of
-		{ok, Rec1, Warnings} ->
-			validate_warnings(Warnings, Rec1);
-		Else ->
-			Else
-	end.
-
-validate_warnings([], Rec) ->
-	{ok, Rec};
-
-validate_warnings([background_color | Tail], Rec) ->
-	Color = Rec#rpgb_rec_battlemap.background_color,
-	case validate_color(Color) of
-		true ->
-			validate_warnings(Tail, Rec);
-		false ->
-			{error, {bad_color, background_color}}
-	end;
-
-validate_warnings([gridline_color | Tail], Rec) ->
-	Color = Rec#rpgb_rec_battlemap.gridline_color,
-	case validate_color(Color) of
-		true ->
-			validate_warnings(Tail, Rec);
-		false ->
-			{error, {bad_color, gridline_color}}
-	end.
-
-validate_color(Color) when is_binary(Color) ->
-	true;
-validate_color([_R, _G, _B] = Color) ->
-	lists:all(fun
-		(I) when is_integer(I) ->
-			I =< 255 andalso I >= 0;
-		(_) ->
-			false
-	end, Color);
-validate_color([R, G, B, A]) when A =< 1 andalso A >= 0 ->
-	validate_color([R, G, B]);
-validate_color(_) ->
-	false.
+	rpgb:get_url(Req, Host, Port, ["maps", integer_to_list(Rec#rpgb_rec_battlemap.id)]).
 
 generate_etag(Req, #ctx{mapid = undefined} = Ctx) ->
 	{undefined, Req, Ctx};

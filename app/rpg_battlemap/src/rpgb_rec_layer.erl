@@ -4,19 +4,19 @@
 
 -include("rpg_battlemap.hrl").
 
--export([make_json/4, make_json/6]).
+-export([make_json/1, make_json/3]).
 -export([get_map_layers/1]).
 -export([delete/1]).
 
-make_json(Req, Host, Port, Layer) ->
+make_json(Layer) ->
 	Zones = rpgb_rec_zone:get_layer_zones(Layer#rpgb_rec_layer.first_zone_id),
 	Auras = rpgb_rec_zone:get_layer_zones(Layer#rpgb_rec_layer.first_aura_id),
-	make_json(Req, Host, Port, Layer, Zones, Auras).
+	make_json(Layer, Zones, Auras).
 
-make_json(Req, Host, Port, Layer, Zones, Auras) ->
-	Url = rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Layer#rpgb_rec_layer.battlemap_id), "layers", integer_to_list(Layer#rpgb_rec_layer.id)]),
-	ZoneJsons = [rpgb_zone:make_json(Req, Host, Port, Zone, Layer#rpgb_rec_layer.battlemap_id) || Zone <- Zones],
-	AurasJsons = [rpgb_zone:make_json(Req, Host, Port, Aura, Layer#rpgb_rec_layer.battlemap_id) || Aura <- Auras],
+make_json(Layer, Zones, Auras) ->
+	Url = rpgb:get_url(["maps", integer_to_list(Layer#rpgb_rec_layer.battlemap_id), "layers", integer_to_list(Layer#rpgb_rec_layer.id)]),
+	ZoneJsons = [rpgb_rec_zone:make_json(Zone, Layer#rpgb_rec_layer.battlemap_id) || Zone <- Zones],
+	AurasJsons = [rpgb_rec_zone:make_json(Aura, Layer#rpgb_rec_layer.battlemap_id) || Aura <- Auras],
 	Layer:to_json([{url, Url}, {zones, ZoneJsons}, {auras, AurasJsons}, first_aura_id, first_zone_id]).
 
 get_map_layers(InitialId) ->

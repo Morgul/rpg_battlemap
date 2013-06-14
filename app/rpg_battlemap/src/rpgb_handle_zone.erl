@@ -13,10 +13,10 @@
 
 get_routes() ->
 	[
-		<<"/map/:mapid/layers/:layerid/auras">>,
-		<<"/map/:mapid/layers/:layerid/auras/:zoneid">>,
-		<<"/map/:mapid/layers/:layerid/zones">>,
-		<<"/map/:mapid/layers/:layerid/zones/:zoneid">>
+		<<"/maps/:mapid/layers/:layerid/auras">>,
+		<<"/maps/:mapid/layers/:layerid/auras/:zoneid">>,
+		<<"/maps/:mapid/layers/:layerid/zones">>,
+		<<"/maps/:mapid/layers/:layerid/zones/:zoneid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
@@ -47,7 +47,7 @@ rest_init(Req, [HostPort]) ->
 		'ERROR':{badarg, _} ->
 			notfound
 	end,
-	PreBin = <<"/map/", MapId/binary, "/layers/", LayerId/binary, "/">>,
+	PreBin = <<"/maps/", MapId/binary, "/layers/", LayerId/binary, "/">>,
 	PreBinSize = size(PreBin),
 	<<PreBin:PreBinSize/binary, RestPath/binary>> = Path,
 	Mode2 = case RestPath of
@@ -157,11 +157,11 @@ to_json(Req, #ctx{rec = undefined} = Ctx) ->
 		aura ->
 			get_zones(Layer#rpgb_rec_layer.first_aura_id)
 	end,
-	Jsons = [make_json(Req, Ctx#ctx{rec = Rec}) || Rec <- Recs],
+	Jsons = [make_json(Ctx#ctx{rec = Rec}) || Rec <- Recs],
 	{jsx:to_json(Jsons), Req, Ctx};
 
 to_json(Req, #ctx{rec = Rec} = Ctx) ->
-	Json = make_json(Req, Ctx),
+	Json = make_json(Ctx),
 	{jsx:to_json(Json), Req, Ctx}.
 
 from_json(Req, #ctx{rec = undefined} = Ctx) ->
@@ -226,7 +226,7 @@ generate_etag(Req, #ctx{rec = Rec} = Ctx) ->
 make_location(Req, Ctx) ->
 	#ctx{hostport = {Host, Port}, map = Map, layer = Layer, rec = Rec, mode = Mode} = Ctx,
 	ModeList = atom_to_list(Mode),
-	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Map#rpgb_rec_battlemap.id),
+	rpgb:get_url(Req, Host, Port, ["maps", integer_to_list(Map#rpgb_rec_battlemap.id),
 		"layers", integer_to_list(Layer#rpgb_rec_layer.id), ModeList ++ "s",
 		integer_to_list(Rec#rpgb_rec_zone.id)]).
 
@@ -359,10 +359,10 @@ delete_zone(Layer, Rec) ->
 	end,
 	{ok, Layer}.
 
-make_json(Req, Ctx) ->
-	#ctx{hostport = {Host, Port}, rec = Rec, map = Map} = Ctx,
+make_json(Ctx) ->
+	#ctx{rec = Rec, map = Map} = Ctx,
 	MapId = Map#rpgb_rec_battlemap.id,
-	rpgb_rec_zone:make_json(Req, Host, Port, Rec, MapId).
+	rpgb_rec_zone:make_json(Rec, MapId).
 
 get_zones(undefined) ->
 	[];

@@ -14,9 +14,9 @@
 
 get_routes() ->
 	[
-		<<"/map/:mapid/combatants">>,
-		<<"/map/:mapid/combatants/:combatantid">>,
-		<<"/map/:mapid/layers/:layerid/combatants">>
+		<<"/maps/:mapid/combatants">>,
+		<<"/maps/:mapid/combatants/:combatantid">>,
+		<<"/maps/:mapid/layers/:layerid/combatants">>
 	].
 
 init(_Protos, Req, _HostPort) ->

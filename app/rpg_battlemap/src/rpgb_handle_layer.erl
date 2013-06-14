@@ -14,8 +14,8 @@
 
 get_routes() ->
 	[
-		<<"/map/:mapid/layers">>,
-		<<"/map/:mapid/layers/:layerid">>
+		<<"/maps/:mapid/layers">>,
+		<<"/maps/:mapid/layers/:layerid">>
 	].
 
 init(_Protos, Req, _HostPort) ->
@@ -34,7 +34,7 @@ rest_init(Req, [HostPort]) ->
 				MapN ->
 					MapN
 			catch
-				'ERROR':{badarg, _} ->
+				error:badarg ->
 					undefined
 			end
 	end,
@@ -46,7 +46,7 @@ rest_init(Req, [HostPort]) ->
 			try list_to_integer(binary_to_list(LayerId)) of
 				LayerN -> LayerN
 			catch
-				'ERROR':{badarg, _} ->
+				error:badarg ->
 					undefined
 			end
 	end,
@@ -73,11 +73,16 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 			{ok, Req2} = cowboy_req:reply(404, Req),
 			{halt, Req2, Ctx};
 		{ok, Map} ->
-			if
-				User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id ->
-					{false, Req, Ctx#ctx{map = Map}};
-				true ->
-					{true, Req, Ctx#ctx{map = Map}}
+			{Mode, Req1} = cowboy_req:method(Req),
+			UserIsOwner = User#rpgb_rec_user.id == Map#rpgb_rec_battlemap.owner_id,
+			UserIsParticiapnt = rpgb_rec_battlemap:is_user_participant(User, Map),
+			case {Mode, UserIsOwner, UserIsParticiapnt} of
+				{_, true, _} ->
+					{false, Req1, Ctx#ctx{map = Map}};
+				{<<"GET">>, _, true} ->
+					{false, Req1, Ctx#ctx{map = Map}};
+				_ ->
+					{true, Req1, Ctx#ctx{map = Map}}
 			end
 	end.
 
@@ -201,13 +206,11 @@ get_layers(Id, Acc) ->
 	#rpgb_rec_layer{next_layer_id = NextId} = Layer,
 	get_layers(NextId, [Layer | Acc]).
 
-make_json(Req, Ctx, Layer) ->
-	{Host, Port} = Ctx#ctx.hostport,
-	rpgb_rec_layer:make_json(Req, Host, Port, Layer).
+make_json(_Req, _Ctx, Layer) ->
+	rpgb_rec_layer:make_json(Layer).
 
-make_location(Req, Ctx, Rec) ->
-	{Host, Port} = Ctx#ctx.hostport,
-	rpgb:get_url(Req, Host, Port, ["map", integer_to_list(Rec#rpgb_rec_layer.battlemap_id), "layers", integer_to_list(Rec#rpgb_rec_layer.id)]).
+make_location(_Req, _Ctx, Rec) ->
+	rpgb:get_url(["maps", integer_to_list(Rec#rpgb_rec_layer.battlemap_id), "layers", integer_to_list(Rec#rpgb_rec_layer.id)]).
 
 validate_layer(Json, InitLayer) ->
 	ValidateFuns = [
