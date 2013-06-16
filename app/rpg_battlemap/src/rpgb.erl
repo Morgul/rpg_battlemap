@@ -15,6 +15,16 @@
 -export([bind/2]).
 -export([splice/3,splice/4]).
 -export([snip/2]).
+-export([start_app/1]).
+
+start_app(AppName) ->
+	case application:start(AppName) of
+		{error, {not_started, Dep}} ->
+			start_app(Dep),
+			start_app(AppName);
+		Else ->
+			Else
+	end.
 
 res_init(Term) ->
 	case get_env(trace) of

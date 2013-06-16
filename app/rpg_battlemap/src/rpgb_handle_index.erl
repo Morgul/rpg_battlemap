@@ -8,10 +8,12 @@
 
 get_routes() -> [<<"/">>].
 
-init(_Transport, Req, Ctx) ->
+init(Transport, Req, Ctx) ->
+	?info("init on transport ~p", [Transport]),
 	{ok, Req, Ctx}.
 
 handle(Req, [{Host, Port}] = Ctx) ->
+	?info("handle"),
 	{ok, Session, Req1} = rpgb_session:get_or_create(Req),
 	User = rpgb_session:get_user(Session),
 	LoginLink = rpgb:get_url(Req, ["account", "login"]),

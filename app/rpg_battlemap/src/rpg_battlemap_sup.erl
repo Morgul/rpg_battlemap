@@ -32,7 +32,7 @@ init(Args) ->
 	{ok, ListenHost} = rpgb:get_env(listen_host, '_'),
 	{ok, Host} = rpgb:get_env(hostname, <<"localhost">>),
 	{ok, Port} = rpgb:get_env(port, 9090),
-	{ok, Listeners} = rpgb:get_env(listeners, 100),
+	{ok, Listeners} = rpgb:get_env(listeners, 10),
 	HP = {Host, Port},
 	{ok, Keyfile} = rpgb:get_env(keyfile, code:priv_dir(rpg_battlemap) ++ "/key"),
 	{ok, Certfile} = rpgb:get_env(certfile, code:priv_dir(rpg_battlemap) ++ "/rpgb.crt"),

@@ -2,9 +2,9 @@ REPO        ?= rpg_battlemap
 
 .PHONY: rel deps
 
-all: deps compile
+all: compile
 
-compile:
+compile: deps
 	./rebar compile
 
 deps:
@@ -31,8 +31,8 @@ test: deps compile testclean
 script: compile
 	./rebar escriptize skip_deps=true
 
-rel: deps 
-	./rebar compile generate
+rel: compile
+	./rebar generate skip_deps=true
 
 relclean:
 	rm -rf rel/$(REPO)
