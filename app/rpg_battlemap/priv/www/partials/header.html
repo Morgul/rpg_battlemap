@@ -1,0 +1,42 @@
+<header id="main-header" ng-controller="HeaderCtrl">
+    <div class="navbar navbar-static-top main">
+        <div id="top-bar"class="collapse in">
+            <div class="navbar-inner">
+                <div>
+                    <a class="brand" href="/">RPG Battlemap</a>
+                    <div class="pull-right navbar-text">
+                        chris.case@g33xnexus.com <a href="#" class="persona-button"><span>Sign Out</span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="actions" ng-hide="{{noToolbar}}">
+            <div class="btn-toolbar pull-right">
+                <div class="btn-group" data-toggle="buttons-radio">
+                    <button class="btn btn-small" title="{{ tool.name }}" ng-repeat="tool in tools"><i class="{{ tool.icon }}"></i></button>
+                </div>
+
+                <button class="btn btn-small" title="Collapse controls" data-toggle="collapse" data-target="#top-bar" ng-click="handleToggle()">
+                    <i ng-class="{'open': 'icon-double-angle-down', 'closed': 'icon-double-angle-up'}[topBarToggle]"></i>
+                </button>
+            </div>
+
+            <div class="btn-toolbar">
+                <div class="btn-group" ng-repeat="button in buttons" ng-show="button.menu != undefined">
+                    <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">
+                        {{ button.name }}
+                        <span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a tabindex="-1" href="#">Action</a></li>
+                        <li><a tabindex="-1" href="#">Another action</a></li>
+                        <li><a tabindex="-1" href="#">Something else here</a></li>
+                        <li class="divider"></li>
+                        <li><a tabindex="-1" href="#">Separated link</a></li>
+                    </ul>
+                </div>
+                <a href="{{ button.url }}" class="btn btn-small {{ button.class }}" ng-repeat="button in buttons" ng-show="button.menu == undefined"><i ng-repeat="icon in button.icons" class="{{ icon }}">&nbsp;</i> {{ button.name }}</a>
+            </div>
+        </div>
+    </div>
+</header>

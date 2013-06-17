@@ -64,11 +64,8 @@
 	{% endblock %}
 	
 	{% block page_scripts %}
-	<script type="text/javascript" src="/contrib/jquery.js"></script>
-	<script type="text/javascript" src="/contrib/handlebars-1.0.rc.1.js"></script>
-	<script type="text/javascript" src="/contrib/ember.js"></script>
 	<script type="text/javascript">
-		$('form#newmap').submit(function(ev){
+		/*$('form#newmap').submit(function(ev){
 			var mapName = ev.target.mapname.value;
 			var createUrl = ev.target.action;
 			var defer = $.ajax({
@@ -124,7 +121,7 @@
 			defer.success(function(){
 				window.location.reload();
 			});
-		});
+		});*/
 	</script>
 	{% endblock %}
 {% comment %}

@@ -1,0 +1,47 @@
+<section ng-include="'/partials/header.html'"></section>
+
+<div class="row-fluid">
+    <div class="span6">
+        <div class="navbar navbar-small">
+            <div class="navbar-inner">
+                <span class="brand"><i class="icon-group"></i> Participating Maps</span>
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            <table class="table table-bordered table-striped">
+                <tr ng-repeat="map in getParticipating(maps)">
+                    <td class="expand">
+                        <a href="#/map/{{ map.id }}">{{ map.name }}</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="span6">
+        <div class="navbar navbar-small">
+            <div class="navbar-inner">
+                <span class="brand"><i class="icon-user"></i> My Maps</span>
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            <form class="form-inline">
+                <input type="text" class="input-xlarge"> <button class="btn">New Map</button>
+            </form>
+
+            <table class="table table-bordered table-striped">
+                <tr ng-repeat="map in maps" ng-show="{{ map.owner_id == 1}}">
+                    <td class="expand">
+                        <a href="#/map/{{ map.id }}">{{ map.name }}</a>
+                    </td>
+                    <td class="shrink">
+                        <button class="btn btn-small btn-danger"><i class="icon-trash"></i> Delete Map</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+

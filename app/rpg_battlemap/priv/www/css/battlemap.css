@@ -1,0 +1,50 @@
+/* Navbar */
+
+.navbar.main {
+    padding: 0;
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: 5px;
+    width: auto;
+}
+
+.navbar.main .navbar-inner {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.navbar .actions {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+.navbar .actions a,
+.navbar .actions .btn-toolbar,
+.navbar .actions .btn-group {
+    display: inline-block;
+}
+
+.navbar .actions .btn-toolbar {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Table helpers */
+
+table td.expand {
+    width: 99%
+}
+
+table td.shrink {
+    white-space:nowrap
+}
+
+/* Grid */
+.grid
+{
+    overflow: hidden;
+    border: 2px solid #aaa;
+    border-radius: 5px;
+    margin-left: -14px;
+    margin-right: -14px;
+}
