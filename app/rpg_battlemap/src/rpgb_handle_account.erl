@@ -5,7 +5,8 @@
 
 -export([get_routes/0]).
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
-	content_types_provided/2, process_post/2]).
+	content_types_provided/2, content_types_accepted/2, from_json/2]).
+%process_post/2]).
 
 -record(ctx, {
 	hostport,
@@ -53,10 +54,17 @@ is_authorized(Req, #ctx{action = undefined, session = Session} = Ctx) ->
 	end.
 
 content_types_provided(Req, Ctx) ->
-	?info("content types provided"),
+	?info("content types provided, method: ~p", [element(1, cowboy_req:method(Req))]),
 	Types = [
 		{{<<"text">>, <<"html">>, []}, to_html},
 		{{<<"text">>, <<"json">>, []}, to_json}
+	],
+	{Types, Req, Ctx}.
+
+content_types_accepted(Req, Ctx) ->
+	?info("content types accepted; got ~p", [element(1, cowboy_req:header(<<"content-type">>, Req))]),
+	Types = [
+		{{<<"application">>, <<"json">>, []}, from_json}
 	],
 	{Types, Req, Ctx}.
 
@@ -68,12 +76,12 @@ resource_exists(Req, Ctx) ->
 previously_existed(Req, Ctx) ->
 	{true, Req, Ctx}.
 
-process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = logout} = Ctx) ->
+from_json(Req, #ctx{session = Session, hostport = {Host, Port}, action = logout} = Ctx) ->
 	?info("processing logout"),
 	Req1 = rpgb_session:destroy(Req),
 	{true, Req1, Ctx};
 
-process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = login} = Ctx) ->
+from_json(Req, #ctx{session = Session, hostport = {Host, Port}, action = login} = Ctx) ->
 	?info("processing login"),
 	SessionId = rpgb_session:get_id(Session),
 	BaseURL = rpgb:get_url(Req, []),
@@ -106,7 +114,8 @@ process_post(Req, #ctx{session = Session, hostport = {Host, Port}, action = logi
 							rpgb_session:set_user(Userrec, Session)
 					end,
 					{true, Req1, Ctx#ctx{session = Session1}};
-				_ ->
+				NotOkay ->
+					?info("data returned invalid: ~p", [NotOkay]),
 					{false, Req1, Ctx}
 			end;
 		_ ->
