@@ -57,7 +57,10 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 		// neither does the browser. ah well.
 	$rootScope.maps = [];
 
-	var Map = $resource('/maps/:mapid', {}, {'save': {'method':'PUT'}, 'create':{'method':'POST'}, 'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
+	var Map = $resource('/maps/:mapid', {}, {
+		'save': {'method':'PUT'},
+		'create':{'method':'POST', },
+		'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
 
 	var mapsPromise = Map.query();
 	mapsPromise.$then(function(success){
@@ -71,8 +74,20 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 
 	// Get the maps we're participating in.
 	$scope.getParticipating = function(maps) {
-		console.log('der maps', maps);
 		return maps;
+	};
+
+	$scope.createMap = function(){
+		console.log('hi!', $scope.newMapName);
+		var mapPromise = Map.create({name: $scope.newMapName});
+		mapPromise.$then(function(success){
+			$rootScope.maps.push(success.data);
+			$scope.newMapName = '';
+		},
+		function(error){
+			console.error('could not make map', error);
+			$scope.newMapName = '';
+		})
 	}
 });
 
