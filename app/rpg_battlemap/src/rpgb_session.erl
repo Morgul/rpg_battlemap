@@ -123,10 +123,7 @@ destroy(Req) when element(1, Req) =:= mochiweb_request ->
 destroy(Req) ->
 	{SessionId, Req1} = cowboy_req:cookie(<<"rpgbsid">>, Req),
 	?MODULE:destroy(SessionId),
-	{Header, Val} = cowboy_cookies:cookie(<<"rpgbsid">>, <<>>, [
-		{max_age, 0}, {path, <<"/">>}]),
-	{ok, Out} = cowboy_req:set_resp_header(Header, Val, Req1),
-	Out.
+	set_cookie(<<>>, Req1).
 
 %% @doc Extracts the id from a `session()'.
 -spec get_id(Session :: session()) -> binary().
