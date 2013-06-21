@@ -8,7 +8,10 @@ data_access_test_() ->
 		rpgb_data:start_link(data_callback)
 	end,
 	fun(_) ->
-		meck:unload(data_callback)
+		meck:unload(data_callback),
+		DataPid = whereis(rpgb_data),
+		unlink(DataPid),
+		exit(DataPid, kill)
 	end,
 	fun(_) -> [
 

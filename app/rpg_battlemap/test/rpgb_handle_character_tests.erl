@@ -20,7 +20,7 @@ end).
 
 -record(state, {url, props}).
 
-browser_test_() -> {setup, fun() ->
+browser_test_d() -> {setup, fun() ->
 		rpgb_test_util:web_test_setup(?MODULE),
 		rpgb_test_util:create_authed_session(<<"sessionid">>),
 		rpgb_test_util:create_authed_session(<<"baduser">>)

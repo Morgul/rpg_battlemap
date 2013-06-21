@@ -183,6 +183,10 @@ maybe_add_data(undefined, Json) ->
 maybe_add_data(Data, Json) ->
 	[{<<"data">>, Data} | Json].
 
+dispatch(Req, State, undefined, _Action, _Type, _Id, _Data) ->
+	?debugMsg("no reply id given"),
+	{ok, Req, State};
+
 dispatch(Req, State, From, <<"put">>, Type, Id, undefined) ->
 	?debugMsg("no data put"),
 	Reply = make_reply(From, false, <<"no data">>),
@@ -222,9 +226,9 @@ dispatch(Req, State, From, <<"delete">>, <<"map">>, _Id, _Json) ->
 	Reply = make_reply(From, false, undefined),
 	{reply, {text, Reply}, Req, State};
 
-dispatch(Req, State, undefined, _Action, _Type, _Id, _Data) ->
-	?debugMsg("no reply id given"),
-	{ok, Req, State};
+dispatch(Req, State, From, _Action, <<"map">>, _Id, _Json) ->
+	Reply = make_reply(From, false, <<"invalid method">>),
+	{reply, {text, Reply}, Req, State};
 
 dispatch(Req, State, From, Action, Type, Id, Data) ->
 	?debugFmt("no reply, just not gonna do anything~n"

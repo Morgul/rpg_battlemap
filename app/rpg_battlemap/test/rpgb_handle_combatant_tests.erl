@@ -28,7 +28,7 @@ end).
 
 -compile(export_all).
 
-browser_test_() -> {setup, fun() ->
+browser_test_d() -> {setup, fun() ->
 		rpgb_test_util:web_test_setup(?MODULE)
 	end,
 	fun(_) ->

@@ -39,7 +39,7 @@ proplists_update_test_() -> [
 	?_assertEqual([{c, new}, {b, new}, {a, 1}, {d, 4}], proplists_update([{b, new}, {c, new}], [{a, 1}, {b, 2}, {c, 3}, {d, 4}]))
 ].
 
-browser_test_() -> {setup, fun() ->
+browser_test_d() -> {setup, fun() ->
 		rpgb_test_util:web_test_setup(?MODULE)
 	end,
 	fun(_) ->

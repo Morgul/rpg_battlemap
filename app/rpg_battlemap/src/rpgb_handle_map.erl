@@ -7,7 +7,7 @@
 -export([init/3, rest_init/2, allowed_methods/2, is_authorized/2,
 	forbidden/2, content_types_provided/2, to_json/2, to_html/2,
 	content_types_accepted/2, from_json/2, delete_resource/2,
-	generate_etag/2]).
+	generate_etag/2, resource_exists/2]).
 
 -record(ctx, { hostport, session, mapid, map}).
 
@@ -40,7 +40,7 @@ rest_init(Req, [HostPort]) ->
 	{ok, Req3, #ctx{hostport = HostPort, session = Session, mapid = MapId1}}.
 
 allowed_methods(Req, #ctx{mapid = undefined} = Ctx) ->
-	{[<<"GET">>, <<"PUT">>, <<"HEAD">>], Req, Ctx};
+	{[<<"GET">>, <<"HEAD">>, <<"POST">>], Req, Ctx};
 
 allowed_methods(Req, Ctx) ->
 	{[<<"GET">>, <<"PUT">>, <<"HEAD">>, <<"DELETE">>], Req, Ctx}.
@@ -85,18 +85,26 @@ forbidden(Req, #ctx{mapid = MapId, session = Session} = Ctx) ->
 					end,
 					{IsForbidden, Req1, Ctx#ctx{map = Map}};
 				{error, notfound} ->
-					rpgb:refresh_templates(base_dtl),
-					LoginLink = rpgb:get_url(Req, ["account", "login"]),
-					LogoutLink = rpgb:get_url(Req, ["account", "logout"]),
-					RenderProps = [{user, User}, {login_link, LoginLink},
-						{logout_link, LogoutLink},
-						{content, <<"This map doesn't exist!">>}],
-					{ok, Output} = base_dtl:render(RenderProps),
-					Req2 = cowboy_req:set_resp_body(Output, Req),
-					{ok, Req3} = cowboy_req:reply(404, Req2),
-					{halt, Req3, Ctx}
+					{false, Req, Ctx#ctx{map = {error, notfound}}}
 			end
 	end.
+
+resource_exists(Req, #ctx{mapid = undefined} = Ctx) ->
+	case cowboy_req:method(Req) of
+		{<<"POST">>, Req1} ->
+			{false, Req1, Ctx};
+		{_, Req1} ->
+			{true, Req1, Ctx}
+	end;
+
+resource_exists(Req, #ctx{mapid = {error, notfound}} = Ctx) ->
+	{false, Req, Ctx};
+
+resource_exists(Req, Ctx) ->
+	{true, Req, Ctx}.
+
+delete_resource(Req, #ctx{mapid = undefined} = Ctx) ->
+	{false, Req, Ctx};
 
 delete_resource(Req, #ctx{mapid = MapId} = Ctx) ->
 	case rpgb_data:delete(rpgb_rec_battlemap, MapId) of
@@ -198,8 +206,16 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			end,
 			OutJson = jsx:to_json(make_json(Req2, Ctx, Rec3)),
 			Req3 = cowboy_req:set_resp_body(OutJson, Req2),
-			{true, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec2}};
+			Return = case MapId of
+				undefined ->
+					{true, make_location(Req3, Ctx, Rec3)};
+				_ ->
+					true
+			end,
+			?debug("The return is: ~p", [Return]),
+			{Return, Req3, Ctx#ctx{mapid = Rec2#rpgb_rec_battlemap.id, map = Rec3}};
 		{error, {Atom, ErrString}} ->
+			?debug("error on map thinging: ~p", [{Atom, ErrString}]),
 			ErrBody2 = jsx:to_json(ErrString),
 			Status = case Atom of
 				conflict -> 409;
@@ -207,7 +223,11 @@ from_json(Req, #ctx{mapid = MapId} = Ctx) ->
 			end,
 			Req2 = cowboy_req:set_resp_body(ErrBody2, Req1),
 			{ok, Req3} = cowboy_req:reply(Status, Req2),
-			{halt, Req3, Ctx}
+			{halt, Req3, Ctx};
+		Wut ->
+			?debug("no idea what's up: ~p", [Wut]),
+			{ok, Req2} = cowboy_req:reply(500, Req),
+			{halt, Req2, Ctx}
 	end.
 
 make_json(_Req, _Ctx, Map) ->

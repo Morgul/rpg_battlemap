@@ -110,23 +110,30 @@ delete_all(Recname) ->
 	{ok, Things} = rpgb_data:search(Recname, []),
 	[rpgb_data:delete(Thing) || Thing <- Things].
 
-command(#state{maps = []} = State) ->
-	{call, rpgb_maps_tests, http, [g_who(), put, undefined, rpgb_prop:g_mapjson()]};
 command(State) ->
-	oneof([
-		%{call, ?MODULE, characters, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.characters), rpgb_prop:g_characterjson()]},
-		%{call, ?MODULE, combatants, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.combatants), rpgb_prop:g_combatantjson(), g_maybe_exists(State#state.maps)]},
-		{call, rpgb_maps_tests, http, [g_who(), g_action(), g_maybe_exists(State#state.maps), rpgb_prop:g_mapjson()]},
-		{call, rpgb_maps_tests, websocket, [g_maybe_exists(State#state.ws), g_action(), rpgb_prop:g_mapjson()]}]
-		%{call, ?MODULE, layers, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.layers), rpgb_prop:g_layerjson(), g_maybe_exists(State#state.maps)]},
-		%{call, ?MODULE, zones, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.zones), rpgb_prop:g_zonejson(), g_maybe_exists(State#state.layers)]},
-		%{call, ?MODULE, auras, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.zones), rpgb_prop:g_zonejson(), g_maybe_exists(State#state.layers)]},
-		++ [{call, ?MODULE, connect_ws, [g_who(), elements(State#state.maps)]} || length(State#state.ws) =< 10]
+	oneof(
+		[{call, ?MODULE, connect_ws, [g_who(), elements(State#state.maps)]} || length(State#state.ws) =< 10, length(State#state.maps) > 0]
 		++ [{call, ?MODULE, disconnect_ws, [elements(State#state.ws)]} || State#state.ws =/= []]
-	).
+		++ rpgb_maps_tests:command(State)
+		).
+
+%command(#state{maps = []}) ->
+%	{call, rpgb_maps_tests, http, [g_who(), post, undefined, rpgb_prop:g_mapjson()]};
+%command(State) ->
+%	oneof([
+%		%{call, ?MODULE, characters, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.characters), rpgb_prop:g_characterjson()]},
+%		%{call, ?MODULE, combatants, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.combatants), rpgb_prop:g_combatantjson(), g_maybe_exists(State#state.maps)]},
+%		{call, rpgb_maps_tests, http, [g_who(), g_action(), g_maybe_exists(State#state.maps), rpgb_prop:g_mapjson()]},
+%		{call, rpgb_maps_tests, websocket, [g_maybe_exists(State#state.ws), g_action(), rpgb_prop:g_mapjson()]}]
+%		%{call, ?MODULE, layers, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.layers), rpgb_prop:g_layerjson(), g_maybe_exists(State#state.maps)]},
+%		%{call, ?MODULE, zones, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.zones), rpgb_prop:g_zonejson(), g_maybe_exists(State#state.layers)]},
+%		%{call, ?MODULE, auras, [g_transport(State), g_who(), g_action(), g_maybe_exists(State#state.zones), rpgb_prop:g_zonejson(), g_maybe_exists(State#state.layers)]},
+%		++ [{call, ?MODULE, connect_ws, [g_who(), elements(State#state.maps)]} || length(State#state.ws) =< 10]
+%		++ [{call, ?MODULE, disconnect_ws, [elements(State#state.ws)]} || State#state.ws =/= []]
+%	).
 
 g_action() ->
-	oneof([get, put, delete]).
+	oneof([get, put, post, delete]).
 
 g_who() ->
 	frequency([
@@ -458,10 +465,12 @@ extract_zoneaura(Original, Result) ->
 
 %% === common ========================================================
 
-extract_json({ok, Status, Heads, Body}) ->
+extract_json({ok, _Status, _Heads, Body} = Thing) ->
+	?debugFmt("http extract json: ~p", [Thing]),
 	jsx:to_term(list_to_binary(Body));
 
 extract_json({_SomeId, {ok, {text, Frame}}}) ->
+	?debugFmt("websocket extract json: ~p", [Frame]),
 	Json = jsx:to_term(Frame),
 	proplists:get_value(<<"data">>, Json).
 
@@ -637,8 +646,7 @@ zones_http_post(_State, {ok, "403", _Head, _Body}, notpartier, _Action, _Exists,
 zones_http_post(_State, {ok, "405", _Head, _Body}, _Who, delete, undefined, _Json, _Layer) ->
 	true;
 
-zones_http_post(State, {ok, "201", Heads, Body}, Who, put, undefined, Json, Layer) ->
-	Map = lists:keyfind(Layer#test_layer.map_id, #test_map.id, State#state.maps),
+zones_http_post(_State, {ok, "201", Heads, Body}, _Who, put, undefined, Json, _Layer) ->
 	HasLocation = proplists:get_value("location", Heads) =/= undefined,
 	GotBody = jsx:to_term(list_to_binary(Body)),
 	HasLocation andalso assert_json(Json, GotBody);
@@ -925,10 +933,15 @@ assert_json(undefined, Got) ->
 assert_json(Expected, undefined) ->
 	?debugFmt("Expected data, got undefined: ~p", [Expected]),
 	false;
-assert_json(Expected, Got) ->
+assert_json(Expected, Got) when is_list(Expected), is_list(Got) ->
 	Expected1 = fix_json_keys(Expected),
 	Got1 = fix_json_keys(Got),
-	assert_json(lists:sort(Expected1), lists:sort(Got1), []).
+	assert_json(lists:sort(Expected1), lists:sort(Got1), []);
+assert_json(Expected, Got) ->
+	?debugFmt("Something will likely go wrong:~n"
+		"    Expected: ~p~n"
+		"    Got: ~p", [Expected, Got]),
+		false.
 
 assert_json([], _Got, []) ->
 	true;
@@ -1052,7 +1065,20 @@ send_request(What, {Socket, _RealWho, _MapId}, _Who, Action, Existant, Json, _Ar
 	ok = gen_websocket:send(Socket, Json2),
 	Reply = proplists:get_value(<<"reply_with">>, Frame),
 	Return = gen_websocket:recv(Socket, 1000),
-	{Reply, Return}.
+	Return2 = case Return of
+		{ok, Frame} ->
+			ReplyFrame = jsx:to_term(Frame),
+			#ws_msg{
+				action = proplists:get_value(<<"action">>, ReplyFrame),
+				data = proplists:get_value(<<"data">>, ReplyFrame),
+				accepted = proplists:get_value(<<"accepted">>, ReplyFrame),
+				type_id = proplists:get_value(<<"type_id">>, ReplyFrame),
+				type = proplists:get_value(<<"type">>, ReplyFrame)
+			};
+		_ ->
+			Return
+	end,
+	{Reply, Return2}.
 
 url_from_rec(maps, undefined, _Args) ->
 	<<"http://localhost:10001/maps">>;

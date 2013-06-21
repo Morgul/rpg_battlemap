@@ -2,16 +2,25 @@
 
 -include("prop_tests.hrl").
 
-simple_args(http, [Who, Action, undefined, _Json]) ->
-	[Who, Action, undefined];
-simple_args(http, [Who, Action, #test_map{id = Id}, _Json]) ->
-	[Who, Action, Id];
-simple_args(websocket, [{_Socket, Who, MapId}, Action, _Json]) ->
-	[Who, Action, MapId].
+simple_args(http, [Who, Action, undefined, _Json, Name]) ->
+	[Who, Action, undefined, Name];
+simple_args(http, [Who, Action, #test_map{id = Id}, _Json, Name]) ->
+	[Who, Action, Id, Name];
+simple_args(websocket, [{_Socket, Who, MapId}, Action, _Json, Name]) ->
+	[Who, Action, MapId, Name].
+
+command(#state{maps = []}) ->
+	[{call, ?MODULE, http, [rpgb_requests_tests:g_who(), post, undefined, rpgb_prop:g_mapjson(), rpgb_prop:g_name()]}];
+command(State) ->
+	[{call, ?MODULE, http, [rpgb_requests_tests:g_who(), rpgb_requests_tests:g_action(), rpgb_requests_tests:g_maybe_exists(State#state.maps), rpgb_prop:g_mapjson(), g_maybe_name()]},
+	{call, ?MODULE, websocket, [rpgb_requests_tests:g_maybe_exists(State#state.ws), rpgb_requests_tests:g_action(), rpgb_prop:g_mapjson(), g_maybe_name()]}].
+
+g_maybe_name() ->
+	oneof([undefined, null, <<>>, rpgb_prop:g_name()]).
 
 %% === commands ============================================
 
-http(Who, Action, Map, Json) ->
+http(Who, Action, Map, Json, Name) ->
 	Sessions = rpgb_requests_tests:get_sessions(),
 	Ids = lists:foldl(fun({SessWho, Session}, Acc) ->
 		if
@@ -34,17 +43,35 @@ http(Who, Action, Map, Json) ->
 		_ ->
 			Json
 	end,
-	?debugFmt("der json: ~p", [Json2]),
-	rpgb_requests_tests:send_request(maps, http, Who, Action, Map, Json2, []).
+	Json3 = maybe_set_name(Json2, Name),
+	?debugFmt("der json: ~p", [Json3]),
+	rpgb_requests_tests:send_request(maps, http, Who, Action, Map, Json3, []).
 
-websocket({_SockRef, Who, MapId} = Socket, Action, Json) ->
-	rpgb_requests_tests:send_request(maps, Socket, undefined, Action, MapId, Json, []).
+websocket({_SockRef, _Who, MapId} = Socket, Action, Json, Name) ->
+	Json2 = maybe_set_name(Json, Name),
+	rpgb_requests_tests:send_request(maps, Socket, undefined, Action, MapId, Json2, []).
+
+maybe_set_name([{}], undefined) ->
+	[{}];
+
+maybe_set_name([{}], Name) ->
+	[{<<"name">>, Name}];
+
+maybe_set_name(Json,undefined) ->
+	lists:keydelete(<<"name">>, 1, Json);
+
+maybe_set_name(Json, Name) ->
+	[{name, Name} | lists:keydelete(<<"name">>, 1, Json)].
 
 %% === preconditions =======================================
 
-precondition(State, {call, ?MODULE, websocket, [undefined | _]}) ->
+precondition(_State, {call, ?MODULE, websocket, [undefined | _]}) ->
 	false;
-precondition(State, {call, ?MODULE, http, [notpartier, put, undefined, _Json]}) ->
+precondition(_State, {call, ?MODULE, http, [notpartier, put, undefined, _Json, _Name]}) ->
+	false;
+precondition(_State, {call, ?MODULE, http, [_Who, post, undefined, _Json, _Name]}) ->
+	true;
+precondition(_State, {call, ?MODULE, http, [_Who, post, _Whatever, _Json, _Name]}) ->
 	false;
 precondition(_State, _Call) ->
 	true.
@@ -57,36 +84,56 @@ next_state(State, _Result, {call, ?MODULE, http, [_Who, get | _]}) ->
 next_state(State, _Result, {call, ?MODULE, http, [notauthed | _]}) ->
 	State;
 
-next_state(State, Result, {call, ?MODULE, http, [Who, put, undefined, Json]}) ->
-	case map_put_valid(Json, undefined) of
-		true ->
-			TestMap = extract_map(undefined, Who, Result),
+next_state(State, Result, {call, ?MODULE, http, [Who, post, undefined, Json, Name]}) ->
+	?debugFmt("~n"
+		"=====================~n"
+		"== in case of fail ==~n"
+		"=====================~n"
+		"    State: ~p~n"
+		"    Result: ~p~n"
+		"    Who: ~p~n"
+		"    Json: ~p~n"
+		"    Name: ~p~n", [State, Result, Who, Json, Name]),
+	Json2 = maybe_set_name(Json, Name),
+	PutValid = map_put_valid(Json2, undefined),
+	NameUnique = map_name_unique(Name, Who, undefined, State#state.maps),
+	if
+		PutValid andalso NameUnique ->
+			TestMap = extract_map(undefined, Who, Result, Name),
+			TestMap2 = TestMap#test_map{name = Name},
 			TestLayer = rpgb_layers_tests:extract_layer(undefined, Who, {map, Result}),
-			TestLayer1 = TestLayer#test_layer{map_id = TestMap#test_map.id},
-			Maps = State#state.maps ++ [TestMap],
+			TestLayer1 = TestLayer#test_layer{map_id = TestMap2#test_map.id},
+			Maps = State#state.maps ++ [TestMap2],
 			Layers = State#state.layers ++ [TestLayer1],
 			State#state{maps = Maps, layers = Layers};
-		false ->
+		true ->
 			State
 	end;
 
-next_state(State, Result, {call, ?MODULE, http, [Who, put, #test_map{owner = Who} = Original, Json]}) ->
-	case map_put_valid(Json, Original) of
-		true ->
-			NewMap = extract_map(Original, Who, Result),
+next_state(State, _Result, {call, ?MODULE, http, [_Who, put, undefined, _Json, _Name]}) ->
+	State;
+
+next_state(State, Result, {call, ?MODULE, http, [Who, put, #test_map{owner = Who} = Original, Json, Name]}) ->
+	Json2 = maybe_set_name(Json, Name),
+	PutValid = map_put_valid(Json2, Original),
+	NameUnique = map_name_unique(Who, Name, Original, State#state.maps),
+	if
+		PutValid andalso NameUnique ->
+			NewMap = extract_map(Original, Who, Result, Name),
+
 			Maps = lists:keyreplace(Original#test_map.id, #test_map.id, State#state.maps, NewMap),
 			State#state{maps = Maps};
-		false ->
+		true ->
 			State
 	end;
 
-next_state(State, _Result, {call, ?MODULE, http, [_Who, put, _Map, _Json]}) ->
+next_state(State, _Result, {call, ?MODULE, http, [_Who, put, _Map, _Json, _Name]}) ->
 	State;
 
-next_state(State, _Result, {call, ?MODULE, http, [_Who, delete, undefined, _Json]}) ->
+next_state(State, _Result, {call, ?MODULE, http, [_Who, delete, undefined, _Json, _Name]}) ->
 	State;
 
-next_state(State, _Result, {call, ?MODULE, http, [Who, delete, #test_map{owner = Who} = Map, _Json]}) ->
+next_state(State, _Result, {call, ?MODULE, http, [Who, delete, #test_map{owner = Who} = Map, _Json, _Name]}) ->
 	Maps = lists:keydelete(Map#test_map.id, #test_map.id, State#state.maps),
 	LayerIds = [Id || #test_layer{id = Id, map_id = Mid} <- State#state.layers, Mid =:= Map#test_map.id],
 	Layers = lists:filter(fun(L) ->
@@ -109,16 +156,23 @@ next_state(State, _Result, {call, ?MODULE, http, [Who, delete, #test_map{owner =
 	end, State#state.ws),
 	State#state{maps = Maps, layers = Layers, zones = Zones, combatants = Combatants, ws = Sockets};
 
-next_state(State, _Result, {call, ?MODULE, http, [_Who, delete, _Map, _Json]}) ->
+next_state(State, _Result, {call, ?MODULE, http, [_Who, delete, _Map, _Json, _Name]}) ->
 	State;
 
-next_state(State, Result, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json]}) ->
+next_state(State, Result, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json, Name]}) ->
 	Map = lists:keyfind(MapId, #test_map.id, State#state.maps),
 	case Map of
 		#test_map{owner = Who} ->
-			Map2 = extract_map(Map, Who, Result),
-			Maps = lists:keyreplace(MapId, #test_map.id, State#state.maps, Map2),
-			State#state{maps = Maps};
+			PutValid = map_put_valid(maybe_set_name(Json, Name), Map),
+			NameUnique = map_name_unique(Who, Name, Map, State#state.maps),
+			if
+				PutValid andalso NameUnique ->
+					Map2 = extract_map(Map, Who, Result, Name),
+					Maps = lists:keyreplace(MapId, #test_map.id, State#state.maps, Map2),
+					State#state{maps = Maps};
+				true ->
+					State
+			end;
 		false ->
 			Ws = lists:keydelete(Socket, 1, State#state.ws),
 			State#state{ws = Ws};
@@ -127,79 +181,144 @@ next_state(State, Result, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put,
 	end;
 
 next_state(State, _Result, {call, ?MODULE, websocket, _Args}) ->
+	?debugFmt("next_state for websocket", []),
 	State.
 
 map_put_valid(Json, undefined) ->
 	Name = proplists:get_value(<<"name">>, rpgb_requests_tests:fix_json_keys(Json)),
-	if
-		Name =:= undefined ->
+	case Name of
+		undefined ->
 			false;
-		Name =:= <<>> ->
+		<<>> ->
 			false;
-		true ->
+		null ->
+			false;
+		_ ->
 			true
 	end;
-map_put_valid(_,_) ->
-	true.
+map_put_valid(Json, _Map) ->
+	Name = proplists:get_value(<<"name">>, rpgb_requests_tests:fix_json_keys(Json)),
+	case Name of
+		undefined -> true;
+		<<>> -> false;
+		null -> false;
+		Binary when is_binary(Binary) -> true;
+		_ -> false
+	end.
 
-extract_map(Original, Who, Result) ->
+map_name_unique(Name, Who, Map, Maps) ->
+	MapId = case Map of
+		#test_map{id = Id} -> Id;
+		undefined -> undefined
+	end,
+	Filtered = [M || #test_map{owner = Lwho, id = Lid, name = Lname} = M <- Maps,
+		Lid =/= MapId, Lname =:= Name, Lwho =:= Who],
+	case Filtered of
+		[] ->
+			true;
+		_ ->
+			false
+	end.
+
+extract_map(Original, Who, Result, Name) ->
 	M1 = case Original of
 		undefined ->
 			#test_map{id = {call, rpgb_requests_tests, extract_json, [Result, <<"id">>]},
 				url = {call, rpgb_requests_tests, extract_json, [Result, <<"url">>]},
-				ws_url = {call, rpgb_requests_tests, extract_json, [Result, <<"websocketUrl">>]}, owner = Who};
+				name = Name,
+				ws_url = {call, rpgb_requests_tests, extract_json, [Result, <<"websocketUrl">>]},
+				owner = Who};
+			_ when is_atom(Name); Name =:= <<>> ->
+				Original;
 			_ ->
-				Original
+				Original#test_map{name = Name}
+	end,
+	Name2 = case Name of
+		_ when is_atom(Name) ->
+			M1#test_map.name;
+		<<>> ->
+			M1#test_map.name;
+		_ when is_binary(Name) ->
+			Name;
+		_ ->
+			M1#test_map.name
 	end,
 	M1#test_map{
+		name = Name2,
 		properties = {call, rpgb_requests_tests, extract_json, [Result]}
 	}.
 
 %% === postcondition =======================================
 
-postcondition(_State, {call, ?MODULE, http, [_Who, _Action, _Map, _Json]}, {ok, "404", _Heads, _Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, _Action, _Map, _Json, _Name]}, {ok, "404", _Heads, _Body}) ->
+	?debugMsg("404"),
 	false;
 
-postcondition(_State, {call, ?MODULE, http, [_Who, delete, undefined, _Json]}, {ok, "405", _Heads, _Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, delete, undefined, _Json, _Name]}, {ok, "405", _Heads, _Body}) ->
+	?debugMsg("405 on delete maps"),
 	true;
 
-postcondition(_State, {call, ?MODULE, http, [Who, _Action, #test_map{owner = Who}, _Json]}, {ok, "405", _Heads, _Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, put, undefined, _Json, _Name]}, {ok, "405", _Heads, _Body}) ->
+	?debugMsg("405 on put on maps"),
+	true;
+
+postcondition(_State, {call, ?MODULE, http, [notauthed, _Action, _Map, _Json, _Name]}, {ok, "401", Heads, _Body}) ->
+	?debugMsg("401"),
+	proplists:get_value("www-authenticate", Heads) =:= "persona";
+
+postcondition(_State, {call, ?MODULE, http, [Who, _Action, #test_map{owner = Who}, _Json, _Name]}, {ok, "405", _Heads, _Body}) ->
+	?debugMsg("405 on some action on maps/mapid"),
 	false; 
 
-postcondition(_State, {call, ?MODULE, http, [_Who, put, undefined, Json]}, {ok, "422", _Head, _Body}) ->
-	case proplists:get_value(name, Json) of
+postcondition(State, {call, ?MODULE, http, [Who, post, undefined, _Json, Name]}, {ok, "409", _Headers, "\"You already have a map by that name.\""}) ->
+	not map_name_unique(Who, Name, undefined, State#state.maps);
+
+postcondition(_State, {call, ?MODULE, http, [_Who, post, undefined, _Json, Name]}, {ok, "422", _Headers, _Body}) ->
+	case Name of
 		undefined ->
 			true;
 		<<>> ->
+			true;
+		null ->
 			true;
 		_ ->
 			false
 	end;
 
-postcondition(_State, {call, ?MODULE, http, [notauthed, _Action, _Map, _Json]}, {ok, "401", Heads, _Body}) ->
-	proplists:get_value("www-authenticate", Heads) =:= "persona";
+postcondition(_State, {call, ?MODULE, http, [_Who, put, _Map, _Json, Name]}, {ok,"422", _Heads, _Body}) ->
+	case Name of
+		undefined -> false;
+		null -> true;
+		<<>> -> true;
+		_ -> false
+	end;
 
-postcondition(_State, {call, ?MODULE, http, [notpartier, _Action, _Map, _Json]}, {ok, "403", _Heads, Body}) ->
-	true;
-
-postcondition(_State, {call, ?MODULE, http, [_Who, put, undefined, Json]}, {ok, "201", Headers, Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, post, undefined, Json, Name]}, {ok, "201", Headers, Body}) ->
+	?debugMsg("201 on post to maps/"),
 	HasLocation = proplists:get_value("location", Headers) =/= undefined,
-	ExpectedBody = jsx:to_term(jsx:to_json(Json)),
+	ExpectedBody = jsx:to_term(jsx:to_json(maybe_set_name(Json, Name))),
 	DecodedBody = jsx:to_term(list_to_binary(Body)),
 	rpgb_requests_tests:assert_json(ExpectedBody, DecodedBody) andalso HasLocation;
 
-postcondition(State, {call, ?MODULE, http, [Who, put, #test_map{owner = Who, id = MapId}, Json]}, {ok, "200", _Headers, Body}) ->
-	PostedBody = jsx:to_term(jsx:to_json(Json)),
+postcondition(_State, {call, ?MODULE, http, [notpartier, _Action, _Map, _Json, _Name]}, {ok, "403", _Heads, _Body}) ->
+	?debugMsg("403"),
+	true;
+
+postcondition(State, {call, ?MODULE, http, [Who, put, #test_map{owner = Who, id = MapId}, Json, Name]}, {ok, "200", _Headers, Body}) ->
+	?debugMsg("200 to pust on maps/mapid"),
+	PostedBody = jsx:to_term(jsx:to_json(maybe_set_name(Json, Name))),
 	DecodedBody = jsx:to_term(list_to_binary(Body)),
 	JsonOkay = rpgb_requests_tests:assert_json(PostedBody, DecodedBody),
 	JsonOkay andalso lists:all(fun
-		({Socket, _SomeWho, Mid}) when Mid =:= MapId ->
-			rpgb_requests_tests:assert_ws_frame(Socket, put, undefined, map, MapId, Json);
+		({Socket, SomeWho, Mid}) when Mid =:= MapId ->
+			?debugFmt("asserting ~s's websokcet got update for map ~p", [SomeWho, Mid]),
+			rpgb_requests_tests:assert_ws_frame(Socket, put, undefined, map, MapId, PostedBody);
 		(_) ->
 			true
 	end, State#state.ws);
 
-postcondition(State, {call, ?MODULE, http, [Who, get, undefined, _Json]}, {ok, "200", _Headers, Body}) ->
+postcondition(State, {call, ?MODULE, http, [Who, get, undefined, _Json, _Name]}, {ok, "200", _Headers, Body}) ->
+	?debugMsg("200 on get to maps"),
 	GotBody = jsx:to_term(list_to_binary(Body)),
 	Expected = [P || #test_map{owner = O, properties = P} <- State#state.maps, O == Who],
 	GotEnough = length(GotBody) =:= length(Expected),
@@ -213,14 +332,17 @@ postcondition(State, {call, ?MODULE, http, [Who, get, undefined, _Json]}, {ok, "
 		end
 	end, GotBody);
 
-postcondition(_State, {call, ?MODULE, http, [_Who, put, _Map, _Json]}, {ok, "403", _Headers, _Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, put, _Map, _Json, _Name]}, {ok, "403", _Headers, _Body}) ->
+	?debugMsg("403 on put"),
 	true;
 
-postcondition(_State, {call, ?MODULE, http, [_Who, get, Map, _Json]}, {ok, "200", _Headers, Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, get, Map, _Json, _Name]}, {ok, "200", _Headers, Body}) ->
+	?debugFmt("200 on get maps/mapid: ~p", [Body]),
 	GotBody = jsx:to_term(list_to_binary(Body)),
 	rpgb_requests_tests:assert_json(Map#test_map.properties, GotBody);
 
-postcondition(State, {call, ?MODULE, http, [Who, delete, #test_map{owner = Who, id = MapId}, _Json]}, {ok, "204", _Headers, _Body}) ->
+postcondition(State, {call, ?MODULE, http, [Who, delete, #test_map{owner = Who, id = MapId}, _Json, _Name]}, {ok, "204", _Headers, _Body}) ->
+	?debugMsg("204 on delete to maps/mapid"),
 	lists:all(fun
 		({S, _SomeWho, Mid}) when MapId =:= Mid ->
 			rpgb_requests_tests:assert_ws_frame(S, delete, undefined, map, MapId, undefined);
@@ -228,14 +350,16 @@ postcondition(State, {call, ?MODULE, http, [Who, delete, #test_map{owner = Who, 
 			true
 	end, State#state.ws);
 
-postcondition(_State, {call, ?MODULE, http, [_Who, delete, _Map, _Json]}, {ok, "403", _Headers, _Body}) ->
+postcondition(_State, {call, ?MODULE, http, [_Who, delete, _Map, _Json, _Name]}, {ok, "403", _Headers, _Body}) ->
+	?debugMsg("403 on delete to maps"),
 	true;
 
-postcondition(State, {call, ?MODULE, websocket, _Args}, {_Reply, {error, Wut}}) ->
+postcondition(_State, {call, ?MODULE, websocket, _Args}, {_Reply, {error, Wut}}) ->
 	?debugFmt("error on first reply for websocket: ~p", [Wut]),
 	false;
 
-postcondition(State, {call, ?MODULE, websocket, [{Socket, _Who, MapId}, get, _Json]}, {ReplyTo, ReplyFrame}) ->
+postcondition(State, {call, ?MODULE, websocket, [{Socket, _Who, MapId}, get, _Json, _Name]}, {ReplyTo, ReplyFrame}) ->
+	?debugMsg("websocket get maps"),
 	case lists:keyfind(MapId, #test_map.id, State#state.maps) of
 		false ->
 			ErrorFrame = rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, undefined),
@@ -245,7 +369,8 @@ postcondition(State, {call, ?MODULE, websocket, [{Socket, _Who, MapId}, get, _Js
 			rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, true, reply, ReplyTo, Map#test_map.properties)
 	end;
 
-postcondition(_State, {call, ?MODULE, websocket, [_Socket, delete, _Json]}, {ReplyTo, ReplyFrame}) ->
+postcondition(_State, {call, ?MODULE, websocket, [_Socket, delete, _Json, _Name]}, {ReplyTo, ReplyFrame}) ->
+	?debugMsg("websocket delete"),
 	rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, undefined);
 
 %postcondition(State, {call, ?MODULE, websocket, [{Socket, _Who, MapId}, Action, Json]}, {ReplyTo, ReplyFrame}) ->
@@ -256,7 +381,31 @@ postcondition(_State, {call, ?MODULE, websocket, [_Socket, delete, _Json]}, {Rep
 %	end, OtherSockets),
 %	ReplyFrameOkay andalso Others;
 
-postcondition(State, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json]}, {ReplyTo, ReplyFrame}) ->
+postcondition(State, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json, Name]}, {ReplyTo, #ws_msg{action = <<"reply">>, accepted = false, type_id = ReplyTo, type = <<"reply">>} = ReplyFrame}) ->
+	Map = lists:keyfind(MapId, #test_map.id, State#state.maps),
+	case Map of
+		false ->
+			?debugFmt("Could not find map ~p", [MapId]),
+			{error, closed} =:= gen_websocket:recv(Socket, 1000);
+		#test_map{owner = Who} ->
+			Json2 = maybe_set_name(Json, Name),
+			NameUnique = map_name_unique(Who, Name, Map, State#state.maps),
+			NameValid = map_put_valid(Json2, Map),
+			if
+				NameUnique andalso NameValid ->
+					false;
+				NameUnique ->
+					<<"Name cannot be blank.">> =:= ReplyFrame#ws_msg.data;
+				NameValid ->
+					<<"You already have a map by that name.">> =:= ReplyFrame#ws_msg.data;
+				true ->
+					false
+			end;
+		_NotWho ->
+			<<"not owner">> =:= ReplyFrame#ws_msg.data
+	end;
+
+postcondition(State, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json, Name]}, {ReplyTo, ReplyFrame}) ->
 	?debugFmt("The reply to is ~p", [ReplyTo]),
 	Map = lists:keyfind(MapId, #test_map.id, State#state.maps),
 	case Map of
@@ -266,15 +415,36 @@ postcondition(State, {call, ?MODULE, websocket, [{Socket, Who, MapId}, put, Json
 			Closed = gen_websocket:recv(Socket, 1000),
 			Closed == {error, closed};
 		#test_map{owner = Who} ->
-			FirstFrame = rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, true, reply, ReplyTo, Json),
-			AllOthers = lists:all(fun
-				({S, _W, Mid} = Sdata) when Mid =:= MapId ->
-					?debugFmt("dealing with socket ~p", [Sdata]),
-					rpgb_requests_tests:assert_ws_frame(S, put, undefined, map, MapId, Json);
-				(_) ->
-					true
-			end, State#state.ws),
-			FirstFrame andalso AllOthers;
+			NameUnique = map_name_unique(Who, Name, Map, State#state.maps),
+			Json2 = maybe_set_name(Json, Name),
+			NameValid = map_put_valid(Json2, Map),
+			if
+				NameUnique andalso NameValid ->
+					FirstFrame = rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, true, reply, ReplyTo, Json2),
+					AllOthers = lists:all(fun
+						({S, _W, Mid} = Sdata) when Mid =:= MapId ->
+							?debugFmt("dealing with socket ~p", [Sdata]),
+							rpgb_requests_tests:assert_ws_frame(S, put, undefined, map, MapId, maybe_set_name(Json, Name));
+						(_) ->
+							true
+					end, State#state.ws),
+					FirstFrame andalso AllOthers;
+				NameUnique ->
+					rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, <<"Name cannot be blank.">>);
+				true ->
+					rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, <<"You already have a map by that name.">>)
+			end;
 		_NotWho ->
 			rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, <<"not owner">>)
-	end.
+	end;
+
+postcondition(_State, {call, ?MODULE, websocket, [{_Socket, _Who, _MapId}, post, _Json, _Name]}, {ReplyTo, ReplyFrame}) ->
+	?debugMsg("websocket post"),
+	rpgb_requests_tests:assert_ws_frame(ReplyFrame, reply, false, reply, ReplyTo, <<"invalid method">>);
+
+postcondition(State, Call, Res) ->
+	?debugFmt("Postcondition fallthrough~n"
+		"    State: ~p~n"
+		"    Call: ~p~n"
+		"    Res: ~p", [State, Call, Res]),
+		false.

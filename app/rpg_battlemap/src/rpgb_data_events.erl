@@ -1,5 +1,6 @@
 -module(rpgb_data_events).
 
+-include("log.hrl").
 % public api
 -export([start_link/0, stop/0, subscribe/2, notify/1]).
 
@@ -11,6 +12,7 @@ stop() ->
 	gen_event:stop(?MODULE).
 
 subscribe(Callback, Args) ->
+	?info("subscription for ~p", [Callback]),
 	gen_event:add_sup_handler(?MODULE, Callback, Args).
 
 notify(Msg) ->

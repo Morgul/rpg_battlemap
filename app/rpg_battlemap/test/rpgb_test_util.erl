@@ -10,6 +10,7 @@
 	create_authed_session/2, assert_body/2, match_keys/2]).
 -export([make_cookie/2]).
 -export([start_app/1]).
+-export([stop_data/0, kill_process/1]).
 
 start_app(AppName) ->
 	case application:start(AppName) of
@@ -20,6 +21,24 @@ start_app(AppName) ->
 			start_app(AppName);
 		Else ->
 			Else
+	end.
+
+stop_data() ->
+	kill_process(rpgb_data).
+
+kill_process(undefined) ->
+	ok;
+
+kill_process(Atom) when is_atom(Atom) ->
+	kill_process(whereis(Atom));
+
+kill_process(Pid) when is_pid(Pid) ->
+	catch unlink(Pid),
+	Mon = erlang:monitor(process, Pid),
+	exit(Pid, kill),
+	receive
+		{'DOWN', Mon, process, Pid, _} ->
+			ok
 	end.
 
 make_cookie(Name, Value) when is_binary(Name) ->

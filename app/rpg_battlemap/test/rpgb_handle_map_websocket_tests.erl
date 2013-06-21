@@ -6,6 +6,7 @@
 request_test_() ->
 	{setup, fun() ->
 		rpgb_test_util:web_test_setup(?MODULE),
+		rpgb_data_events:start_link(),
 		{ok, GoodUserSession} = rpgb_test_util:create_authed_session(<<"sessionid">>),
 		rpgb_test_util:create_authed_session(<<"baduser">>),
 		GoodUser = rpgb_session:get_user(GoodUserSession),
@@ -15,7 +16,8 @@ request_test_() ->
 		{GoodUser, Map2}
 	end,
 	fun(_) ->
-		rpgb_test_util:web_test_teardown()
+		rpgb_test_util:web_test_teardown(),
+		rpgb_data_events:stop()
 	end,
 	fun({_GoodUser, Map}) -> [
 
@@ -65,7 +67,7 @@ request_test_() ->
 				{ok, {text, Recv}} = gen_websocket:recv(Ws, 4000),
 				Reply = jsx:to_term(Recv),
 				?debugFmt("reply got:~n~p", [Reply]),
-				?assertEqual(1, proplists:get_value(<<"reply_for">>, Reply))
+				?assertEqual(1, proplists:get_value(<<"type_id">>, Reply)),
 				?assertEqual(true, proplists:get_value(<<"accepted">>, Reply))
 			end}
 
@@ -82,7 +84,7 @@ request_test_() ->
 	] end}.
 
 ws_url(MapId) ->
-	"ws://localhost:9099/map/" ++ integer_to_list(MapId) ++ "/ws".
+	"ws://localhost:9099/maps/" ++ integer_to_list(MapId) ++ "/ws".
 
 bin_cookie(V) ->
 	{Head, Val} = cookie(V),

@@ -110,7 +110,7 @@ check_named_map({Json, Map}) ->
 	JsonName = proplists:get_value(<<"name">>, Json),
 	case {MapName, JsonName} of
 		{undefined, undefined} ->
-			{error, {invalid, <<"name cannot be blank.">>}};
+			{error, {invalid, <<"Name cannot be blank.">>}};
 		_ ->
 			{ok, {Json, Map}}
 	end.
@@ -118,9 +118,17 @@ check_named_map({Json, Map}) ->
 check_blank_name({Json, Map}) ->
 	case proplists:get_value(<<"name">>, Json) of
 		<<>> ->
-			{error, {invalid, <<"name cannot be blank.">>}};
+			{error, {invalid, <<"Name cannot be blank.">>}};
+		null ->
+			{error, {invalid, <<"Name cannot be blank.">>}};
+		Name when is_binary(Name) ->
+			{ok, {Json, Map}};
+		undefined when is_binary(Map#rpgb_rec_battlemap.name) ->
+			{ok, {Json, Map}};
+		undefined ->
+			{error, {invalid, <<"Name cannot be blank.">>}};
 		_ ->
-			{ok, {Json, Map}}
+			{error, {invalid, <<"Name must be a word.">>}}
 	end.
 
 check_name_conflict({Json, Map}) ->
@@ -137,7 +145,7 @@ check_name_conflict({Json, Map}) ->
 				{ok, []} ->
 					{ok, {Json, Map}};
 				_ ->
-					{error, {conflict, <<"you already have a map by that name.">>}}
+					{error, {conflict, <<"You already have a map by that name.">>}}
 			end
 	end.
 

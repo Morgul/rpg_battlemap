@@ -13,40 +13,40 @@
 
 g_mapjson() ->
 	?LET(X, list(oneof([
-		{name, g_name()},
-		{background_color,  g_color()},
-		{gridline_color,  g_color()},
-		{grid_opacity,  g_opacity()},
-		{rating, g_rating()}
+		{<<"name">>, g_name()},
+		{<<"background_color">>,  g_color()},
+		{<<"gridline_color">>,  g_color()},
+		{<<"grid_opacity">>,  g_opacity()},
+		{<<"rating">>, g_rating()}
 	])), uniquify(X)).
 
 g_combatantjson() ->
 	?LET(X, list(oneof([
-		{name, g_name()},
-		{color, g_color()},
-		{portrait_image, g_url()},
-		{token_image, g_url()},
-		{x, integer()},
-		{y, integer()},
-		{initiative, float()},
-		{size, pos_integer()},
-		{aura_size, non_neg_integer()},
-		{aura_color, oneof([null, g_color()])}
+		{<<"name">>, g_name()},
+		{<<"color">>, g_color()},
+		{<<"portrait_image">>, g_url()},
+		{<<"token_image">>, g_url()},
+		{<<"x">>, integer()},
+		{<<"y">>, integer()},
+		{<<"initiative">>, float()},
+		{<<"size">>, pos_integer()},
+		{<<"aura_size">>, non_neg_integer()},
+		{<<"aura_color">>, oneof([null, g_color()])}
 	])), uniquify(X)).
 
 g_characterjson() ->
 	?LET(X, list(oneof([
-		{name, g_name()},
-		{color, g_color()},
-		{portrait_image_url, g_url()},
-		{token_image_url, g_url()},
-		{size, pos_integer()},
-		{public, oneof([true, false])}
+		{<<"name">>, g_name()},
+		{<<"color">>, g_color()},
+		{<<"portrait_image_url">>, g_url()},
+		{<<"token_image_url">>, g_url()},
+		{<<"size">>, pos_integer()},
+		{<<"public">>, oneof([true, false])}
 	])), uniquify(X)).
 
 g_layerjson() ->
 	?LET(X, list(oneof([
-		{name, g_name()}
+		{<<"name">>, g_name()}
 	])), uniquify(X)).
 
 g_zonejson() ->
