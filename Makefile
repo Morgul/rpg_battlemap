@@ -24,7 +24,6 @@ testclean:
 eunit: clean deps compile
 	./rebar eunit skip_deps=true
 
-# Test each dependency individually in its own VM
 test: deps compile testclean
 	./rebar eunit skip_deps=true
 
