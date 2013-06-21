@@ -118,14 +118,14 @@ delete_resource(Req, #ctx{mapid = MapId} = Ctx) ->
 
 content_types_provided(Req, Ctx) ->
 	Types = [
-		{{<<"application">>, <<"json">>, []}, to_json},
-		{{<<"text">>, <<"html">>, []}, to_html}
+		{{<<"application">>, <<"json">>, '*'}, to_json},
+		{{<<"text">>, <<"html">>, '*'}, to_html}
 	],
 	{Types, Req, Ctx}.
 
 content_types_accepted(Req, Ctx) ->
 	Types = [
-		{{<<"application">>, <<"json">>, []}, from_json}
+		{{<<"application">>, <<"json">>, '*'}, from_json}
 	],
 	{Types, Req, Ctx}.
 
