@@ -88,7 +88,19 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 			console.error('could not make map', error);
 			$scope.newMapName = '';
 		})
-	}
+	};
+
+	$scope.deleteMap = function(map){
+		var delPromise = Map.delete({mapid: map.id});
+		delPromise.$then(function(success){
+			var index = $rootScope.maps.indexOf(map);
+			if(index < 0) {
+				return;
+			}
+			$rootScope.maps.splice(index, 1);
+		})
+	};
+
 });
 
 Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope) {
