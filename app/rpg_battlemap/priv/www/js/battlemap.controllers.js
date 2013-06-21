@@ -8,6 +8,50 @@ Controllers = angular.module("battlemap.controllers", []);
 
 //----------------------------------------------------------------------------------------------------------------------
 
+Controllers.controller("PersonaCtrl", function($scope, $rootScope){
+
+	// why yes, pulling this from the window is a horrible idea.
+	$scope.signin = function(){
+		navigator.id.request();
+	}
+
+	$scope.signout = function(){
+		navigator.id.logout();
+	}
+
+	$scope.user = window.currentUser;
+	$scope.loginUrl = window.loginUrl;
+	$scope.logoutUrl = window.logoutUrl;
+
+	navigator.id.watch({
+		loggedInUser: $scope.user,
+		onlogin: function(assertion){
+			console.log('onlogin', $scope.user);
+			$.ajax({
+				type: 'POST',
+				url: $scope.loginUrl,
+				data: JSON.stringify({assertion: assertion}),
+				contentType: 'application/json',
+				success: function(res, status, xhr){ window.location.reload(); },
+				error: function(xhr, status, err){ console.log('login fail', err); }
+			});
+		},
+		onlogout: function(){
+			console.log('onlogout', $scope.currentUser);
+			$.ajax({
+				type: 'POST',
+				url: $scope.logoutUrl,
+				contentType: 'application/json',
+				success: function(res, status, xhr){ window.location.reload(); },
+				error: function(xhr, status, err){ console.log('logout fail', err); }
+			});
+		}
+
+	});
+
+});
+
+
 Controllers.controller("ListMapsCtrl", function($scope, $rootScope) {
 	//FIXME: Only for demo
 	$scope.maps = $rootScope.maps;
