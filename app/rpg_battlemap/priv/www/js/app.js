@@ -5,16 +5,29 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
+	.config(['$locationProvider', function($locationProvider) {
+		$locationProvider.html5Mode(true);
+	}])
 	.config(['$routeProvider', function($routeProvider) {
 		$routeProvider
 			.when('/', {templateUrl: '/partials/list_maps.html',   controller: 'ListMapsCtrl'})
-			.when('/map/:mapid', {templateUrl: '/partials/map.html',   controller: 'ViewMapCtrl'})
-			.when('/map/:mapid/edit', {templateUrl: '/partials/map.html',   controller: 'EditMapCtrl'})
+			.when('/maps/:mapid', {templateUrl: '/partials/map.html',   controller: 'ViewMapCtrl'})
+			.when('/maps/:mapid/edit', {templateUrl: '/partials/map.html',   controller: 'EditMapCtrl'})
 			.otherwise({redirectTo: '/'});
 	}])
 	//FIXME: Remove this; it's only for demo
 	.run(function($rootScope){
-		$rootScope.maps = [
+		$rootScope.user = window.currentUser;
+		$rootScope.loginUrl = window.loginUrl;
+		$rootScope.logoutUrl = window.logoutUrl;
+		// the resource thing doesn't really do hateaos well, but then again
+		// neither does the browser. ah well.
+		/*var Map = $resource('/maps/:mapid', {}, {'save': {'method':'PUT'}, 'create':{'method':'POST'}, 'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
+		var thing = Map.query(function(maps){
+			console.log('der maps', maps);
+		});
+		console.log('thing?', thing);*/
+		/*$rootScope.maps = [
 				{
 					id: 1,
 					name: "Test Map",
@@ -75,7 +88,7 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 					websocketUrl: "wss://localhost:9090/map/2",
 					zoom: 1
 				}
-			];
+			];*/
 	});
 
 //----------------------------------------------------------------------------------------------------------------------

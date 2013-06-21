@@ -230,7 +230,7 @@ expand_owner(Json, Map) ->
 		{error, notfound} ->
 			null;
 		{ok, User} ->
-			User#rpgb_rec_user.name
+			User#rpgb_rec_user.email
 	end,
 	[{<<"owner">>, OwnerName} | Json].
 
@@ -240,7 +240,7 @@ expand_particpants(Json, Map) ->
 			{error, _} ->
 				Acc;
 			{ok, User} ->
-				[User#rpgb_rec_user.name | Acc]
+				[User#rpgb_rec_user.email | Acc]
 		end
 	end, [], Map#rpgb_rec_battlemap.participant_ids),
 	[{<<"participant">>, lists:reverse(PartyNames)} | Json].

@@ -52,31 +52,33 @@ Controllers.controller("PersonaCtrl", function($scope, $rootScope){
 });
 
 
-Controllers.controller("ListMapsCtrl", function($scope, $rootScope) {
-	//FIXME: Only for demo
-	$scope.maps = $rootScope.maps;
+Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
+		// the resource thing doesn't really do hateaos well, but then again
+		// neither does the browser. ah well.
+	$rootScope.maps = [];
+
+	var Map = $resource('/maps/:mapid', {}, {'save': {'method':'PUT'}, 'create':{'method':'POST'}, 'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
+
+	var mapsPromise = Map.query();
+	mapsPromise.$then(function(success){
+		$rootScope.maps = success.data;
+	}, function(error){
+		console.error('failed to get maps', error);
+	});
 
 	// Disable the toolbar from the main nav bar.
 	$scope.noToolbar = true;
 
 	// Get the maps we're participating in.
 	$scope.getParticipating = function(maps) {
-		var partList = [];
-		maps.forEach(function(map){
-
-			//FIXME: We hardcode a user id of '1' for the demo.
-			if(map.participant_ids.indexOf(1) >= 0) {
-				partList.push(map);
-			}
-		});
-
-		return partList;
+		console.log('der maps', maps);
+		return maps;
 	}
 });
 
 Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope) {
 	//FIXME: For demo, only
-	$scope.map = $rootScope.maps[0];
+	$scope.map = ($rootScope.maps && $rootScope.maps[0]) || {};
 
 	$scope.buttons = [
 		{ name: 'Combatants', menu: [] },
@@ -92,7 +94,7 @@ Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope)
 
 Controllers.controller("EditMapCtrl", function($scope, $rootScope) {
 	//FIXME: For demo, only
-	$scope.map = $rootScope.maps[0];
+	$scope.map = ($rootScope.maps && $rootScope.maps[0]) || {};
 
 	$scope.buttons = [
 		{ name: 'Layers', icon: 'icon-map-marker', menu: [] },
