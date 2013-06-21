@@ -4,7 +4,6 @@
 
 -undef(debugMsg).
 -undef(debugFmt).
-
 -define(debugMsg(_Msg), ok).
 -define(debugFmt(_Fmt,_Args),ok).
 

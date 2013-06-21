@@ -26,7 +26,7 @@ make_json(Map, Layers, Combatants) ->
 		CombatantsJsons = [rpgb_rec_combatant:make_json(Combatant) || Combatant <- Combatants],
 		[{combatants, CombatantsJsons} | InJson]
 	end,
-	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, MakeLayerJson, first_combatant_id, MakeCombatantJson]).
+	Map:to_json([{url, Url},{websocketUrl, WebSocket}, bottom_layer_id, MakeLayerJson, first_combatant_id, MakeCombatantJson, fun expand_owner/2, fun expand_particpants/2]).
 
 get_by_participant(#rpgb_rec_user{id = UserId}) ->
 	get_by_participant(UserId);
@@ -225,3 +225,22 @@ validate_warnings([gridline_color | Tail], Rec) ->
 validate_color(Color) ->
 	rpgb_validation:is_valid_color(Color).
 
+expand_owner(Json, Map) ->
+	OwnerName = case rpgb_data:get_by_id(rpgb_rec_user, Map#rpgb_rec_battlemap.owner_id) of
+		{error, notfound} ->
+			null;
+		{ok, User} ->
+			User#rpgb_rec_user.name
+	end,
+	[{<<"owner">>, OwnerName} | Json].
+
+expand_particpants(Json, Map) ->
+	PartyNames = lists:foldl(fun(Id, Acc) ->
+		case rpgb_data:get_by_id(rpgb_rec_user, Id) of
+			{error, _} ->
+				Acc;
+			{ok, User} ->
+				[User#rpgb_rec_user.name | Acc]
+		end
+	end, [], Map#rpgb_rec_battlemap.participant_ids),
+	[{<<"participant">>, lists:reverse(PartyNames)} | Json].

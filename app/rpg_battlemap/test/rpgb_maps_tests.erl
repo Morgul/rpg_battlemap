@@ -69,6 +69,8 @@ precondition(_State, {call, ?MODULE, websocket, [undefined | _]}) ->
 	false;
 precondition(_State, {call, ?MODULE, http, [notpartier, put, undefined, _Json, _Name]}) ->
 	false;
+precondition(_State, {call, ?MODULE, http, [notpartier, post, undefined, _Json, _Name]}) ->
+	false;
 precondition(_State, {call, ?MODULE, http, [_Who, post, undefined, _Json, _Name]}) ->
 	true;
 precondition(_State, {call, ?MODULE, http, [_Who, post, _Whatever, _Json, _Name]}) ->
@@ -317,10 +319,14 @@ postcondition(State, {call, ?MODULE, http, [Who, put, #test_map{owner = Who, id 
 			true
 	end, State#state.ws);
 
-postcondition(State, {call, ?MODULE, http, [Who, get, undefined, _Json, _Name]}, {ok, "200", _Headers, Body}) ->
+postcondition(_State, {call, ?MODULE, http, [notpartier, get, undefined, _Json, _Name]}, {ok, "200", _Headers, Body}) ->
+	GotBody = jsx:to_term(list_to_binary(Body)),
+	[] =:= GotBody;
+
+postcondition(State, {call, ?MODULE, http, [_Who, get, undefined, _Json, _Name]}, {ok, "200", _Headers, Body}) ->
 	?debugMsg("200 on get to maps"),
 	GotBody = jsx:to_term(list_to_binary(Body)),
-	Expected = [P || #test_map{owner = O, properties = P} <- State#state.maps, O == Who],
+	Expected = [P || #test_map{properties = P} <- State#state.maps],
 	GotEnough = length(GotBody) =:= length(Expected),
 	GotEnough andalso lists:all(fun(Json) ->
 		Id = proplists:get_value(<<"id">>, Json),

@@ -132,7 +132,7 @@ content_types_accepted(Req, Ctx) ->
 to_json(Req, #ctx{map = undefined} = Ctx) ->
 	Session = Ctx#ctx.session,
 	User = rpgb_session:get_user(Session),
-	{ok, Maps} = rpgb_data:search(rpgb_rec_battlemap, [{owner_id, User#rpgb_rec_user.id}]),
+	{ok, Maps} = rpgb_rec_battlemap:get_by_participant(User),
 	Json = lists:map(fun(M) ->
 		make_json(Req, Ctx, M)
 	end, Maps),
