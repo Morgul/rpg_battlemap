@@ -23,6 +23,23 @@
             </div>
 
             <div class="btn-toolbar">
+                <div class="btn-group" ng-show="user == map.owner">
+                    <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">Grid<span class="caret"> </span></a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <label for="gridLineColor">Line Color</label>
+                            <input ng-model="map.gridline_color" name="gridLineColor" type="color" ng-click="stopPropagation($event)" />
+                        </li>
+                        <li>
+                            <label for="gridLineOpacity">Line Opacity</label>
+                            <input ng-model="map.grid_opacity" type="number" step="0.1" min="0.0" max="1.0" ng-click="stopPropagation($event)" />
+                        </li>
+                        <li>
+                            <label for="gridBackgroundColor">Background Color</label>
+                            <input ng-model="map.background_color" name="gridBackgroundColor" type="color" ng-click="stopPropagation($event)" />
+                        </li>
+                    </ul>
+                </div>
                 <div class="btn-group" ng-repeat="button in buttons" ng-show="button.menu != undefined">
                     <a class="btn btn-small dropdown-toggle" data-toggle="dropdown" href="#">
                         {{ button.name }}

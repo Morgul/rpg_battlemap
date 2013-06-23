@@ -57,12 +57,7 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 		// neither does the browser. ah well.
 	$rootScope.maps = [];
 
-	var Map = $resource('/maps/:mapid', {}, {
-		'save': {'method':'PUT'},
-		'create':{'method':'POST', },
-		'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
-
-	var mapsPromise = Map.query();
+	var mapsPromise = $rootScope.Map.query();
 	mapsPromise.$then(function(success){
 		$rootScope.maps = success.data;
 	}, function(error){
@@ -78,7 +73,6 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 	};
 
 	$scope.createMap = function(){
-		console.log('hi!', $scope.newMapName);
 		var mapPromise = Map.create({name: $scope.newMapName});
 		mapPromise.$then(function(success){
 			$rootScope.maps.push(success.data);
@@ -103,20 +97,31 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 
 });
 
-Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope) {
+Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope, $resource) {
 	//FIXME: For demo, only
-	$scope.map = ($rootScope.maps && $rootScope.maps[0]) || {};
+	$scope.map = {};
+	var mapPromise = $rootScope.Map.get($routeParams);
+	mapPromise.$then(function (success) {
+		$scope.map = success.data;
+	},
+	function(error){
+		console.error(error);
+	});
 
 	$scope.buttons = [
 		{ name: 'Combatants', menu: [] },
 		{ name: 'Zones & Auras', menu: [] },
-		{ name: 'Edit Map', icons: ['icon-edit'], url:"#/map/" + $routeParams.mapid + '/edit' }
 	];
 
 	$scope.tools = [
 		{ name: 'Normal', icon: 'icon-hand-up' },
 		{ name: 'Measure', icon: 'icon-map-marker' }
 	];
+
+	$scope.mapBackgroundCssObject = function(){
+		var out = {'backgroundColor': $scope.map.background_color};
+		return out;
+	}
 });
 
 Controllers.controller("EditMapCtrl", function($scope, $rootScope) {
@@ -155,10 +160,14 @@ Controllers.controller("HeaderCtrl", function($scope) {
 		} else {
 			return 'closed';
 		}
+	};
+
+	$scope.logit = function(){
+		console.log('der thangs', arguments);
 	}
 });
 
-Controllers.controller("GridCtrl", function($scope) {
+Controllers.controller("GridCtrl", function($scope, $rootScope) {
 	var header = angular.element("#main-header");
 	var topBar = $("#top-bar");
 	var docElem = angular.element(window);

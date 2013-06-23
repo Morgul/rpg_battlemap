@@ -16,10 +16,20 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 			.otherwise({redirectTo: '/'});
 	}])
 	//FIXME: Remove this; it's only for demo
-	.run(function($rootScope){
+	.run(function($rootScope, $resource){
 		$rootScope.user = window.currentUser;
 		$rootScope.loginUrl = window.loginUrl;
 		$rootScope.logoutUrl = window.logoutUrl;
+
+		$rootScope.Map = $resource('/maps/:mapid', {}, {
+		'save': {'method':'PUT'},
+		'create':{'method':'POST', },
+		'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
+
+		$rootScope.stopPropagation = function(ev){
+			ev.stopPropagation();
+		}
+
 		// the resource thing doesn't really do hateaos well, but then again
 		// neither does the browser. ah well.
 		/*var Map = $resource('/maps/:mapid', {}, {'save': {'method':'PUT'}, 'create':{'method':'POST'}, 'query':{'method':'GET', 'isArray':true, 'params':{'mapid':''}}});
