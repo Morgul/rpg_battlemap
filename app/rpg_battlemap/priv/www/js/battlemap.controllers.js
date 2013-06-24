@@ -97,15 +97,32 @@ Controllers.controller("ListMapsCtrl", function($scope, $rootScope, $resource) {
 
 });
 
-Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope, $resource) {
-	//FIXME: For demo, only
+Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope, $resource, MapSocket) {
 	$scope.map = {};
+
 	var mapPromise = $rootScope.Map.get($routeParams);
 	mapPromise.$then(function (success) {
+		console.log('map data gotten');
 		$scope.map = success.data;
+
+		var connectDefer = MapSocket($scope.map);
+		connectDefer.then(function(success){
+			console.log('connect defer');
+			var socketPromise = MapSocket.get('map', parseInt($routeParams.mapid, 10));
+			socketPromise.then(function(success){
+				console.log('der success', success);
+				$scope.map = success;
+			},
+			function(fail){
+				console.log('failed to get map', fail);
+			})
+		},
+		function(fail){
+			console.error("websocket failed to connect", fail);
+		})
 	},
 	function(error){
-		console.error(error);
+		console.error('some error', error);
 	});
 
 	$scope.buttons = [
@@ -167,7 +184,7 @@ Controllers.controller("HeaderCtrl", function($scope) {
 	}
 });
 
-Controllers.controller("GridCtrl", function($scope, $rootScope) {
+Controllers.controller("GridCtrl", function($scope, $rootScope, MapSocket) {
 	var header = angular.element("#main-header");
 	var topBar = $("#top-bar");
 	var docElem = angular.element(window);
