@@ -72,7 +72,7 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 			request.reply_with = nextReplyId();
 
 			var defer = $q.defer();
-			requests[request.reply_to] = {
+			requests[request.reply_with] = {
 				'posted': new Date(),
 				'defer': defer
 			};
@@ -87,24 +87,32 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 
 		var onMessage = function(ev){
 			var messageObj = JSON.parse(ev.data);
+			console.log('messageObj', messageObj);
 			if(messageObj.type == 'reply'){
 				maybeReply(messageObj);
 				return;
 			}
+			var eventName = messageObj.action + '_' + messageObj.type;
+			if(messageObj.hasOwnProperty('type_id') && messageObj.action != 'delete'){
+				eventName += '_' + messageObj.type_id;
+			}
+			var emitData = messageObj.action == 'delete' ? messageObj.type_id : messageObj.data;
+			$rootScope.$apply($rootScope.$emit(eventName, emitData));
 		};
 
 		var maybeReply = function(reply){
-			if(! reply.id){
+			console.log('maybe reply', reply);
+			if(! reply.type_id){
 				return;
 			}
-			if(requests.hasOwnProperty(reply.id)){
-				var defer = requests[reply.id].defer;
+			if(requests.hasOwnProperty(reply.type_id)){
+				var defer = requests[reply.type_id].defer;
 				if(reply.accepted){
 					$rootScope.$apply(defer.resolve(reply.data));
 				} else {
 					$rootScope.$apply(defer.reject(reply.data));
 				}
-				delete requests[reply.id];
+				delete requests[reply.type_id];
 			}
 		};
 
@@ -112,12 +120,9 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 			var outDefer = $q.defer();
 			var q = sendRequest('get', type);
 			q.then(function(success){
-				success.save = function(){
-					return sendRequest('put', type, this.id, this);
-				};
-				success.delete = function(){
-					return sendRequest('delete', type, this.id);
-				};
+				success = success.map(function(obj){
+					return attach(type, obj);
+				});
 				outDefer.resolve(success);
 			},
 			function(fail){
@@ -130,12 +135,13 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 			var outDefer = $q.defer();
 			var q = sendRequest('get', type, id);
 			q.then(function(success){
-				success.save = function(){
+				attach(type, success);
+				/*success.save = function(){
 					return sendRequest('put', type, this.id, this);
 				};
 				success.delete = function(){
 					return sendRequest('delete', type, this.id);
-				};
+				};*/
 				outDefer.resolve(success);
 			},
 			function(fail){
@@ -144,9 +150,29 @@ angular.module("battlemap", ['ngResource', 'battlemap.controllers'])
 			return outDefer.promise;
 		};
 
+		var attach = function(type, obj){
+			obj.$save = function(){
+				return sendRequest('put', type, this.id, this);
+			};
+			obj.$delete = function(){
+				return sendRequest('delete', type, this.id);
+			};
+			var eventName = 'put_' + type + '_' + obj.id;
+			$rootScope.$on(eventName, function(ev, newObjParams){
+				var k;
+				for(k in newObjParams){
+					if(newObjParams.hasOwnProperty(k)){
+						obj[k] = newObjParams[k];
+					}
+				}
+				console.log('put event', obj.id, ev, newObjParams);
+			})
+		};
+
 		connectMap.sendRequest = sendRequest;
 		connectMap.query = query;
 		connectMap.get = get;
+		connectMap.attach = attach;
 		return connectMap;
 	}])
 	.run(function($rootScope, $resource){

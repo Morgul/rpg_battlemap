@@ -109,6 +109,7 @@ Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope,
 		connectDefer.then(function(success){
 			console.log('connect defer');
 			var socketPromise = MapSocket.get('map', parseInt($routeParams.mapid, 10));
+			console.log('der promise', socketPromise);
 			socketPromise.then(function(success){
 				console.log('der success', success);
 				$scope.map = success;
@@ -124,6 +125,11 @@ Controllers.controller("ViewMapCtrl", function($scope, $routeParams, $rootScope,
 	function(error){
 		console.error('some error', error);
 	});
+
+	$scope.saveMap = function(ev){
+		console.log('saving map', $scope.map);
+		$scope.map.$save();
+	};
 
 	$scope.buttons = [
 		{ name: 'Combatants', menu: [] },

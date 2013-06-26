@@ -28,15 +28,15 @@
                     <ul class="dropdown-menu">
                         <li>
                             <label for="gridLineColor">Line Color</label>
-                            <input ng-model="map.gridline_color" name="gridLineColor" type="color" ng-click="stopPropagation($event)" />
+                            <input ng-model="map.gridline_color" name="gridLineColor" type="color" ng-click="stopPropagation($event)" ng-change="saveMap($event)" />
                         </li>
                         <li>
                             <label for="gridLineOpacity">Line Opacity</label>
-                            <input ng-model="map.grid_opacity" type="number" step="0.1" min="0.0" max="1.0" ng-click="stopPropagation($event)" />
+                            <input ng-model="map.grid_opacity" type="number" step="0.1" min="0.0" max="1.0" ng-click="stopPropagation($event)" ng-change="saveMap($event)" />
                         </li>
                         <li>
                             <label for="gridBackgroundColor">Background Color</label>
-                            <input ng-model="map.background_color" name="gridBackgroundColor" type="color" ng-click="stopPropagation($event)" />
+                            <input ng-model="map.background_color" name="gridBackgroundColor" type="color" ng-click="stopPropagation($event)" ng-change="saveMap($event);" />
                         </li>
                     </ul>
                 </div>
